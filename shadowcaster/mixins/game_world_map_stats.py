@@ -1,0 +1,267 @@
+from __future__ import annotations
+
+from ..game_typing import GameMixinBase
+
+
+class WorldMapStatsMixin(GameMixinBase):
+
+    def region_world_theme(self, region_type=None, state=None):
+        region_type = region_type or (state["region_type"] if state else self.region_type)
+        theme_map = {
+            "forest": "verdant",
+            "plains": "verdant",
+            "farmland": "settled",
+            "town": "settled",
+            "inn": "settled",
+            "clinic": "settled",
+            "supply": "settled",
+            "cartographer": "settled",
+            "shrine": "sanctum",
+            "smith": "sanctum",
+            "desert": "arid",
+            "badlands": "arid",
+            "swamp": "wild",
+            "mountain": "stone",
+            "castle": "stone",
+            "ruins": "stone",
+            "dungeon": "depths",
+            "cave": "depths",
+            "maze": "wild",
+            "tundra": "cold",
+            "volcanic": "blight",
+            "monster_town": "blight",
+        }
+        return theme_map.get(region_type, "wild")
+
+    def region_theme_color(self, theme):
+        return {
+            "verdant": (126, 182, 104),
+            "settled": (214, 186, 120),
+            "sanctum": (188, 178, 232),
+            "arid": (216, 162, 92),
+            "wild": (112, 156, 118),
+            "stone": (152, 162, 176),
+            "depths": (126, 132, 158),
+            "cold": (194, 220, 238),
+            "blight": (214, 108, 98),
+        }.get(theme, (150, 160, 174))
+
+    def continuity_summary(self, coord, state):
+        theme = self.region_world_theme(state=state)
+        neighbors = []
+        for delta in self.DIRECTION_VECTORS.values():
+            neighbor_coord = (coord[0] + delta[0], coord[1] + delta[1])
+            neighbor_state = self.world_map_regions().get(neighbor_coord)
+            if neighbor_state is None:
+                continue
+            neighbors.append(neighbor_state)
+        if not neighbors:
+            return "No nearby regions charted yet."
+        same_theme = sum(1 for neighbor_state in neighbors if self.region_world_theme(state=neighbor_state) == theme)
+        harsher = sum(1 for neighbor_state in neighbors if neighbor_state.get("danger_tier", 1) > state.get("danger_tier", 1))
+        safer = sum(1 for neighbor_state in neighbors if neighbor_state.get("danger_tier", 1) < state.get("danger_tier", 1))
+        if same_theme >= 3:
+            base = "This region sits inside a broad continuous belt."
+        elif same_theme == 2:
+            base = "Nearby regions feel fairly consistent."
+        elif same_theme == 1:
+            base = "This area feels like a transition zone."
+        else:
+            base = "This region stands apart from its neighbors."
+        if harsher >= 2:
+            return base + " The frontier grows more dangerous nearby."
+        if safer >= 2:
+            return base + " Nearby territory looks gentler."
+        return base
+
+    def region_stats(self, coord):
+        discovered = self.discovered_world_regions()
+        if coord == self.world_position and self.in_local_region():
+            state = self.snapshot_current_region()
+        else:
+            if coord in discovered:
+                state = discovered[coord]
+            elif self.world_map_mode == "local_debug":
+                preview_key = self.region_key(coord)
+                state = self.preview_world_regions.get(preview_key)
+                if state is None:
+                    state = self.preview_placeholder_state(coord)
+            else:
+                return None
+        if state is None:
+            return None
+        if state.get("expandable_preview"):
+            return {
+                "coord": coord,
+                "distance": abs(coord[0]) + abs(coord[1]),
+                "name": f"Expand to ({coord[0]}, {coord[1]})",
+                "region_type": state["region_type"],
+                "region_label": "Frontier",
+                "palette": state["region_palette"],
+                "theme": "survey",
+                "theme_color": (152, 168, 190),
+                "continuity_text": "Click to generate this neighboring region.",
+                "is_preview": True,
+                "loading_preview": False,
+                "expandable_preview": True,
+                "preview_generated": False,
+                "danger_tier": state.get("danger_tier", 1),
+                "exploration": 0,
+                "foes_defeated": 0,
+                "foes_remaining": 0,
+                "foes_spawned": 0,
+                "residents": 0,
+                "depth": 1,
+                "max_depth": 1,
+                "full_clear_reward_claimed": False,
+                "bottom_reward_claimed": False,
+                "exits_found": 0,
+                "exit_directions": [],
+                "landmarks_total": 0,
+                "landmarks_visited": 0,
+                "landmarks_cleared": 0,
+                "landmark_type_counts": [],
+                "landmark_summaries": [],
+                "neighbor_summaries": [],
+                "is_current": False,
+                "settlement_size": None,
+                "settlement_rank": 0,
+                "settlement_buildings": 0,
+                "parent_biome": None,
+            }
+        if state.get("loading_preview"):
+            return {
+                "coord": coord,
+                "distance": abs(coord[0]) + abs(coord[1]),
+                "name": state["region_name"],
+                "region_type": state["region_type"],
+                "region_label": "Preview",
+                "palette": state["region_palette"],
+                "theme": "survey",
+                "theme_color": (152, 168, 190),
+                "continuity_text": "Preview generation in progress.",
+                "is_preview": True,
+                "loading_preview": True,
+                "expandable_preview": False,
+                "preview_generated": False,
+                "danger_tier": state.get("danger_tier", 1),
+                "exploration": 0,
+                "foes_defeated": 0,
+                "foes_remaining": 0,
+                "foes_spawned": 0,
+                "residents": 0,
+                "depth": 1,
+                "max_depth": 1,
+                "full_clear_reward_claimed": False,
+                "bottom_reward_claimed": False,
+                "exits_found": 0,
+                "exit_directions": [],
+                "landmarks_total": 0,
+                "landmarks_visited": 0,
+                "landmarks_cleared": 0,
+                "landmark_type_counts": [],
+                "landmark_summaries": [],
+                "neighbor_summaries": [],
+                "is_current": coord == self.world_position,
+                "settlement_size": None,
+                "settlement_rank": 0,
+                "settlement_buildings": 0,
+                "parent_biome": None,
+            }
+        theme = self.region_world_theme(state=state)
+        exits_found = len(state.get("edge_exits", {}))
+        exit_directions = sorted(state.get("edge_exits", {}))
+        foes_remaining = len(state["enemies"])
+        landmarks = state.get("landmarks", [])
+        neighbors = []
+        world_regions = self.world_map_regions()
+        for direction, delta in self.DIRECTION_VECTORS.items():
+            neighbor_coord = (coord[0] + delta[0], coord[1] + delta[1])
+            neighbor_state = world_regions.get(neighbor_coord)
+            if neighbor_state is None:
+                neighbors.append(
+                    {
+                        "direction": direction,
+                        "coord": neighbor_coord,
+                        "name": None,
+                        "label": "Unknown",
+                        "danger_tier": None,
+                        "is_preview": False,
+                    }
+                )
+                continue
+            neighbors.append(
+                {
+                    "direction": direction,
+                    "coord": neighbor_coord,
+                    "name": neighbor_state["region_name"],
+                    "label": self.region_display_label(state=neighbor_state),
+                    "danger_tier": neighbor_state.get("danger_tier", 1),
+                    "is_preview": neighbor_coord not in discovered and neighbor_coord != self.world_position,
+                }
+            )
+        landmark_summaries = []
+        for landmark in landmarks[:4]:
+            progress = self.landmark_progress(coord, landmark)
+            landmark_summaries.append(
+                {
+                    "name": landmark.name,
+                    "kind": landmark.kind,
+                    "status": progress["status"],
+                    "detail": progress["detail"],
+                }
+            )
+        return {
+            "coord": coord,
+            "distance": abs(coord[0]) + abs(coord[1]),
+            "name": state["region_name"],
+            "region_type": state["region_type"],
+            "region_label": self.region_display_label(state=state),
+            "palette": state["region_palette"],
+            "theme": theme,
+            "theme_color": self.region_theme_color(theme),
+            "continuity_text": self.continuity_summary(coord, state),
+            "is_preview": coord not in discovered and coord != self.world_position,
+            "loading_preview": state.get("loading_preview", False),
+            "expandable_preview": state.get("expandable_preview", False),
+            "preview_generated": state.get("preview_generated", False),
+            "danger_tier": state.get("danger_tier", 1),
+            "exploration": self.region_exploration_percent(state),
+            "foes_defeated": state.get("enemies_defeated", 0),
+            "foes_remaining": foes_remaining,
+            "foes_spawned": state.get("enemies_spawned", foes_remaining + state.get("enemies_defeated", 0)),
+            "residents": len(state["residents"]),
+            "depth": state.get("region_depth", 1),
+            "max_depth": state.get("region_max_depth", 1),
+            "full_clear_reward_claimed": 100 in state["claimed_exploration_rewards"],
+            "bottom_reward_claimed": state.get("bottom_reward_claimed", False),
+            "exits_found": exits_found,
+            "exit_directions": exit_directions,
+            "landmarks_total": len(landmarks),
+            "landmarks_visited": sum(1 for landmark in landmarks if self.landmark_progress(coord, landmark)["visited"]),
+            "landmarks_cleared": sum(1 for landmark in landmarks if self.landmark_progress(coord, landmark)["cleared"]),
+            "landmark_type_counts": self.site_type_counts(landmarks),
+            "landmark_summaries": landmark_summaries,
+            "neighbor_summaries": neighbors,
+            "is_current": coord == self.world_position,
+            "settlement_size": self.settlement_label(state),
+            "settlement_rank": self.settlement_size_rank(state),
+            "settlement_buildings": self.settlement_building_count(state),
+            "parent_biome": self.settlement_parent_biome(state),
+        }
+
+    def region_walkable_count(self, state):
+        dungeon = state["dungeon"]
+        return sum(1 for x in range(dungeon.width) for y in range(dungeon.height) if dungeon.tiles[x][y] == 0)
+
+    def region_exploration_percent(self, state):
+        walkable = self.region_walkable_count(state)
+        explored = len(state["seen_tiles"])
+        return int((explored / max(1, walkable)) * 100)
+
+    def site_type_counts(self, landmarks):
+        counts = {}
+        for landmark in landmarks:
+            label = landmark.kind.replace("_", " ").title()
+            counts[label] = counts.get(label, 0) + 1
+        return [f"{label} x{counts[label]}" for label in sorted(counts)]
