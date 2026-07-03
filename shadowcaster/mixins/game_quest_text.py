@@ -24,17 +24,28 @@ class QuestTextMixin(GameMixinBase):
         ("quest_parcel", "Wrapped Parcel", "a wrapped parcel", (190, 180, 140)),
     ]
     _CHAIN_LEADS = [
-        ("Strange markings were spotted near {landmark} in {region}. Someone needs to get eyes on it and report back.", "ammo"),
-        ("Word came through that {landmark} in {region} has gone quiet. We need a first-hand account.", "medkit"),
-        ("A courier mentioned something odd about {landmark} near {region} before moving on. Worth a look.", "ammo"),
-        ("A trader came through with news of {landmark} out in {region}. The details didn't add up. Find out what's there.", "medkit"),
-        ("The scouts flagged {landmark} in {region} as worth checking before the next route posting.", "ammo"),
-        ("An old map note pointed to {landmark} somewhere around {region}. Confirm it still stands.", "medkit"),
+        ("Strange markings were spotted near {landmark} in {region}. Someone needs to get eyes on it and report back.", "ammo", "field notes"),
+        ("Word came through that {landmark} in {region} has gone quiet. We need a first-hand account.", "medkit", "a witness sketch"),
+        ("A courier mentioned something odd about {landmark} near {region} before moving on. Worth a look.", "tonic", "a courier's note"),
+        ("A trader came through with news of {landmark} out in {region}. The details didn't add up. Find out what's there.", "intel", "a trader's ledger scrap"),
+        ("The scouts flagged {landmark} in {region} as worth checking before the next route posting.", "ammo", "survey marks"),
+        ("An old map note pointed to {landmark} somewhere around {region}. Confirm it still stands.", "tonic", "a map rubbing"),
     ]
     _CHAIN_FALLBACK_LEADS = [
-        ("Someone passed through with unsettled news from {region}. Survey the area and bring back what you find.", "ammo"),
-        ("The region of {region} has been off the regular route for too long. A firsthand look would help.", "medkit"),
+        ("Someone passed through with unsettled news from {region}. Survey the area and bring back what you find.", "ammo", "field notes"),
+        ("The region of {region} has been off the regular route for too long. A firsthand look would help.", "intel", "a survey sketch"),
     ]
+    _CHAIN_REWARD_LABELS = {
+        "ammo": "+2 ammo",
+        "medkit": "+1 healing potion",
+        "tonic": "+1 tonic",
+        "intel": "route intel",
+    }
+    _CHAIN_OBJECTIVE_LABELS = {
+        "survey": "Survey",
+        "recover": "Recover",
+        "hunt": "Hunt",
+    }
     _BOUNTY_TARGETS = {
         "forest": "drive off prowlers",
         "plains": "thin the roaming pack",
@@ -116,7 +127,7 @@ class QuestTextMixin(GameMixinBase):
         if quest.kind == "scout" and quest.stage >= 1:
             return "REPORT"
         if quest.kind == "chain" and quest.stage == 1:
-            return "LEAD"
+            return self._CHAIN_OBJECTIVE_LABELS.get(quest.objective_key, "LEAD").upper()
         if quest.kind == "chain" and quest.stage >= 2:
             return "RETURN"
         return {
@@ -127,7 +138,8 @@ class QuestTextMixin(GameMixinBase):
         }.get(quest.kind, quest.kind.upper())
 
     def notice_board_reward_label(self, quest):
-        reward_label = f"Reward: {quest.reward_gold}g + supplies"
+        reward_extra = self.chain_reward_label(quest.item_key)
+        reward_label = f"Reward: {quest.reward_gold}g + {reward_extra}"
         if quest.kind != "chain":
             reward_label = f"Reward: {quest.reward_gold}g"
         existing = next((q for q in self.active_quests if q.id == quest.id), None)
@@ -142,9 +154,33 @@ class QuestTextMixin(GameMixinBase):
             if existing.stage == 0:
                 return f"{reward_label} - Travel to {existing.target_region_name}"
             if existing.stage == 1:
-                return f"{reward_label} - Find {existing.target_landmark_name or 'the site'}"
-            return f"{reward_label} - Return to {existing.origin_town_name}"
+                return f"{reward_label} - Recover {existing.item_name or 'proof'}"
+            return f"{reward_label} - Return {existing.item_name or 'proof'} to {existing.origin_town_name}"
         return reward_label
+
+    def chain_reward_label(self, reward_key):
+        return self._CHAIN_REWARD_LABELS.get(reward_key, "supplies")
+
+    def chain_objective_label(self, objective_key):
+        return self._CHAIN_OBJECTIVE_LABELS.get(objective_key or "recover", "Lead")
+
+    def chain_stage_text(self, quest):
+        evidence = quest.item_name or "proof"
+        objective = quest.objective_key or "recover"
+        if quest.stage <= 0:
+            if objective == "hunt":
+                return f"Reach {self.quest_target_label(quest)}, then bring down {quest.target_count} foes and return with {evidence}."
+            return f"Reach {self.quest_target_label(quest)}, then search for {evidence}."
+        if quest.stage == 1:
+            if objective == "survey":
+                return f"Survey {self.quest_target_label(quest)} and recover {evidence}."
+            if objective == "hunt":
+                kills = max(0, self.enemies_defeated - quest.progress_count)
+                return f"Hunt {min(kills, quest.target_count)}/{quest.target_count} foes in {self.quest_target_label(quest)}, then return with {evidence}."
+            target_label = quest.target_landmark_name or "the site"
+            return f"Search {target_label} in {self.quest_target_label(quest)} and recover {evidence}."
+        home_name = quest.origin_town_name or f"({quest.from_world_pos[0]}, {quest.from_world_pos[1]})"
+        return f"{evidence.capitalize()} secured. Return to {home_name} for {quest.reward_gold}g + {self.chain_reward_label(quest.item_key)}."
 
     def delivery_description(self, desc, region_name, dir_name):
         biome = self.town_biome_context()
@@ -202,6 +238,12 @@ class QuestTextMixin(GameMixinBase):
         return {"home": home_name, "work": work_name, "civic": civic_name, "town": self.region_name}
 
     def _notice_board_text(self):
+        response = self.town_response_line()
+        work_summary = self.town_work_summary_line()
+        if response and work_summary:
+            return f"{response} {work_summary}"
+        if response:
+            return response
         seed_str = f"{self.world_seed}:{self.world_position[0]}:{self.world_position[1]}"
         h = int(hashlib.md5(seed_str.encode()).hexdigest(), 16)
         postings = [

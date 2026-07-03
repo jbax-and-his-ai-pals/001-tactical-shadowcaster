@@ -101,6 +101,7 @@ class Quest:
     target_count: int = 0
     progress_count: int = 0
     stage: int = 0
+    objective_key: str = ""
     target_region_name: str = ""
     target_landmark_name: str = ""
     target_landmark_kind: str = ""

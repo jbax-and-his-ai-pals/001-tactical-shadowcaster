@@ -84,6 +84,7 @@
 - Town buildings are now loosely clustered into district-like bands such as town center, market square, works, and homes, giving larger settlements more legible internal structure
 - World map UX tightened: recenter button, right-panel scroll, chip vertical centering, wheel zoom (18% per step from center), prominent selected-region border drawn above preview tiles, three-pass render for correct depth order, local debug map preserves mode/pan/expanded state across close/reopen, click vs drag correctly disambiguated for all tile types
 - Overworld landmark variety expanded: 11 surface-modal site kinds (waystone, barrow, stone_circle, oasis, hot_spring, watchtower, grove, necropolis, geyser, standing_stone, camp) now generate alongside the 6 enterable kinds, with biome-specific pools; surface sites fire a reward modal on first visit without entering a local region, tracked in `claimed_surface_landmark_keys`
+- First place-based lead chains now exist on town notice boards: staged quests can send the player to a nearby region, require a site search or survey there, then route them back home for gold plus supplies
 
 ## Sequential Roadmap
 ### Phase 0 - Foundation Tightening

@@ -79,6 +79,7 @@ Line counts drift — run `python -B utils/largest_py_files.py shadowcaster/mixi
 | `game_world.py` | world generation, floor construction, exits, transitions, danger rules |
 | `game_towns.py` | town landmarks, building flavor, resident interactions, service logic; `surface_landmark_kinds()` gate in `enter_landmark` |
 | `game_landmark_services.py` | surface-modal landmark reward handlers; `apply_surface_landmark` fires directly from `enter_landmark` for non-enterable site kinds |
+| `game_town_reactions.py` | lightweight settlement-response text keyed off completed local work and prosperity |
 | `game_world_state.py` | region snapshots, local-region keys, save/load application |
 | `game_world_map_stats.py` | world-map region stats and settlement display |
 | `game_world_map_ui.py` | world-map layout, preview generation, debug-map behavior |
@@ -214,6 +215,8 @@ For a fuller walkthrough, read `docs/ARCHITECTURE.md`.
 - Gear is no longer town-only: deeper local delves and some higher-danger overworld regions can place unowned weapons or armor directly on the map, and duplicate non-consumable finds currently salvage into ammo instead of creating redundant inventory stacks
 - Overworld landmarks now split into two categories: enterable (cave, dungeon, castle, ruins, town, monster_town) which generate a full local-region interior, and surface-modal (waystone, barrow, stone_circle, oasis, hot_spring, watchtower, grove, necropolis, geyser, standing_stone, camp) which fire a reward modal immediately on step-on without entering a region. Surface modal rewards are tracked in `claimed_surface_landmark_keys` on the world-region snapshot so revisiting does not re-grant them. To add a new surface kind: add it to `surface_landmark_kinds()` in `game_towns.py`, add an elif branch in `apply_surface_landmark` in `game_landmark_services.py`, add a color/marker entry in `generate_landmarks`, add it to the relevant biome pool(s), and add a name table entry in `random_region_name` in `regions.py`.
 - Journal flow is now selection-first rather than click-to-open-map: entries are selected, `Show Map` only enables for selected active quests whose target region is truly discovered (not just preview-generated), and `Abandon` only enables for selected active quests
+- `chain` notice-board quests are now explicit staged leads rather than flavor-only scouts: they progress through travel -> objective -> return, use `Quest.stage` for their journal/map focus, and contribute to town prosperity/world-map quest stats alongside delivery/scout/bounty work. Their current reward variants are `ammo`, `medkit`, `tonic`, and `intel` (route reveal with ammo fallback), all encoded through `Quest.item_key`, while objective variants are `recover`, `survey`, and `hunt`, encoded through `Quest.objective_key`
+- Town response is now lightly surfaced without new UI: quest turn-ins can append a prosperity-flavor line, notice boards can swap from generic notices to settlement-response text after local work is completed, and town residents can fold that same response into ambient dialogue
 
 ## Smoke-Testing Without a Display
 Pygame needs a video driver even headless. Use this pattern for quick verification scripts (no test suite exists yet):

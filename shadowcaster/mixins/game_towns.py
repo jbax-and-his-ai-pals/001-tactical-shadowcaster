@@ -358,10 +358,10 @@ class TownsMixin(GameMixinBase):
         if self.apply_resident_boon(resident):
             return
         if resident.dialogue:
-            self.message = random.choice(resident.dialogue)
+            base = random.choice(resident.dialogue)
+            response = self.resident_town_response_line(resident)
+            self.message = f"{base} {response}".strip()
             return
         name = resident.name or f"the {resident.kind}"
         self.message = f"{name.capitalize()} nods to you." if resident.name else f"The {resident.kind} nods to you."
-
-
 

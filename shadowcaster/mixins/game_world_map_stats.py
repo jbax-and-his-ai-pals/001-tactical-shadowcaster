@@ -345,6 +345,7 @@ class WorldMapStatsMixin(GameMixinBase):
             "quest_delivery": quest_counts.get("delivery", 0),
             "quest_scout": quest_counts.get("scout", 0),
             "quest_bounty": quest_counts.get("bounty", 0),
+            "quest_chain": quest_counts.get("chain", 0),
             "prosperity_score": prosperity_score,
             "prosperity_label": self.town_prosperity_label(coord),
             "active_quest_posted_here": active_quest_summary["posted_here"],

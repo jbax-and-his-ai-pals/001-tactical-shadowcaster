@@ -15,6 +15,8 @@ class JournalUIMixin(GameMixinBase):
             return quest.from_world_pos if quest.stage >= 1 or quest.status == "complete" else quest.to_world_pos
         if quest.kind == "bounty":
             return quest.from_world_pos if quest.stage >= 1 or quest.status == "complete" else quest.to_world_pos
+        if quest.kind == "chain":
+            return quest.from_world_pos if quest.stage >= 2 or quest.status == "complete" else quest.to_world_pos
         return quest.from_world_pos
 
     def open_world_map_for_quest(self, quest):
@@ -48,7 +50,7 @@ class JournalUIMixin(GameMixinBase):
         return [quest for quest in self.active_quests if quest.status == "complete"]
 
     def completed_quest_counts(self, coord=None):
-        counts = {"delivery": 0, "scout": 0, "bounty": 0}
+        counts = {"delivery": 0, "scout": 0, "bounty": 0, "chain": 0}
         for quest in self.completed_quests():
             if coord is not None and quest.from_world_pos != coord:
                 continue
@@ -57,7 +59,7 @@ class JournalUIMixin(GameMixinBase):
 
     def town_prosperity_score(self, coord):
         counts = self.completed_quest_counts(coord)
-        return counts.get("delivery", 0) + counts.get("scout", 0) + counts.get("bounty", 0) * 2
+        return counts.get("delivery", 0) + counts.get("scout", 0) + counts.get("chain", 0) * 2 + counts.get("bounty", 0) * 2
 
     def town_prosperity_label(self, coord):
         score = self.town_prosperity_score(coord)
@@ -121,6 +123,16 @@ class JournalUIMixin(GameMixinBase):
                     summary["lines"].append("Bounty turn-in ready here.")
                 elif touches_origin:
                     summary["lines"].append(f"Bounty posted toward {quest.target_region_name}.")
+            elif quest.kind == "chain":
+                if touches_target and quest.stage <= 1:
+                    if quest.objective_key == "hunt":
+                        summary["lines"].append(f"Lead active: hunt {quest.target_count} foes.")
+                    else:
+                        summary["lines"].append(f"Lead active: recover {quest.item_name or 'proof'}.")
+                elif touches_origin and quest.stage >= 2:
+                    summary["lines"].append("Lead return ready here.")
+                elif touches_origin:
+                    summary["lines"].append(f"Lead posted toward {quest.target_region_name}.")
         deduped = []
         for line in summary["lines"]:
             if line not in deduped:
@@ -145,6 +157,16 @@ class JournalUIMixin(GameMixinBase):
             return "Report Back" if quest.stage >= 1 else "Scouting"
         if quest.kind == "bounty":
             return "Turn In" if quest.stage >= 1 else "Bounty"
+        if quest.kind == "chain":
+            if quest.stage >= 2:
+                return "Return Lead"
+            if quest.objective_key == "hunt" and quest.stage == 1:
+                return "Hunt Lead"
+            if quest.objective_key == "survey" and quest.stage == 1:
+                return "Survey Lead"
+            if quest.stage == 1:
+                return "Search Site"
+            return "Follow Lead"
         return quest.kind.title()
 
     def quest_progress_text(self, quest):
@@ -168,6 +190,8 @@ class JournalUIMixin(GameMixinBase):
                 kills = quest.target_count
             home_name = quest.origin_town_name or f"({quest.from_world_pos[0]}, {quest.from_world_pos[1]})"
             return f"{min(kills, quest.target_count)}/{quest.target_count} foes defeated. Return to {home_name} for {quest.reward_gold}g."
+        if quest.kind == "chain":
+            return self.chain_stage_text(quest)
         return f"Reward {quest.reward_gold}g."
 
     def journal_entry_lines(self, quest):
@@ -188,6 +212,7 @@ class JournalUIMixin(GameMixinBase):
             "delivery": counts.get("delivery", 0),
             "scout": counts.get("scout", 0),
             "bounty": counts.get("bounty", 0),
+            "chain": counts.get("chain", 0),
         }
 
     def journal_button_rect(self):
@@ -245,7 +270,7 @@ class JournalUIMixin(GameMixinBase):
             return [f"{counts['active']} active"]
         return [
             f"{counts['completed']} completed",
-            f"Towns helped {counts['towns_helped']}  -  D {counts['delivery']} / S {counts['scout']} / B {counts['bounty']}",
+            f"Towns helped {counts['towns_helped']}  -  D {counts['delivery']} / S {counts['scout']} / B {counts['bounty']} / C {counts['chain']}",
         ]
 
     def journal_content_height(self):

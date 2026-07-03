@@ -25,6 +25,7 @@ from .game_rewards_ui import RewardsUIMixin
 from .game_terrain import TerrainMixin
 from .game_landmark_services import LandmarkServicesMixin
 from .game_towns import TownsMixin
+from .game_town_reactions import TownReactionsMixin
 from .game_towns_reveal import TownsRevealMixin
 from .game_ui import UIMixin
 from .game_visibility import VisibilityMixin
@@ -64,6 +65,7 @@ __all__ = [
     "TerrainMixin",
     "LandmarkServicesMixin",
     "TownsMixin",
+    "TownReactionsMixin",
     "TownsRevealMixin",
     "UIMixin",
     "VisibilityMixin",
