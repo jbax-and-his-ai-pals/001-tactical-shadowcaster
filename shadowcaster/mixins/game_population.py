@@ -7,6 +7,7 @@ from ..constants import (
     COLOR_ENEMY_BRUTE,
     COLOR_HOSTILE_BEAST,
     COLOR_HOSTILE_SETTLER,
+    INTERIOR_REGION_TYPES,
 )
 from ..game_typing import GameMixinBase
 from ..models import Enemy
@@ -71,7 +72,7 @@ class PopulationMixin(GameMixinBase):
 
     def spawn_enemies(self):
         self.enemies = []
-        if self.region_type in {"town", "inn", "clinic", "supply", "shrine", "smith", "cartographer", "tavern", "chapel", "stable"}:
+        if self.region_type in {"town"} | INTERIOR_REGION_TYPES:
             self.enemies_spawned = 0
             return
         positions = self.enemy_spawn_positions()

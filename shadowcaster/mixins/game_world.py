@@ -10,7 +10,7 @@ from ..constants import (
     COLOR_ACCENT, COLOR_ENEMY, COLOR_FRIEND, COLOR_HEAL, COLOR_ITEM_ARMOR,
     COLOR_ITEM_CONSUMABLE, COLOR_ITEM_WEAPON, COLOR_MEMORY_HEAL, COLOR_STAIRS,
     COLOR_TEXT, FLOOR_BASE_HEIGHT, FLOOR_BASE_WIDTH, FOV_RADIUS,
-    SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE, VIEW_HEIGHT, VIEW_WIDTH,
+    INTERIOR_REGION_TYPES, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE, VIEW_HEIGHT, VIEW_WIDTH,
 )
 from ..models import Enemy, GroundItem, Item, Landmark, RegionPalette, Resident, UpgradePickup
 from ..persistence import has_save, list_saves, load_game, save_game
@@ -36,7 +36,7 @@ class WorldMixin(GameMixinBase):
         return {"dungeon", "cave", "castle", "town", "ruins", "monster_town"}
 
     def exploration_rewards_enabled(self, region_type=None):
-        return (region_type or self.region_type) not in {"inn", "clinic", "supply", "shrine", "smith", "cartographer", "tavern", "chapel", "stable"}
+        return (region_type or self.region_type) not in INTERIOR_REGION_TYPES
 
     def is_overworld_region(self, region_type=None):
         return (region_type or self.region_type) in self.overworld_region_types()
@@ -49,7 +49,7 @@ class WorldMixin(GameMixinBase):
 
     def choose_start_region(self):
         with self.seed_scope("start_region"):
-            region_type = "town"
+            region_type = "plains"
             return RegionChoice(region_type=region_type, name=random_region_name(region_type), summary="")
 
     def new_run_seed(self):
@@ -196,20 +196,23 @@ class WorldMixin(GameMixinBase):
         self.world_map_open = not self.world_map_open
         self.prepare_overlay_toggle(opening=self.world_map_open, stop_auto=True, clear_manual=False)
         if self.world_map_open:
-            self.world_map_mode = "discovered"
-            self.selected_world_region = self.world_position
+            self.selected_world_region = self.selected_world_region or self.world_position
             self.world_map_detail_scroll = 0
-            self.set_world_map_center(self.world_position)
+            if self.world_map_view_center is None:
+                if self.world_map_mode == "local_debug" and self.local_debug_target_coords:
+                    xs = [c[0] for c in self.local_debug_target_coords]
+                    ys = [c[1] for c in self.local_debug_target_coords]
+                    self.world_map_view_center = (sum(xs) / len(xs), sum(ys) / len(ys))
+                else:
+                    self.set_world_map_center(self.world_position)
             self.hovered_world_region = self.world_position
             self.update_world_map_hover(*self.mouse_screen_pos)
         else:
             self.hovered_world_region = None
-            self.world_map_view_center = None
             self.world_map_dragging = False
             self.world_map_center_animation = None
             self.preview_generation_queue = []
             self.preview_generation_keys.clear()
-            self.local_debug_target_coords = set()
         self.message = "World map open." if self.world_map_open else f"You return to {self.region_name}."
 
     def clear_player_status(self, effect):

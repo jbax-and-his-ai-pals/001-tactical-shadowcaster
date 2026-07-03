@@ -39,6 +39,7 @@ class Resident:
     behavior: str = "wander"
     anchor: tuple[int, int] | None = None
     home_name: str = ""
+    name: str = ""
     patrol_points: tuple[tuple[int, int], ...] = field(default_factory=lambda: ())
     patrol_index: int = 0
 

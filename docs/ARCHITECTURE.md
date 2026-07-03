@@ -28,7 +28,8 @@ Current gameplay mixins:
 | `shadowcaster/mixins/game_core.py` | app bootstrap, shared state, tuning schema, top-level run/render shell |
 | `shadowcaster/mixins/game_world.py` | world/seed policy, danger rules, region-choice helpers |
 | `shadowcaster/mixins/game_world_travel.py` | arrivals, exits, world transitions, preview region capture |
-| `shadowcaster/mixins/game_towns.py` | town landmarks, building flavor, resident interactions, service logic |
+| `shadowcaster/mixins/game_towns.py` | town landmarks, building flavor, resident interactions, service logic; `surface_landmark_kinds()` gate in `enter_landmark` |
+| `shadowcaster/mixins/game_landmark_services.py` | surface-modal landmark reward handlers (`apply_surface_landmark`); fires directly without entering a local region |
 | `shadowcaster/mixins/game_world_state.py` | region snapshots, save/load application, local-region keys, world-state restoration |
 | `shadowcaster/mixins/game_floor_generation.py` | floor construction, endpoints, pickup placement, feature placement |
 | `shadowcaster/mixins/game_world_map_preview.py` | preview generation queue and local-debug preview caching |

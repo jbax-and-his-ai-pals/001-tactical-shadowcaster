@@ -59,6 +59,8 @@ if TYPE_CHECKING:
         debug_omniscient: bool
         perf_overlay: bool
         perf_timings: dict
+        source_lit_tiles: set
+        _last_sign_anchor: Any
         last_interest_tiles: Any
         upgrade_pickup: Any
         heal_pickup: Any

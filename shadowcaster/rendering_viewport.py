@@ -20,6 +20,7 @@ from .constants import (
     COLOR_TERRAIN_MESA,
     COLOR_TERRAIN_POND,
     COLOR_TEXT,
+    COLOR_LIGHT_WARM,
     SIDE_PANEL_WIDTH,
     VIEW_HEIGHT,
     VIEW_WIDTH,
@@ -76,6 +77,8 @@ def render_viewport(screen, game, start_x, end_x, start_y, end_y):
                 if floor_item is not None:
                     base = floor_item.item.color
                     color = base if visible else tuple(max(18, component // 2) for component in base)
+            if visible and (x, y) in getattr(game, "source_lit_tiles", set()) and game.dungeon.tiles[x][y] == 0:
+                color = tuple(int(c * 0.78 + w * 0.22) for c, w in zip(color, COLOR_LIGHT_WARM))
             draw_tile(screen, x - game.camera_x, y - game.camera_y, color)
             if (x, y) == game.stairs:
                 draw_marker(screen, x - game.camera_x, y - game.camera_y, "stairs", COLOR_TEXT if visible else COLOR_ACCENT)

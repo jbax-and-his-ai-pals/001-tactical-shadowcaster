@@ -20,9 +20,12 @@ from .game_quest_text import QuestTextMixin
 from .game_quests import QuestsMixin
 from .game_resident_boons import ResidentBoonsMixin
 from .game_residents import ResidentsMixin
+from .game_residents_town import ResidentsTownMixin
 from .game_rewards_ui import RewardsUIMixin
 from .game_terrain import TerrainMixin
+from .game_landmark_services import LandmarkServicesMixin
 from .game_towns import TownsMixin
+from .game_towns_reveal import TownsRevealMixin
 from .game_ui import UIMixin
 from .game_visibility import VisibilityMixin
 from .game_world import WorldMixin
@@ -55,10 +58,13 @@ __all__ = [
     "QuestsMixin",
     "ResidentBoonsMixin",
     "ResidentsMixin",
+    "ResidentsTownMixin",
     "TuningMixin",
     "RewardsUIMixin",
     "TerrainMixin",
+    "LandmarkServicesMixin",
     "TownsMixin",
+    "TownsRevealMixin",
     "UIMixin",
     "VisibilityMixin",
     "WorldMixin",

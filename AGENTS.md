@@ -77,7 +77,8 @@ Line counts drift — run `python -B utils/largest_py_files.py shadowcaster/mixi
 |---|---|
 | `game_core.py` | bootstrap, shared runtime state, tuning defaults, top-level run/render shell |
 | `game_world.py` | world generation, floor construction, exits, transitions, danger rules |
-| `game_towns.py` | towns, service interiors, resident interactions, building flavor |
+| `game_towns.py` | town landmarks, building flavor, resident interactions, service logic; `surface_landmark_kinds()` gate in `enter_landmark` |
+| `game_landmark_services.py` | surface-modal landmark reward handlers; `apply_surface_landmark` fires directly from `enter_landmark` for non-enterable site kinds |
 | `game_world_state.py` | region snapshots, local-region keys, save/load application |
 | `game_world_map_stats.py` | world-map region stats and settlement display |
 | `game_world_map_ui.py` | world-map layout, preview generation, debug-map behavior |
@@ -211,6 +212,7 @@ For a fuller walkthrough, read `docs/ARCHITECTURE.md`.
 - Settlements now carry size/context metadata and parent-biome flavor; if you add new town-facing UI, prefer using the display-label helpers rather than recomputing names ad hoc
 - Hover inspect should stay informational only for distant entities; actual resident/NPC interaction text belongs to adjacency/interact actions
 - Gear is no longer town-only: deeper local delves and some higher-danger overworld regions can place unowned weapons or armor directly on the map, and duplicate non-consumable finds currently salvage into ammo instead of creating redundant inventory stacks
+- Overworld landmarks now split into two categories: enterable (cave, dungeon, castle, ruins, town, monster_town) which generate a full local-region interior, and surface-modal (waystone, barrow, stone_circle, oasis, hot_spring, watchtower, grove, necropolis, geyser, standing_stone, camp) which fire a reward modal immediately on step-on without entering a region. Surface modal rewards are tracked in `claimed_surface_landmark_keys` on the world-region snapshot so revisiting does not re-grant them. To add a new surface kind: add it to `surface_landmark_kinds()` in `game_towns.py`, add an elif branch in `apply_surface_landmark` in `game_landmark_services.py`, add a color/marker entry in `generate_landmarks`, add it to the relevant biome pool(s), and add a name table entry in `random_region_name` in `regions.py`.
 - Journal flow is now selection-first rather than click-to-open-map: entries are selected, `Show Map` only enables for selected active quests whose target region is truly discovered (not just preview-generated), and `Abandon` only enables for selected active quests
 
 ## Smoke-Testing Without a Display
@@ -245,4 +247,5 @@ Adding any of these means: extend the cycle in `create_upgrade_pickup`, add tuni
 - Future town work should use transition tiles or doors into dedicated interior maps rather than cramming interiors onto the outdoor map
 - Next roadmap step under consideration: deepening town interactions beyond one-shot service rooms; generation-side groundwork now includes service rooms, door integrity, biome-aware settlement metadata, non-service building flavor, and simple resident routines/patrols
 - Input work is now far enough along that regressions often show up in overlays first; if a modal changes, verify keyboard, mouse, controller, and touch all still have a viable path through it
-- The current near-term roadmap slice is still Phase 1 scaffolding: landmark/site identity and world-map/site progress were just strengthened, so the next natural feature step is multi-step place-based quest chains or non-combat landmark rewards rather than another broad UI refactor
+- Landmark variety was expanded in the last session: overworld regions now generate 11 surface-modal site kinds (waystone, barrow, stone_circle, oasis, hot_spring, watchtower, grove, necropolis, geyser, standing_stone, camp) in addition to the 6 enterable kinds (cave, dungeon, castle, ruins, town, monster_town). Surface kinds fire a reward modal immediately on step-on without generating a local interior, tracked via `claimed_surface_landmark_keys` in the region snapshot. Biome landmark pools now vary significantly per biome.
+- The current near-term roadmap slice is Phase 1: with landmark variety landed, the next natural step is multi-step place-based quest chains, or deepening landmark identity/world-map site progress display

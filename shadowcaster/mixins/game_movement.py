@@ -1,11 +1,46 @@
 from __future__ import annotations
 
+import random
 import pygame
 
 from ..constants import MOVE_REPEAT_INTERVAL_MS
 from ..game_typing import GameMixinBase
 from ..regions import RegionChoice
 from ..systems import can_step, find_path
+
+_SIGN_QUIPS = {
+    "tavern": [
+        "Ale cures most ills. The rest, we don't talk about.",
+        "Trust the cook. Don't ask what's in the stew.",
+        "No brawling. Unless it's Tuesday.",
+        "Rooms rented by the night. Secrets kept for free.",
+        "The house wine is worse than it sounds.",
+        "Tab must be settled before departure. Or else.",
+        "Mind your boots — the floor remembers everything.",
+        "Travelers welcome. Trouble, less so.",
+        "What happens in the common room stays in the common room.",
+        "Finest spirits in the region. We've stopped comparing.",
+    ],
+    "hall": [
+        "Speak plainly. Shout nothing.",
+        "All grievances heard. All decisions final.",
+        "Meeting days: whenever necessary.",
+        "Civic duty is its own reward.",
+    ],
+    "supply": [
+        "No credit extended. No exceptions.",
+        "All sales final unless we made the error.",
+        "Inspect before purchase.",
+    ],
+    "granary": [
+        "Measure twice, pour once.",
+        "All grain weighed at intake. All discrepancies noted.",
+    ],
+    "storehouse": [
+        "Inventory is updated weekly. Mostly.",
+        "Do not move items without a reason.",
+    ],
+}
 
 
 class MovementMixin(GameMixinBase):
@@ -77,9 +112,23 @@ class MovementMixin(GameMixinBase):
             self.descend()
             return True
         if self.terrain_kind_at(self.player) == "notice_board" and self.region_type == "town":
-            self.stop_auto_movement()
-            self._notice_board_interact()
-            return True
+            anchor = self.feature_anchor_at(self.player) or self.player
+            if anchor != self._notice_board_anchor:
+                self._notice_board_anchor = anchor
+                self.stop_auto_movement()
+                self._notice_board_interact()
+                return True
+        else:
+            self._notice_board_anchor = None
+        if self.terrain_kind_at(self.player) == "sign":
+            anchor = self.feature_anchor_at(self.player) or self.player
+            if anchor != self._last_sign_anchor:
+                self._last_sign_anchor = anchor
+                quips = _SIGN_QUIPS.get(self.region_type)
+                if quips:
+                    self.message = f'The sign reads: "{random.choice(quips)}"'
+        else:
+            self._last_sign_anchor = None
         service_spot = getattr(self.dungeon, "metadata", {}).get("service_spot")
         if service_spot and self.player == service_spot and not self.service_claimed:
             self.stop_auto_movement()

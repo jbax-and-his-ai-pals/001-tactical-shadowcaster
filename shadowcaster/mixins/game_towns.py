@@ -12,19 +12,21 @@ from ..systems import heuristic
 class TownsMixin(GameMixinBase):
     def resident_role_summary(self, resident):
         summaries = {
-            "guide": "Can mark one local site",
-            "scout": "Can reveal one nearby route",
-            "farmer": "May share a meal",
-            "watch": "Can warn you about nearby danger",
-            "vendor": "May spare a little trail stock",
-            "herbalist": "May soothe poison or burn",
-            "elder": "Can point out a hidden address",
-            "drover": "May spare trail ammunition",
-            "miller": "May share a field kit",
-            "ferryman": "Can point out the town's way out",
-            "mason": "Can brace you with a ward",
-            "trapper": "May spare a tonic",
-            "kilnkeeper": "Can bank the heat into a ward",
+            "guide":       "Can mark one local site",
+            "scout":       "Can reveal one nearby route",
+            "farmer":      "May share a meal",
+            "watch":       "Can warn you about nearby danger",
+            "vendor":      "May spare a little trail stock",
+            "herbalist":   "May soothe poison or burn",
+            "elder":       "Can point out a hidden address",
+            "drover":      "May spare trail ammunition",
+            "miller":      "May share a field kit",
+            "ferryman":    "Can point out the town's way out",
+            "mason":       "Can brace you with a ward",
+            "trapper":     "May spare a tonic",
+            "kilnkeeper":  "Can bank the heat into a ward",
+            "wanderer":    "Can tip you off about a distant region",
+            "child":       "Has nothing much to say, but means it",
         }
         return summaries.get(resident.kind)
 
@@ -50,6 +52,13 @@ class TownsMixin(GameMixinBase):
             "tavern": ("tavern", (208, 164, 96)),
             "chapel": ("chapel", (196, 188, 240)),
             "stable": ("stable", (172, 148, 108)),
+            "house": ("home", (210, 196, 168)),
+            "hall": ("civic", (200, 192, 236)),
+            "granary": ("work", (196, 176, 128)),
+            "barn": ("work", (172, 152, 112)),
+            "workshop": ("work", (172, 168, 160)),
+            "smokehouse": ("work", (180, 160, 140)),
+            "storehouse": ("work", (176, 170, 152)),
         }
         landmarks = []
         for index, building in enumerate(building_data):
@@ -89,6 +98,9 @@ class TownsMixin(GameMixinBase):
             return origin
         return min(path_tiles, key=lambda tile: heuristic(tile, origin))
 
+    def surface_landmark_kinds(self):
+        return {"waystone", "barrow", "stone_circle", "oasis", "hot_spring", "watchtower", "grove", "necropolis", "geyser", "standing_stone", "camp"}
+
     def generate_landmarks(self):
         if self.region_type == "town":
             return self.town_building_landmarks()
@@ -112,15 +124,15 @@ class TownsMixin(GameMixinBase):
         }
         count = random.choices([0, 1, 2], weights=count_weights.get(self.region_type, [2, 5, 2]), k=1)[0]
         landmark_pool = {
-            "forest": ["town", "cave", "ruins", "dungeon", "town"],
-            "plains": ["town", "castle", "cave", "ruins", "town"],
-            "farmland": ["town", "town", "castle", "ruins", "cave"],
-            "desert": ["ruins", "cave", "dungeon", "town", "ruins"],
-            "swamp": ["ruins", "cave", "dungeon", "ruins", "town"],
-            "mountain": ["castle", "dungeon", "cave", "ruins", "cave"],
-            "badlands": ["ruins", "castle", "cave", "dungeon", "ruins"],
-            "tundra": ["cave", "ruins", "town", "castle", "dungeon"],
-            "volcanic": ["dungeon", "cave", "ruins", "monster_town", "dungeon"],
+            "forest":   ["town", "cave", "ruins", "shrine", "cache", "grove", "stone_circle", "barrow", "watchtower", "standing_stone"],
+            "plains":   ["town", "castle", "cave", "ruins", "shrine", "waystone", "barrow", "watchtower", "standing_stone", "camp"],
+            "farmland": ["town", "town", "castle", "shrine", "cache", "watchtower", "grove", "camp"],
+            "desert":   ["ruins", "cave", "dungeon", "cache", "oasis", "standing_stone", "necropolis", "camp"],
+            "swamp":    ["ruins", "cave", "dungeon", "cache", "stone_circle", "grove", "standing_stone", "camp"],
+            "mountain": ["castle", "dungeon", "cave", "shrine", "cache", "hot_spring", "barrow", "watchtower", "stone_circle", "geyser"],
+            "badlands": ["ruins", "castle", "cave", "dungeon", "cache", "necropolis", "standing_stone", "camp"],
+            "tundra":   ["cave", "ruins", "castle", "shrine", "cache", "hot_spring", "barrow", "necropolis", "waystone"],
+            "volcanic": ["dungeon", "cave", "ruins", "monster_town", "cache", "geyser", "hot_spring", "standing_stone"],
         }.get(self.region_type, ["cave", "dungeon", "town", "castle", "ruins"])
         random.shuffle(available_tiles)
         random.shuffle(landmark_pool)
@@ -135,17 +147,40 @@ class TownsMixin(GameMixinBase):
         for index in range(min(count, len(available_tiles), len(chosen_kinds))):
             kind = chosen_kinds[index]
             marker, color = {
-                "cave": ("cave", (172, 144, 116)),
-                "dungeon": ("dungeon", (154, 164, 182)),
-                "town": ("town", (210, 182, 120)),
-                "castle": ("castle", (196, 188, 220)),
-                "ruins": ("ruins", (184, 148, 108)),
-                "monster_town": ("monster_town", (220, 96, 120)),
-            }[kind]
+                "cave":          ("cave",          (172, 144, 116)),
+                "dungeon":       ("dungeon",        (154, 164, 182)),
+                "town":          ("town",           (210, 182, 120)),
+                "castle":        ("castle",         (196, 188, 220)),
+                "ruins":         ("ruins",          (184, 148, 108)),
+                "monster_town":  ("monster_town",   (220, 96,  120)),
+                "shrine":        ("shrine",         (212, 196, 248)),
+                "cache":         ("cache",          (188, 164, 112)),
+                "waystone":      ("waystone",       (168, 210, 200)),
+                "barrow":        ("barrow",         (160, 148, 132)),
+                "stone_circle":  ("stone_circle",   (186, 172, 220)),
+                "oasis":         ("oasis",          (120, 196, 164)),
+                "hot_spring":    ("hot_spring",     (220, 168, 140)),
+                "watchtower":    ("watchtower",     (180, 196, 164)),
+                "grove":         ("grove",          (140, 188, 128)),
+                "necropolis":    ("necropolis",     (148, 140, 164)),
+                "geyser":        ("geyser",         (200, 180, 148)),
+                "standing_stone":("standing_stone", (172, 164, 148)),
+                "camp":          ("camp",           (180, 160, 120)),
+            }.get(kind, ("town", (210, 182, 120)))
             landmarks.append(Landmark(f"poi_{index}_{kind}", available_tiles[index], kind, random_region_name(kind), color, marker))
+        is_start_region = self.world_position == (0, 0) and not self.in_local_region()
+        if is_start_region and not any(lm.kind == "town" for lm in landmarks):
+            used_tiles = {lm.position for lm in landmarks}
+            fallback_tiles = [t for t in available_tiles if t not in used_tiles]
+            if fallback_tiles:
+                tile = fallback_tiles[0]
+                landmarks.insert(0, Landmark("poi_start_town", tile, "town", random_region_name("town"), (210, 182, 120), "town"))
         return landmarks
 
     def enter_landmark(self, landmark):
+        if landmark.kind in self.surface_landmark_kinds():
+            self.apply_surface_landmark(landmark)
+            return
         self.store_current_region()
         if self.in_local_region():
             context_base = self.local_region_base_key()
@@ -178,7 +213,7 @@ class TownsMixin(GameMixinBase):
         self.message = f"You enter {landmark.name}."
 
     def apply_town_service(self):
-        if self.service_claimed or self.region_type not in {"inn", "clinic", "supply", "shrine", "smith", "cartographer", "tavern", "chapel", "stable", "cave", "dungeon", "castle", "ruins"}:
+        if self.service_claimed or self.region_type not in {"inn", "clinic", "supply", "shrine", "smith", "cartographer", "tavern", "chapel", "stable", "cave", "dungeon", "castle", "ruins", "cache"}:
             return
         title = ""
         lines = []
@@ -301,6 +336,13 @@ class TownsMixin(GameMixinBase):
             self.add_item("medkit", "Healing Potion", "consumable", COLOR_HEAL, "vitality", quantity=1, description="Restores health.")
             lines.append("You salvage a healing potion from the debris.")
             lines.append("+1 healing potion.")
+        elif self.region_type == "cache":
+            title = "Cache Opened"
+            self.ammo += 3
+            self.add_item("medkit", "Healing Potion", "consumable", COLOR_HEAL, "vitality", quantity=2, description="Restores health.")
+            self.add_item("tonic", "Ward Tonic", "consumable", COLOR_ACCENT, "power", quantity=1, description="Clears statuses and grants ward.")
+            lines.append("Someone packed this carefully. You take everything.")
+            lines.append(f"+3 ammo (now {self.ammo}), +2 healing potions, +1 ward tonic.")
         self.service_claimed = True
         self.service_modal_title = title
         self.service_modal_lines = lines
@@ -318,49 +360,8 @@ class TownsMixin(GameMixinBase):
         if resident.dialogue:
             self.message = random.choice(resident.dialogue)
             return
-        self.message = f"The {resident.kind} nods to you."
+        name = resident.name or f"the {resident.kind}"
+        self.message = f"{name.capitalize()} nods to you." if resident.name else f"The {resident.kind} nods to you."
 
-    def reveal_one_adjacent_world_region(self):
-        candidates = []
-        for direction in ("north", "south", "west", "east"):
-            coord = self.move_coord(self.world_position, direction)
-            key = self.region_key(coord)
-            if key in self.world_regions:
-                continue
-            candidates.append(coord)
-        if not candidates:
-            return None
-        with self.seed_scope("scout_reveal", self.world_position, tuple(sorted(candidates))):
-            coord = random.choice(candidates)
-        state = self.create_world_region_state(coord)
-        self.world_regions[self.region_key(coord)] = state
-        return coord, state["region_name"]
 
-    def reveal_one_hidden_town_building(self):
-        hidden_buildings = [
-            building
-            for building in self.town_building_data()
-            if building.get("door") not in self.seen_tiles
-        ]
-        if not hidden_buildings:
-            return None
-        building = min(
-            hidden_buildings,
-            key=lambda entry: heuristic(self.player, entry.get("door") or entry.get("center") or self.player),
-        )
-        door = building.get("door")
-        center = building.get("center")
-        if door is not None:
-            self.seen_tiles.add(door)
-        if center is not None:
-            self.seen_tiles.add(center)
-        return building
-
-    def reveal_one_town_exit(self):
-        hidden_exits = [tile for tile in self.edge_exits.values() if tile is not None and tile not in self.seen_tiles]
-        if not hidden_exits:
-            return None
-        exit_tile = min(hidden_exits, key=lambda tile: heuristic(self.player, tile))
-        self.seen_tiles.add(exit_tile)
-        return exit_tile
 

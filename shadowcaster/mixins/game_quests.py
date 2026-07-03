@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 
+from ..constants import COLOR_ACCENT, COLOR_HEAL
 from ..models import Quest
 from .game_quest_text import QuestTextMixin
 
@@ -81,6 +82,37 @@ class QuestsMixin(QuestTextMixin):
             origin_town_name=self.region_name,
         )
 
+    def _board_quest_chain(self, wx, wy, slot):
+        cycle = self.quest_posting_cycle()
+        h = int(hashlib.md5(f"chain:{self.world_seed}:{wx}:{wy}:{slot}:{cycle}".encode()).hexdigest(), 16)
+        dx, dy = self._QUEST_DIRECTIONS[h % 8]
+        dist = (h >> 3) % 2 + 1
+        to_pos = (wx + dx * dist, wy + dy * dist)
+        dir_name = self._QUEST_DIR_NAMES[(dx, dy)]
+        region_name, landmark_name, landmark_kind = self.scout_target_details(to_pos, h)
+        reward = 25 + (h % 5) * 10
+        if landmark_name:
+            lead_template, supply_kind = self._CHAIN_LEADS[h % len(self._CHAIN_LEADS)]
+            description = self.chain_description(landmark_name, region_name, dir_name, lead_template)
+        else:
+            lead_template, supply_kind = self._CHAIN_FALLBACK_LEADS[h % len(self._CHAIN_FALLBACK_LEADS)]
+            description = self.chain_fallback_description(region_name, dir_name, lead_template)
+        return Quest(
+            id=f"chain_{wx}_{wy}_{slot}_{cycle}",
+            kind="chain",
+            from_world_pos=(wx, wy),
+            to_world_pos=to_pos,
+            to_town_hint=region_name,
+            item_key=supply_kind,
+            item_name="",
+            description=description,
+            reward_gold=reward,
+            target_region_name=region_name,
+            target_landmark_name=landmark_name,
+            target_landmark_kind=landmark_kind,
+            origin_town_name=self.region_name,
+        )
+
     def generate_board_quests(self) -> list:
         if self.region_type != "town":
             return []
@@ -88,8 +120,8 @@ class QuestsMixin(QuestTextMixin):
         cycle = self.quest_posting_cycle()
         h = int(hashlib.md5(f"board:{self.world_seed}:{wx}:{wy}:{cycle}".encode()).hexdigest(), 16)
         builders = [self._board_quest_delivery, self._board_quest_scout, self._board_quest_bounty]
-        quests = []
-        for slot in range(5):
+        quests = [self._board_quest_chain(wx, wy, 0)]
+        for slot in range(1, 5):
             idx = (h >> (slot * 3)) % len(builders)
             quests.append(builders[idx](wx, wy, slot))
         return quests
@@ -166,6 +198,15 @@ class QuestsMixin(QuestTextMixin):
                 self.message = f"Quest accepted: scout {self.quest_target_label(quest)} and report back to {quest.origin_town_name}."
         elif quest.kind == "bounty":
             self.message = f"Quest accepted: hunt in {self.quest_target_label(quest)} and return for {quest.reward_gold}g."
+        elif quest.kind == "chain":
+            key = self.region_key(quest.to_world_pos)
+            if key not in self.world_regions and key not in self.preview_world_regions:
+                state = self.create_world_region_state(quest.to_world_pos)
+                self.preview_world_regions[key] = state
+            if quest.target_landmark_name:
+                self.message = f"Lead accepted: find {quest.target_landmark_name} in {self.quest_target_label(quest)}, then return for {quest.reward_gold}g + supplies."
+            else:
+                self.message = f"Lead accepted: survey {self.quest_target_label(quest)}, then return for {quest.reward_gold}g + supplies."
         if self.notice_board_open:
             self.refresh_notice_board(keep_selection=True)
 
@@ -201,6 +242,15 @@ class QuestsMixin(QuestTextMixin):
             self.message = f"Quest complete - report filed on {target_label}. Received {quest.reward_gold}g. Total: {self.gold}g."
         elif quest.kind == "bounty":
             self.message = f"Quest complete - contract settled for {quest.target_region_name}. Received {quest.reward_gold}g. Total: {self.gold}g."
+        elif quest.kind == "chain":
+            target_label = quest.target_landmark_name or quest.target_region_name or "the site"
+            if quest.item_key == "medkit":
+                self.add_item("medkit", "Healing Potion", "consumable", COLOR_HEAL, "vitality", quantity=1, description="Restores health.")
+                supply_note = "+1 healing potion"
+            else:
+                self.ammo += 2
+                supply_note = f"+2 ammo (now {self.ammo})"
+            self.message = f"Lead closed on {target_label}. Received {quest.reward_gold}g, {supply_note}. Total: {self.gold}g."
         if self.notice_board_open and self.region_type == "town":
             self.refresh_notice_board(keep_selection=True)
 
@@ -224,6 +274,20 @@ class QuestsMixin(QuestTextMixin):
                     self.message = f"Bounty ground reached: {quest.target_region_name}. Make the area safe, then return to {quest.origin_town_name}."
                 kills = self.enemies_defeated - quest.progress_count if quest.stage >= 1 else 0
                 if kills >= quest.target_count and self.world_position == quest.from_world_pos and self.region_type == "town":
+                    self._complete_quest(quest)
+            elif quest.kind == "chain":
+                if quest.stage == 0 and self.world_position == quest.to_world_pos:
+                    quest.stage = 1
+                elif quest.stage == 1 and self.scout_objective_met(quest):
+                    quest.stage = 2
+                    revealed = self.reveal_one_adjacent_world_region()
+                    mid_msg = self.chain_mid_message(quest.target_landmark_name, quest.target_region_name)
+                    if revealed:
+                        _, region_name = revealed
+                        self.message = f"{mid_msg} A new route to {region_name} is now visible."
+                    else:
+                        self.message = mid_msg
+                elif quest.stage >= 2 and self.region_type == "town" and self.world_position == quest.from_world_pos:
                     self._complete_quest(quest)
 
     def _notice_board_interact(self):

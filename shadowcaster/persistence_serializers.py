@@ -79,6 +79,7 @@ def resident_to_data(resident):
         "behavior": resident.behavior,
         "anchor": pack_position(resident.anchor),
         "home_name": resident.home_name,
+        "name": resident.name,
         "patrol_points": [pack_position(point) for point in resident.patrol_points],
         "patrol_index": resident.patrol_index,
     }
@@ -95,6 +96,7 @@ def resident_from_data(data):
         data.get("behavior", "wander"),
         unpack_position(data.get("anchor")),
         data.get("home_name", ""),
+        data.get("name", ""),
         tuple(unpack_required_position(point) for point in data.get("patrol_points", [])),
         data.get("patrol_index", 0),
     )

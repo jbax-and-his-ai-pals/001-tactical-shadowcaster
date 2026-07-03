@@ -230,20 +230,37 @@ def _assign_buildings(region, profile, plaza, houses):
             return remaining_houses.pop(-1)
         return remaining_houses.pop(len(remaining_houses) // 2)
 
+    def flavor_interior_kind(role, name):
+        if role == "home":
+            return "house"
+        if role == "civic":
+            return "hall"
+        lowered = name.lower()
+        if any(k in lowered for k in ("barn", "feed", "goat", "camel", "kennel")):
+            return "barn"
+        if any(k in lowered for k in ("granary", "grain", "cellar", "root", "ice store")):
+            return "granary"
+        if any(k in lowered for k in ("smokehouse", "smoke", "drying", "charcoal")):
+            return "smokehouse"
+        if any(k in lowered for k in ("shed", "tool", "lumber", "ore", "slag", "tack", "scrap", "coal", "kiln", "dye")):
+            return "workshop"
+        return "storehouse"
+
     for role, label in flavor_pool:
         house = choose_house_for_role(role)
         if house is None:
             break
         room = house["room"]
+        interior_kind = flavor_interior_kind(role, label)
         region.metadata["town_buildings"].append(
             {
-                "kind": role,
+                "kind": interior_kind,
                 "name": label,
                 "door": house["door"],
                 "center": room.center,
                 "room": {"x": room.x, "y": room.y, "w": room.w, "h": room.h},
                 "role": role,
-                "enterable": False,
+                "enterable": True,
                 "district": district_label(role, house),
             }
         )

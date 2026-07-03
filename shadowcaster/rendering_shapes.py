@@ -139,6 +139,10 @@ def draw_marker(screen, screen_x, screen_y, kind, color):
         pygame.draw.line(screen, color, (left + 6, top + TILE_SIZE - 5), (left + 8, top + 6), 2)
         pygame.draw.line(screen, color, (center_x, top + TILE_SIZE - 5), (center_x + 1, top + 8), 2)
         pygame.draw.line(screen, color, (left + TILE_SIZE - 7, top + TILE_SIZE - 5), (left + TILE_SIZE - 9, top + 10), 2)
+    elif kind == "cache":
+        pygame.draw.rect(screen, color, (left + 6, top + 9, TILE_SIZE - 12, TILE_SIZE - 10), 2)
+        pygame.draw.line(screen, color, (left + 6, top + 13), (left + TILE_SIZE - 6, top + 13), 2)
+        pygame.draw.rect(screen, color, (left + 9, top + 7, TILE_SIZE - 18, 3), 2)
     elif kind == "monster_town":
         pygame.draw.rect(screen, color, (left + 6, top + 10, TILE_SIZE - 12, TILE_SIZE - 8), 2)
         pygame.draw.polygon(screen, color, [(center_x, top + 3), (left + TILE_SIZE - 5, top + 11), (left + 5, top + 11)], 2)

@@ -34,6 +34,7 @@ class WorldStateMixin(GameMixinBase):
             "residents": self.residents[:],
             "exploration_milestones": list(self.exploration_milestones),
             "claimed_exploration_rewards": set(self.claimed_exploration_rewards),
+            "claimed_surface_landmark_keys": set(self.claimed_surface_landmark_keys),
             "region_depth": self.region_depth,
             "region_max_depth": self.region_max_depth,
             "player_status_sources": dict(self.player_status_sources),
@@ -142,7 +143,8 @@ class WorldStateMixin(GameMixinBase):
         self.world_seed = self.new_run_seed()
         self.reset()
         self.close_menu()
-        self.message = f"A new journey begins. Seed {self.world_seed_label()}."
+        controls = "WASD or arrows to move. Space attacks, F fires."
+        self.message = f"A new journey begins in {self.region_name}. {controls} Seed {self.world_seed_label()}."
 
     def save_run(self):
         if self.menu_mode == "main":
@@ -283,6 +285,7 @@ class WorldStateMixin(GameMixinBase):
         if not self.exploration_rewards_enabled(self.region_type):
             self.exploration_milestones = []
         self.claimed_exploration_rewards = set(state["claimed_exploration_rewards"])
+        self.claimed_surface_landmark_keys = set(state.get("claimed_surface_landmark_keys", set()))
         self.attack_flash = None
         self.shot_flash = []
         self.auto_move_path = []

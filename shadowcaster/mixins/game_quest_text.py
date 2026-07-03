@@ -23,6 +23,18 @@ class QuestTextMixin(GameMixinBase):
         ("quest_medicine", "Medicine Bundle", "a medicine bundle", (160, 210, 180)),
         ("quest_parcel", "Wrapped Parcel", "a wrapped parcel", (190, 180, 140)),
     ]
+    _CHAIN_LEADS = [
+        ("Strange markings were spotted near {landmark} in {region}. Someone needs to get eyes on it and report back.", "ammo"),
+        ("Word came through that {landmark} in {region} has gone quiet. We need a first-hand account.", "medkit"),
+        ("A courier mentioned something odd about {landmark} near {region} before moving on. Worth a look.", "ammo"),
+        ("A trader came through with news of {landmark} out in {region}. The details didn't add up. Find out what's there.", "medkit"),
+        ("The scouts flagged {landmark} in {region} as worth checking before the next route posting.", "ammo"),
+        ("An old map note pointed to {landmark} somewhere around {region}. Confirm it still stands.", "medkit"),
+    ]
+    _CHAIN_FALLBACK_LEADS = [
+        ("Someone passed through with unsettled news from {region}. Survey the area and bring back what you find.", "ammo"),
+        ("The region of {region} has been off the regular route for too long. A firsthand look would help.", "medkit"),
+    ]
     _BOUNTY_TARGETS = {
         "forest": "drive off prowlers",
         "plains": "thin the roaming pack",
@@ -103,21 +115,34 @@ class QuestTextMixin(GameMixinBase):
             return "TURN-IN"
         if quest.kind == "scout" and quest.stage >= 1:
             return "REPORT"
+        if quest.kind == "chain" and quest.stage == 1:
+            return "LEAD"
+        if quest.kind == "chain" and quest.stage >= 2:
+            return "RETURN"
         return {
             "delivery": "DELIVERY",
             "scout": "SCOUTING",
             "bounty": "BOUNTY",
+            "chain": "CHAIN",
         }.get(quest.kind, quest.kind.upper())
 
     def notice_board_reward_label(self, quest):
-        reward_label = f"Reward: {quest.reward_gold}g"
+        reward_label = f"Reward: {quest.reward_gold}g + supplies"
+        if quest.kind != "chain":
+            reward_label = f"Reward: {quest.reward_gold}g"
         existing = next((q for q in self.active_quests if q.id == quest.id), None)
         if quest.kind == "bounty" and existing is not None and existing.status == "active":
             if existing.stage == 0:
-                return f"{reward_label} - Reach {quest.target_region_name}"
+                return f"Reward: {quest.reward_gold}g - Reach {quest.target_region_name}"
             kills = self.enemies_defeated - existing.progress_count
-            return f"{reward_label} - {min(kills, quest.target_count)}/{quest.target_count} enemies"
+            return f"Reward: {quest.reward_gold}g - {min(kills, quest.target_count)}/{quest.target_count} enemies"
         if quest.kind == "scout" and existing is not None and existing.status == "active" and existing.stage >= 1:
+            return f"Reward: {quest.reward_gold}g - Return to {existing.origin_town_name}"
+        if quest.kind == "chain" and existing is not None and existing.status == "active":
+            if existing.stage == 0:
+                return f"{reward_label} - Travel to {existing.target_region_name}"
+            if existing.stage == 1:
+                return f"{reward_label} - Find {existing.target_landmark_name or 'the site'}"
             return f"{reward_label} - Return to {existing.origin_town_name}"
         return reward_label
 
@@ -133,6 +158,19 @@ class QuestTextMixin(GameMixinBase):
         }
         intro = intros.get(biome, "A neighboring settlement needs a dependable courier.")
         return f"{intro} Carry {desc} to {region_name} to the {dir_name}."
+
+    def chain_description(self, landmark_name, region_name, dir_name, lead_template):
+        text = lead_template.format(landmark=landmark_name, region=region_name)
+        return f"{text} Return to {self.region_name} afterward."
+
+    def chain_fallback_description(self, region_name, dir_name, lead_template):
+        text = lead_template.format(region=region_name)
+        return f"{text} Return to {self.region_name} afterward."
+
+    def chain_mid_message(self, landmark_name, region_name):
+        if landmark_name:
+            return f"Lead confirmed: {landmark_name} in {region_name}. Return to {self.region_name} for payment."
+        return f"Survey complete in {region_name}. Return to {self.region_name} for payment."
 
     def quest_target_label(self, quest):
         direction = self.quest_direction_name(quest.from_world_pos, quest.to_world_pos)

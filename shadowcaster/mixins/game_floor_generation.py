@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 from typing import cast
 
-from ..constants import FLOOR_BASE_HEIGHT, FLOOR_BASE_WIDTH
+from ..constants import FLOOR_BASE_HEIGHT, FLOOR_BASE_WIDTH, INTERIOR_REGION_TYPES, SERVICE_REGION_TYPES
 from ..game_typing import GameMixinBase, RegionMapLike
 from ..regions import generate_region
 from ..systems import flood_reachable_tiles, heuristic
@@ -74,7 +74,7 @@ class FloorGenerationMixin(GameMixinBase):
             parent_biome = getattr(self.dungeon, "metadata", {}).get("town_parent_biome")
             if parent_biome:
                 self.region_palette = self.town_palette_for_parent_biome(parent_biome, hostile=self.region_type == "monster_town")
-        self.service_type = self.region_type if self.region_type in {"inn", "clinic", "supply", "shrine", "smith", "cartographer", "tavern", "chapel", "stable"} else None
+        self.service_type = self.region_type if self.region_type in SERVICE_REGION_TYPES else None
         self.service_claimed = False
         self.interaction_claims = set()
         if self.region_is_multilevel(region.region_type):
@@ -123,8 +123,7 @@ class FloorGenerationMixin(GameMixinBase):
             self.up_stairs = self.initial_local_entry_tile()
         self.terrain_features = self.generate_terrain_features()
         self.sync_vision_transparency()
-        interior_regions = {"inn", "clinic", "supply", "shrine", "smith", "cartographer", "tavern", "chapel", "stable"}
-        pickups_enabled = self.region_type not in interior_regions
+        pickups_enabled = self.region_type not in INTERIOR_REGION_TYPES
         self.upgrade_pickup = None
         if pickups_enabled and not self.is_bottom_floor():
             self.upgrade_pickup = self.create_upgrade_pickup(exclude={self.player, self.stairs, self.up_stairs, self.delve_goal})

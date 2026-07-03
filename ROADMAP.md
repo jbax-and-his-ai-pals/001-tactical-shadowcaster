@@ -82,6 +82,8 @@
 - Town squares and streets now carry lightweight civic decor such as fountains, braziers, notice boards, stalls, and hitching posts, with placement influenced by biome and settlement size
 - Individual town buildings now also project small exterior signatures into nearby streets, so barns, stores, shrines, clinics, forges, and halls read more distinctly from the outside
 - Town buildings are now loosely clustered into district-like bands such as town center, market square, works, and homes, giving larger settlements more legible internal structure
+- World map UX tightened: recenter button, right-panel scroll, chip vertical centering, wheel zoom (18% per step from center), prominent selected-region border drawn above preview tiles, three-pass render for correct depth order, local debug map preserves mode/pan/expanded state across close/reopen, click vs drag correctly disambiguated for all tile types
+- Overworld landmark variety expanded: 11 surface-modal site kinds (waystone, barrow, stone_circle, oasis, hot_spring, watchtower, grove, necropolis, geyser, standing_stone, camp) now generate alongside the 6 enterable kinds, with biome-specific pools; surface sites fire a reward modal on first visit without entering a local region, tracked in `claimed_surface_landmark_keys`
 
 ## Sequential Roadmap
 ### Phase 0 - Foundation Tightening
@@ -226,9 +228,9 @@ Exit criteria:
 ## Near-Term Queue
 Ordered candidates for the next several slices:
 
-1. `S` Expand landmark identity and world-map progress for notable sites
+1. `XS` *(in progress)* Deepen per-kind landmark identity on the world map (distinct icons, clearer site-state display in the right panel)
 2. `M` Add small place-based quest chains
-3. `S` Add non-combat landmark rewards and discoveries
+3. `S` *(partially done — surface reward kinds landed)* Deepen non-combat landmark rewards: flavor text variety per biome, scaled rewards by danger tier
 4. `M` Deepen resident roles, homes, and recurring town hooks
 5. `M` Add more building interior variety and dedicated local map pieces
 6. `S-M` Add early town-growth responses to completed local work

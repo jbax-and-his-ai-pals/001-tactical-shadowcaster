@@ -53,6 +53,9 @@ class GameCoreMixin(GameMixinBase):
         self.tiny_font = pygame.font.SysFont("consolas", 14)
         self.perf_overlay = False
         self.perf_timings: dict = {}
+        self._notice_board_anchor = None
+        self._last_sign_anchor = None
+        self.source_lit_tiles: set = set()
         self._message = ""
         self.message_log = []
         self.max_message_log = 50
@@ -82,7 +85,9 @@ class GameCoreMixin(GameMixinBase):
         self.world_map_mode = "discovered"
         self.selected_world_region = None
         self.world_map_view_center = None
+        self.world_map_zoom = 1.0
         self.world_map_detail_scroll = 0
+        self.world_map_detail_content_height = 0
         self.world_map_dragging = False
         self.world_map_drag_moved = False
         self.world_map_drag_anchor_screen = None
@@ -245,7 +250,9 @@ class GameCoreMixin(GameMixinBase):
         self.world_map_mode = "discovered"
         self.selected_world_region = None
         self.world_map_view_center = None
+        self.world_map_zoom = 1.0
         self.world_map_detail_scroll = 0
+        self.world_map_detail_content_height = 0
         self.world_map_dragging = False
         self.world_map_drag_moved = False
         self.world_map_drag_anchor_screen = None
@@ -290,6 +297,7 @@ class GameCoreMixin(GameMixinBase):
         self.service_type = None
         self.service_claimed = False
         self.interaction_claims = set()
+        self.claimed_surface_landmark_keys = set()
         self.region_depth = 1
         self.region_max_depth = 1
         self.danger_tier = 1
@@ -309,7 +317,9 @@ class GameCoreMixin(GameMixinBase):
         with self.seed_scope("build_floor", ("world", (0, 0)), self.floor):
             self.build_floor(first_floor=True, chosen_region=self.choose_start_region())
         self.store_current_region()
-        self.message = f"Move with WASD or arrows. Q/E/Z/C move diagonally. Space attacks, F fires. Seed {self.world_seed_label()}."
+        start_town = next((lm for lm in self.landmarks if lm.kind == "town"), None)
+        if start_town:
+            self.enter_landmark(start_town)
 
     def clear_inspect_focus(self):
         self.hovered_world_tile = None

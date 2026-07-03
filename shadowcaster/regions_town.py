@@ -141,21 +141,28 @@ def generate_interior(width, height, region_type):
         decor[(cx - 2, room.y + room.h - 4)] = "crate"
 
     elif region_type == "tavern":
-        # Bar at top; scattered tables; booths; barrel cluster; sign near door
-        bar = region.carve_rect(room.x + 2, room.y + 2, room.w - 4, 2)
+        # Bar counter row one step from north wall, shelves on the wall behind it;
+        # side booths; scattered patron tables; barrel cluster; braziers; sign near door
+        bar_y = room.y + 3
+        for x in range(room.x + 2, room.x + room.w - 2):
+            decor[(x, room.y + 1)] = "shelves"     # back-bar shelves on north wall
+        for x in range(room.x + 2, room.x + room.w - 2):
+            decor[(x, bar_y)] = "table"             # bar counter
+        service_spot = (cx, bar_y)
+        decor[(room.x + 2, bar_y - 1)] = "barrel"
+        decor[(room.x + room.w - 3, bar_y - 1)] = "barrel"
         left_booth = region.carve_rect(room.x + 1, cy - 2, 4, 4)
         right_booth = region.carve_rect(room.x + room.w - 5, cy - 2, 4, 4)
-        carve_path(region, bar.center, room.center, width=2)
-        service_spot = bar.center
-        decor[bar.center] = "table"
-        for x in range(room.x + 4, room.x + room.w - 4, 4):
-            decor[(x, cy - 1)] = "table"
-            decor[(x, cy + 2)] = "table"
         decor[left_booth.center] = "pew"
         decor[right_booth.center] = "pew"
+        for x in range(cx - 3, cx + 4, 4):
+            decor[(x, cy + 1)] = "table"
+            decor[(x, cy + 3)] = "pew"
         decor[(room.x + 2, room.y + room.h - 4)] = "barrel"
         decor[(room.x + 3, room.y + room.h - 4)] = "barrel"
         decor[(room.x + room.w - 3, room.y + room.h - 4)] = "barrel"
+        decor[(room.x + 2, room.y + room.h - 3)] = "brazier"
+        decor[(room.x + room.w - 3, room.y + room.h - 3)] = "brazier"
         decor[(cx, room.y + room.h - 4)] = "sign"
 
     elif region_type == "chapel":
@@ -183,8 +190,111 @@ def generate_interior(width, height, region_type):
         decor[(room.x + 2, room.y + room.h - 4)] = "brazier"
         decor[(room.x + room.w - 3, room.y + room.h - 4)] = "brazier"
 
+    elif region_type == "house":
+        # Domestic home: beds, hearth, dining table, pantry shelves, flowers
+        decor[(room.x + 2, room.y + 1)] = "bed"
+        decor[(room.x + 3, room.y + 1)] = "bed"
+        decor[(room.x + 2, room.y + 3)] = "brazier"        # hearth
+        decor[(room.x + room.w - 3, room.y + 1)] = "shelves"
+        decor[(room.x + room.w - 3, room.y + 2)] = "shelves"
+        decor[(room.x + room.w - 3, room.y + 3)] = "shelves"
+        decor[(cx, cy - 1)] = "table"
+        decor[(cx - 1, cy)] = "pew"
+        decor[(cx + 1, cy)] = "pew"
+        decor[(cx, cy + 1)] = "shelves"
+        decor[(room.x + room.w - 4, cy + 1)] = "barrel"
+        decor[(room.x + room.w - 3, cy + 1)] = "crate"
+        decor[(room.x + 2, room.y + room.h - 4)] = "flowers"
+        decor[(room.x + 3, room.y + room.h - 4)] = "flowers"
+
+    elif region_type == "hall":
+        # Civic hall: long meeting table, flanking pews, braziers, sign near door
+        for x in range(cx - 3, cx + 4):
+            decor[(x, cy)] = "table"
+        for x in range(cx - 3, cx + 4, 2):
+            decor[(x, cy - 2)] = "pew"
+            decor[(x, cy + 2)] = "pew"
+        decor[(room.x + 2, room.y + 1)] = "brazier"
+        decor[(room.x + room.w - 3, room.y + 1)] = "brazier"
+        for x in range(cx - 2, cx + 3, 2):
+            decor[(x, room.y + 1)] = "shelves"
+        decor[(cx, room.y + room.h - 4)] = "sign"
+        decor[(room.x + 2, room.y + room.h - 4)] = "pew"
+        decor[(room.x + room.w - 3, room.y + room.h - 4)] = "pew"
+
+    elif region_type == "granary":
+        # Grain warehouse: dense crate rows, barrel wall, manifest table near door
+        for x in range(room.x + 2, room.x + room.w - 4, 3):
+            for y in range(room.y + 1, room.y + room.h - 5, 2):
+                decor[(x, y)] = "crate"
+        for y in range(room.y + 1, room.y + room.h - 5, 2):
+            decor[(room.x + room.w - 3, y)] = "barrel"
+        decor[(cx - 1, room.y + room.h - 4)] = "barrel"
+        decor[(cx, room.y + room.h - 4)] = "table"
+        decor[(cx + 1, room.y + room.h - 4)] = "sign"
+
+    elif region_type == "barn":
+        # Animal barn: stalls with hay, wide aisle, trough, hitch posts, feed barrels
+        stall_h = max(3, (room.h - 4) // 2)
+        for ax in (room.x + 1, room.x + room.w - 5):
+            sa = region.carve_rect(ax, room.y + 2, 4, stall_h)
+            sb = region.carve_rect(ax, room.y + 2 + stall_h + 1, 4, stall_h)
+            for stall in (sa, sb):
+                decor[stall.center] = "stall"
+                hay_y = min(stall.center[1] + 1, stall.y + stall.h - 1)
+                decor[(stall.center[0], hay_y)] = "crate"
+        decor[(cx - 1, room.y + 2)] = "table"
+        decor[(cx, room.y + 2)] = "table"
+        decor[(cx + 1, room.y + 2)] = "table"               # trough
+        decor[(room.x + 2, room.y + room.h - 3)] = "hitch_post"
+        decor[(room.x + room.w - 3, room.y + room.h - 3)] = "hitch_post"
+        decor[(cx - 1, room.y + room.h - 3)] = "barrel"
+        decor[(cx + 1, room.y + room.h - 3)] = "barrel"
+
+    elif region_type == "workshop":
+        # Crafting space: workbench, anvil, shelves on three walls, material crates, braziers
+        for x in range(cx - 2, cx + 3):
+            decor[(x, room.y + 1)] = "shelves"
+        decor[(room.x + 2, room.y + 1)] = "shelves"
+        decor[(room.x + room.w - 3, room.y + 1)] = "shelves"
+        for y in range(room.y + 1, cy, 2):
+            decor[(room.x + 2, y)] = "crate"
+            decor[(room.x + room.w - 3, y)] = "crate"
+        decor[(cx, cy)] = "table"                           # workbench
+        decor[(cx - 1, cy)] = "anvil"
+        decor[(cx + 1, cy)] = "crate"
+        decor[(room.x + 2, room.y + room.h - 4)] = "brazier"
+        decor[(room.x + room.w - 3, room.y + room.h - 4)] = "brazier"
+        decor[(cx, room.y + room.h - 4)] = "barrel"
+
+    elif region_type == "smokehouse":
+        # Curing house: braziers for smoke, product shelves, preparation table, brine barrels
+        for x in range(room.x + 2, room.x + room.w - 2, 3):
+            decor[(x, room.y + 1)] = "brazier"
+            decor[(x, room.y + 3)] = "shelves"
+            decor[(x, cy)] = "shelves"
+        decor[(cx, room.y + room.h - 4)] = "table"
+        decor[(cx - 1, room.y + room.h - 4)] = "barrel"
+        decor[(cx + 1, room.y + room.h - 4)] = "barrel"
+        decor[(room.x + 2, room.y + room.h - 3)] = "crate"
+        decor[(room.x + room.w - 3, room.y + room.h - 3)] = "crate"
+
+    elif region_type == "storehouse":
+        # General warehouse: crate rows on left, barrel rows on right, shelves at back, manifest desk
+        for x in range(room.x + 2, cx - 1, 3):
+            for y in range(room.y + 1, room.y + room.h - 5, 2):
+                decor[(x, y)] = "crate"
+        for x in range(cx + 2, room.x + room.w - 2, 3):
+            for y in range(room.y + 1, room.y + room.h - 5, 2):
+                decor[(x, y)] = "barrel"
+        for y in range(room.y + 1, room.y + room.h - 5, 2):
+            decor[(cx, y)] = "shelves"
+        decor[(cx, room.y + room.h - 4)] = "table"
+        decor[(cx - 1, room.y + room.h - 4)] = "sign"
+        decor[(cx + 1, room.y + room.h - 4)] = "crate"
+
     elif region_type == "stable":
-        # Four stalls with stall dividers and hay; wide aisle; trough; hitch posts
+        # Four stalls along side walls with hitch posts and hay; central trough aisle; brazier
         stall_h = max(3, (room.h - 4) // 2)
         left_stall_a = region.carve_rect(room.x + 1, room.y + 2, 4, stall_h)
         left_stall_b = region.carve_rect(room.x + 1, room.y + 2 + stall_h + 1, 4, stall_h)
@@ -193,15 +303,31 @@ def generate_interior(width, height, region_type):
         trough = region.carve_rect(cx - 2, room.y + 2, 5, 2)
         carve_path(region, trough.center, room.center, width=2)
         service_spot = trough.center
-        decor[trough.center] = "table"
+        for x in range(trough.x, trough.x + trough.w):
+            decor[(x, trough.center[1])] = "table"     # water trough
         for stall in (left_stall_a, left_stall_b, right_stall_a, right_stall_b):
-            decor[stall.center] = "stall"
+            decor[stall.center] = "hitch_post"
             hay_y = min(stall.center[1] + 1, stall.y + stall.h - 1)
-            decor[(stall.center[0], hay_y)] = "crate"
+            decor[(stall.center[0], hay_y)] = "haystack"
         decor[(room.x + 2, room.y + room.h - 3)] = "hitch_post"
         decor[(room.x + room.w - 3, room.y + room.h - 3)] = "hitch_post"
         decor[(cx - 1, room.y + room.h - 3)] = "barrel"
         decor[(cx + 1, room.y + room.h - 3)] = "barrel"
+        decor[(cx, room.y + 1)] = "brazier"
+
+    elif region_type == "cache":
+        # Hidden cache: cramped alcove stuffed with crates and barrels, single brazier for light
+        region.carve_rect(room.x + 2, room.y + 2, room.w - 4, room.h - 6)
+        service_spot = (cx, cy - 1)
+        for x in range(room.x + 3, room.x + room.w - 3, 2):
+            decor[(x, room.y + 2)] = "crate"
+            decor[(x, room.y + 4)] = "crate"
+        for x in range(room.x + 3, room.x + room.w - 3, 3):
+            decor[(x, room.y + room.h - 7)] = "barrel"
+        decor[(room.x + 2, room.y + 3)] = "shelves"
+        decor[(room.x + room.w - 3, room.y + 3)] = "shelves"
+        decor[(cx, room.y + 2)] = "brazier"
+        decor[(cx, cy - 1)] = "crate"                       # the main cache pile
 
     door_x = foyer.center[0]
     door_y = room.y + room.h - 1

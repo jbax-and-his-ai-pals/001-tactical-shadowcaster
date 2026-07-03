@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 import pygame
-from ..constants import VIEW_HEIGHT, VIEW_WIDTH
+from ..constants import VIEW_HEIGHT, VIEW_WIDTH, LIGHT_EMITTERS
 from ..systems import compute_fov
 from ..game_typing import GameMixinBase
 
@@ -62,6 +62,7 @@ class VisibilityMixin(GameMixinBase):
         self.newly_discovered_tiles = self.visible_tiles - previous_seen
         self.turn_newly_discovered_tiles.update(self.newly_discovered_tiles)
         self.seen_tiles.update(self.visible_tiles)
+        self._update_source_lit_tiles()
         explored_walkable = len(self.seen_tiles & self.floor_explorable_tiles)
         self.exploration_progress = int((explored_walkable / max(1, len(self.floor_explorable_tiles))) * 100)
         if self.exploration_effectively_complete():
@@ -84,6 +85,19 @@ class VisibilityMixin(GameMixinBase):
             self.stop_auto_movement()
             messages.append("Floor fully explored: choose a boon.")
         return " ".join(messages) if messages else None
+
+    def _update_source_lit_tiles(self):
+        decor = getattr(self.dungeon, "metadata", {}).get("decor", {})
+        terrain = getattr(self, "terrain_features", {})
+        lit: set = set()
+        for tile, kind in list(decor.items()) + list(terrain.items()):
+            radius = LIGHT_EMITTERS.get(kind)
+            if radius is None:
+                continue
+            lit |= compute_fov(tile[0], tile[1], radius, self.dungeon)
+        self.source_lit_tiles = lit
+        self.visible_tiles |= lit
+        self.seen_tiles |= lit
 
     def update_camera(self):
         max_camera_x = max(0, self.dungeon.width - VIEW_WIDTH)

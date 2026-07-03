@@ -18,6 +18,15 @@ MOVE_REPEAT_DELAY_MS = 180
 MOVE_REPEAT_INTERVAL_MS = 70
 AUTO_MOVE_INTERVAL_MS = 70
 
+SERVICE_REGION_TYPES = frozenset({
+    "inn", "clinic", "supply", "shrine", "smith", "cartographer",
+    "tavern", "chapel", "stable", "cache",
+})
+FLAVOR_REGION_TYPES = frozenset({
+    "house", "hall", "granary", "barn", "workshop", "smokehouse", "storehouse",
+})
+INTERIOR_REGION_TYPES = SERVICE_REGION_TYPES | FLAVOR_REGION_TYPES
+
 COLOR_BG = (10, 10, 14)
 COLOR_WALL = (70, 230, 120)
 COLOR_FLOOR = (40, 40, 55)
@@ -72,6 +81,8 @@ COLOR_TERRAIN_PEW = (146, 108, 82)
 COLOR_TERRAIN_ANVIL = (156, 166, 184)
 COLOR_TERRAIN_FOUNTAIN = (114, 192, 238)
 COLOR_TERRAIN_BRAZIER = (236, 136, 72)
+COLOR_LIGHT_WARM = (255, 148, 48)
+LIGHT_EMITTERS = {"brazier": 4, "forge": 5, "embers": 3, "hearth": 3}
 COLOR_TERRAIN_STALL = (214, 168, 112)
 COLOR_TERRAIN_HITCH = (138, 112, 88)
 COLOR_TERRAIN_NOTICE = (210, 194, 142)

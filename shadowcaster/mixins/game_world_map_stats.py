@@ -43,7 +43,8 @@ class WorldMapStatsMixin(GameMixinBase):
             "inn": ("Inn", "A traveler stop where you can recover before pressing on.", "A free rest on first entry."),
             "clinic": ("Clinic", "A place to patch wounds and clear lingering afflictions.", "Healing and status relief."),
             "supply": ("Provisioner", "A stock point for ammunition and field medicine.", "Resupply and barter."),
-            "shrine": ("Shrine", "A quiet refuge with protective rites.", "Ward and cleansing."),
+            "shrine": ("Forgotten Shrine", "An old roadside altar, still tended by something unseen.", "Full healing and status cleanse."),
+            "cache": ("Hidden Cache", "Someone buried supplies here and never came back.", "Substantial supply haul."),
             "smith": ("Smithy", "A work site where gear and trail readiness matter.", "Refit and tonic support."),
             "cartographer": ("Survey Office", "A chart room that turns travel into knowledge.", "Nearby regions revealed."),
         }
@@ -81,6 +82,7 @@ class WorldMapStatsMixin(GameMixinBase):
             "supply": "settled",
             "cartographer": "settled",
             "shrine": "sanctum",
+            "cache": "depths",
             "smith": "sanctum",
             "desert": "arid",
             "badlands": "arid",
@@ -110,12 +112,14 @@ class WorldMapStatsMixin(GameMixinBase):
             "blight": (214, 108, 98),
         }.get(theme, (150, 160, 174))
 
-    def continuity_summary(self, coord, state):
+    def continuity_summary(self, coord, state, regions_map=None):
         theme = self.region_world_theme(state=state)
+        if regions_map is None:
+            regions_map = self.world_map_regions()
         neighbors = []
         for delta in self.DIRECTION_VECTORS.values():
             neighbor_coord = (coord[0] + delta[0], coord[1] + delta[1])
-            neighbor_state = self.world_map_regions().get(neighbor_coord)
+            neighbor_state = regions_map.get(neighbor_coord)
             if neighbor_state is None:
                 continue
             neighbors.append(neighbor_state)
@@ -138,7 +142,9 @@ class WorldMapStatsMixin(GameMixinBase):
             return base + " Nearby territory looks gentler."
         return base
 
-    def region_stats(self, coord):
+    def region_stats(self, coord, regions_map=None):
+        if regions_map is None:
+            regions_map = self.world_map_regions()
         discovered = self.discovered_world_regions()
         fully_discovered_coords = {self.parse_region_key(key) for key in self.world_regions}
         fully_discovered_coords.add(self.world_position)
@@ -240,10 +246,9 @@ class WorldMapStatsMixin(GameMixinBase):
         foes_remaining = len(state["enemies"])
         landmarks = state.get("landmarks", [])
         neighbors = []
-        world_regions = self.world_map_regions()
         for direction, delta in self.DIRECTION_VECTORS.items():
             neighbor_coord = (coord[0] + delta[0], coord[1] + delta[1])
-            neighbor_state = world_regions.get(neighbor_coord)
+            neighbor_state = regions_map.get(neighbor_coord)
             if neighbor_state is None:
                 neighbors.append(
                     {
@@ -266,10 +271,20 @@ class WorldMapStatsMixin(GameMixinBase):
                     "is_preview": neighbor_coord not in fully_discovered_coords and neighbor_coord != self.world_position,
                 }
             )
+        landmark_progress_cache = [self.landmark_progress(coord, lm) for lm in landmarks]
         landmark_summaries = []
-        landmark_counts = self.landmark_progress_counts(coord, landmarks)
-        for landmark in landmarks[:6]:
-            progress = self.landmark_progress(coord, landmark)
+        landmark_counts = {"unvisited": 0, "located": 0, "entered": 0, "cleared": 0}
+        for prog in landmark_progress_cache:
+            if prog["cleared"]:
+                landmark_counts["cleared"] += 1
+            elif prog.get("entered"):
+                landmark_counts["entered"] += 1
+            elif prog["visited"]:
+                landmark_counts["located"] += 1
+            else:
+                landmark_counts["unvisited"] += 1
+        for i, landmark in enumerate(landmarks[:6]):
+            progress = landmark_progress_cache[i]
             identity = self.landmark_identity(coord, state, landmark)
             landmark_summaries.append(
                 {
@@ -298,7 +313,7 @@ class WorldMapStatsMixin(GameMixinBase):
             "palette": state["region_palette"],
             "theme": theme,
             "theme_color": self.region_theme_color(theme),
-            "continuity_text": self.continuity_summary(coord, state),
+            "continuity_text": self.continuity_summary(coord, state, regions_map),
             "is_preview": coord not in fully_discovered_coords and coord != self.world_position,
             "loading_preview": state.get("loading_preview", False),
             "expandable_preview": state.get("expandable_preview", False),
@@ -316,9 +331,9 @@ class WorldMapStatsMixin(GameMixinBase):
             "exits_found": exits_found,
             "exit_directions": exit_directions,
             "landmarks_total": len(landmarks),
-            "landmarks_visited": sum(1 for landmark in landmarks if self.landmark_progress(coord, landmark)["visited"]),
-            "landmarks_entered": sum(1 for landmark in landmarks if self.landmark_progress(coord, landmark).get("entered")),
-            "landmarks_cleared": sum(1 for landmark in landmarks if self.landmark_progress(coord, landmark)["cleared"]),
+            "landmarks_visited": sum(1 for p in landmark_progress_cache if p["visited"]),
+            "landmarks_entered": sum(1 for p in landmark_progress_cache if p.get("entered")),
+            "landmarks_cleared": sum(1 for p in landmark_progress_cache if p["cleared"]),
             "landmarks_unvisited": landmark_counts["unvisited"],
             "landmarks_located_only": landmark_counts["located"],
             "landmarks_open": landmark_counts["entered"],
@@ -345,8 +360,10 @@ class WorldMapStatsMixin(GameMixinBase):
         }
 
     def region_walkable_count(self, state):
-        dungeon = state["dungeon"]
-        return sum(1 for x in range(dungeon.width) for y in range(dungeon.height) if dungeon.tiles[x][y] == 0)
+        if "walkable_count" not in state:
+            dungeon = state["dungeon"]
+            state["walkable_count"] = sum(1 for x in range(dungeon.width) for y in range(dungeon.height) if dungeon.tiles[x][y] == 0)
+        return state["walkable_count"]
 
     def region_exploration_percent(self, state):
         walkable = self.region_walkable_count(state)

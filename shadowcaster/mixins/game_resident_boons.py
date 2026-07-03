@@ -1,11 +1,25 @@
 from __future__ import annotations
 
+import random
+
 from ..constants import COLOR_ACCENT, COLOR_HEAL
 from ..game_typing import GameMixinBase
+from ..resident_data import RETURN_DIALOGUE
 from ..systems import heuristic
 
 
 class ResidentBoonsMixin(GameMixinBase):
+
+    def _return_line(self, resident):
+        """Pick a contextual second-visit line for a resident whose boon is claimed."""
+        pool = RETURN_DIALOGUE.get(resident.kind)
+        line = random.choice(pool) if pool else "They've already done what they can for now."
+        name = resident.name
+        if name and pool:
+            # Prefix with the resident's name for personal touch
+            line = f"{name}: {line[0].lower()}{line[1:]}" if line[0].isupper() else f"{name}: {line}"
+        return line
+
     def apply_resident_boon(self, resident):
         if self.region_type != "town":
             return False
@@ -13,7 +27,7 @@ class ResidentBoonsMixin(GameMixinBase):
         if resident.kind == "guide":
             hidden_landmarks = [landmark for landmark in self.landmarks if landmark.position not in self.seen_tiles]
             if claim_key in self.interaction_claims:
-                self.message = "The guide says you've already got the best local lead they can offer."
+                self.message = self._return_line(resident)
                 return True
             if not hidden_landmarks:
                 self.message = "The guide smiles. You've already found every notable place nearby."
@@ -26,7 +40,7 @@ class ResidentBoonsMixin(GameMixinBase):
             return True
         if resident.kind == "scout":
             if claim_key in self.interaction_claims:
-                self.message = "The scout has already shared the safest nearby route."
+                self.message = self._return_line(resident)
                 return True
             revealed = self.reveal_one_adjacent_world_region()
             if not revealed:
@@ -39,7 +53,7 @@ class ResidentBoonsMixin(GameMixinBase):
             return True
         if resident.kind == "farmer":
             if claim_key in self.interaction_claims:
-                self.message = "The farmer wishes you luck on the road."
+                self.message = self._return_line(resident)
                 return True
             if self.health >= self.max_health:
                 self.message = "The farmer offers a bite to eat, but you're already in good shape."
@@ -51,7 +65,7 @@ class ResidentBoonsMixin(GameMixinBase):
             return True
         if resident.kind == "watch":
             if claim_key in self.interaction_claims:
-                self.message = "The watcher says the roads are as clear as they can make them."
+                self.message = self._return_line(resident)
                 return True
             nearby = []
             for direction in ("north", "south", "west", "east"):
@@ -74,7 +88,7 @@ class ResidentBoonsMixin(GameMixinBase):
             return True
         if resident.kind == "vendor":
             if claim_key in self.interaction_claims:
-                self.message = "The vendor has already spared what they could."
+                self.message = self._return_line(resident)
                 return True
             self.interaction_claims.add(claim_key)
             self.ammo += 1
@@ -83,7 +97,7 @@ class ResidentBoonsMixin(GameMixinBase):
             return True
         if resident.kind == "herbalist":
             if claim_key in self.interaction_claims:
-                self.message = "The herbalist has already mixed what they can for today."
+                self.message = self._return_line(resident)
                 return True
             if "poison" not in self.player_statuses and "burn" not in self.player_statuses:
                 self.message = "The herbalist says to come back if the road leaves a worse sting on you."
@@ -96,7 +110,7 @@ class ResidentBoonsMixin(GameMixinBase):
             return True
         if resident.kind == "elder":
             if claim_key in self.interaction_claims:
-                self.message = "The elder has already pointed you toward what mattered most."
+                self.message = self._return_line(resident)
                 return True
             building = self.reveal_one_hidden_town_building()
             if building is None:
@@ -109,7 +123,7 @@ class ResidentBoonsMixin(GameMixinBase):
             return True
         if resident.kind == "drover":
             if claim_key in self.interaction_claims:
-                self.message = "The drover has already shared a bit of trail stock."
+                self.message = self._return_line(resident)
                 return True
             self.interaction_claims.add(claim_key)
             self.ammo += 1
@@ -118,7 +132,7 @@ class ResidentBoonsMixin(GameMixinBase):
             return True
         if resident.kind == "miller":
             if claim_key in self.interaction_claims:
-                self.message = "The miller has already packed what they could spare."
+                self.message = self._return_line(resident)
                 return True
             self.interaction_claims.add(claim_key)
             self.add_item("medkit", "Healing Potion", "consumable", COLOR_HEAL, "vitality", quantity=1, description="Restores health.")
@@ -127,7 +141,7 @@ class ResidentBoonsMixin(GameMixinBase):
             return True
         if resident.kind == "ferryman":
             if claim_key in self.interaction_claims:
-                self.message = "The ferryman has already shown you the surest way out."
+                self.message = self._return_line(resident)
                 return True
             exit_tile = self.reveal_one_town_exit()
             if exit_tile is None:
@@ -140,7 +154,7 @@ class ResidentBoonsMixin(GameMixinBase):
             return True
         if resident.kind == "mason":
             if claim_key in self.interaction_claims:
-                self.message = "The mason has already braced you as well as they can."
+                self.message = self._return_line(resident)
                 return True
             self.interaction_claims.add(claim_key)
             self.add_status(self.player_statuses, "ward", 4)
@@ -149,7 +163,7 @@ class ResidentBoonsMixin(GameMixinBase):
             return True
         if resident.kind == "trapper":
             if claim_key in self.interaction_claims:
-                self.message = "The trapper has already shared spare trail supplies."
+                self.message = self._return_line(resident)
                 return True
             self.interaction_claims.add(claim_key)
             self.add_item("tonic", "Ward Tonic", "consumable", COLOR_ACCENT, "power", quantity=1, description="Clears statuses and grants ward.")
@@ -158,7 +172,7 @@ class ResidentBoonsMixin(GameMixinBase):
             return True
         if resident.kind == "kilnkeeper":
             if claim_key in self.interaction_claims:
-                self.message = "The kilnkeeper has already done what they can for your road heat."
+                self.message = self._return_line(resident)
                 return True
             cleared_burn = "burn" in self.player_statuses
             self.clear_player_status("burn")
@@ -169,6 +183,25 @@ class ResidentBoonsMixin(GameMixinBase):
                 self.message = "The kilnkeeper banks the heat out of your wounds and leaves you warded for 4 turns."
             else:
                 self.message = "The kilnkeeper teaches you how to carry the heat better. Ward 4 turns."
+            return True
+        if resident.kind == "wanderer":
+            if claim_key in self.interaction_claims:
+                self.message = self._return_line(resident)
+                return True
+            revealed = self._reveal_distant_world_region()
+            self.interaction_claims.add(claim_key)
+            self.store_current_region()
+            if revealed:
+                _, region_name = revealed
+                self.message = f"The traveler's tip leads you to {region_name} on your map."
+            else:
+                self.message = "The traveler's tip doesn't add much — you already know these roads."
+            return True
+        if resident.kind == "child":
+            if resident.dialogue:
+                self.message = random.choice(resident.dialogue)
+            else:
+                self.message = "The child looks at you for a moment, then goes back to whatever they were doing."
             return True
         return False
 

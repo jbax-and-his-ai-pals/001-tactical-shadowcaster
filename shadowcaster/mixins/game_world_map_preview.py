@@ -124,14 +124,7 @@ class WorldMapPreviewMixin(GameMixinBase):
         for coord in frontier_coords:
             if coord in regions:
                 continue
-            key = self.region_key(coord)
-            if key in self.world_regions:
-                regions[coord] = self.world_regions[key]
-            elif key in self.preview_world_regions:
-                regions[coord] = self.preview_world_regions[key]
-            else:
-                regions[coord] = self.preview_placeholder_state(coord, expandable=True)
-        self.refresh_preview_generation_queue(desired_coords)
+            regions[coord] = self.preview_placeholder_state(coord, expandable=True)
         return regions
 
     def expand_local_debug_region(self, coord):
@@ -159,7 +152,8 @@ class WorldMapPreviewMixin(GameMixinBase):
             self.set_world_map_center(self.selected_world_region or self.world_position)
         self.world_map_center_animation = None
         if self.world_map_mode == "local_debug":
-            self.seed_local_debug_targets(reset=True)
+            self.seed_local_debug_targets()
+            self.refresh_preview_generation_queue(sorted(self.local_debug_target_coords))
             self.process_preview_generation(budget=1)
         label = "Local debug map" if self.world_map_mode == "local_debug" else "Discovered world map"
         self.message = f"{label} open."

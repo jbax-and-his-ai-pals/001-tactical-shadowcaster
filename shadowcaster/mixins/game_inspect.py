@@ -42,7 +42,8 @@ class InspectMixin(GameMixinBase):
         resident = self.get_resident_at(position)
         if resident and position in self.visible_tiles:
             disposition = "Peaceful" if self.region_type == "town" else "Local"
-            title = resident.title or resident.kind.title()
+            role = resident.title or resident.kind.title()
+            title = f"{resident.name} — {role}" if resident.name else role
             lines = [disposition, f"Marker {resident.marker.replace('_', ' ')}"]
             if self.region_type == "town":
                 role_summary = self.resident_role_summary(resident)

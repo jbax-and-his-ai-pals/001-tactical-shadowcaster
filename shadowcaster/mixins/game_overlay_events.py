@@ -100,11 +100,7 @@ class OverlayEventMixin(GameMixinBase):
                 else:
                     self.update_world_map_hover(*event.pos)
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                labels = ["Discovered", "Local Debug"]
-                tab_index = self.tab_index_from_screen(event.pos[0], event.pos[1], labels, SCREEN_WIDTH // 2 - 180, 118, 360)
-                if tab_index is not None:
-                    self.handle_world_map_click(*event.pos)
-                else:
+                if not self.handle_world_map_click(*event.pos):
                     self.begin_world_map_drag(*event.pos)
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 self.end_world_map_drag(event.pos[0], event.pos[1], getattr(event, "clicks", 1))

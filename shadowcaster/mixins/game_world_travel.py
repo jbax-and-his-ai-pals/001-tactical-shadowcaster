@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import random
 
+from ..constants import INTERIOR_REGION_TYPES
 from ..game_typing import GameMixinBase
 from ..regions import carve_path
 from ..systems import flood_reachable_tiles, heuristic
@@ -158,7 +159,7 @@ class WorldTravelMixin(GameMixinBase):
         if self.in_local_region() and self.region_depth == 1:
             if self.region_type == "town":
                 return {"south": self.carve_edge_exit("south")}
-            if self.region_type in {"inn", "clinic", "supply", "shrine", "smith", "cartographer", "tavern", "chapel", "stable"}:
+            if self.region_type in INTERIOR_REGION_TYPES:
                 exit_tile = getattr(self.dungeon, "metadata", {}).get("interior_exit")
                 if exit_tile:
                     return {"south": exit_tile}

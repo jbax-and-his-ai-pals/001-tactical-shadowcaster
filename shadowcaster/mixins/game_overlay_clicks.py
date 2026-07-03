@@ -101,19 +101,11 @@ class OverlayClickMixin(GameMixinBase):
         if self.world_map_recenter_rect().collidepoint(screen_x, screen_y):
             self.reset_world_map_view()
             return True
-        selected = self.world_region_from_screen(screen_x, screen_y)
-        if selected is not None:
-            if self.world_map_mode == "local_debug":
-                state = self.world_map_regions().get(selected)
-                if state and state.get("expandable_preview"):
-                    self.expand_local_debug_region(selected)
-                    return True
-            self.hovered_world_region = selected
-            self.select_world_region(selected)
-            return True
         if dismiss_on_miss:
-            self.toggle_world_map()
-            return True
+            selected = self.world_region_from_screen(screen_x, screen_y)
+            if selected is None:
+                self.toggle_world_map()
+                return True
         return False
 
     def begin_world_map_drag(self, screen_x, screen_y):
@@ -154,13 +146,20 @@ class OverlayClickMixin(GameMixinBase):
         selected = self.world_region_from_screen(screen_x, screen_y)
         if selected is None:
             return False
-        if clicks >= 2 and not (self.world_map_mode == "local_debug" and self.world_map_regions().get(selected, {}).get("expandable_preview")):
+        regions = self.world_map_regions()
+        state = regions.get(selected, {})
+        if self.world_map_mode == "local_debug" and state.get("expandable_preview"):
+            self.expand_local_debug_region(selected)
+            return True
+        if clicks >= 2:
             self.hovered_world_region = selected
             self.selected_world_region = selected
             self.center_world_map_on(selected, animated=True)
-            self.message = f"Centering on {self.world_map_regions()[selected]['region_name']}."
+            self.message = f"Centering on {regions[selected]['region_name']}."
             return True
-        return self.handle_world_map_click(screen_x, screen_y)
+        self.hovered_world_region = selected
+        self.select_world_region(selected)
+        return True
 
     def handle_service_modal_click(self, screen_x, screen_y):
         ok_rect = self.service_modal_ok_rect()

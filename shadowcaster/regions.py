@@ -2,6 +2,7 @@ import random
 from dataclasses import dataclass, field
 from collections import deque
 
+from .constants import INTERIOR_REGION_TYPES
 from .dungeon import Dungeon
 from .game_typing import RegionMapLike
 from .models import RectRoom, RegionPalette
@@ -139,20 +140,14 @@ def choose_region_type(floor):
         options.extend(["plains", "farmland", "cave"])
         weights.extend([2, 2, 2])
     if floor >= 3:
-        options.extend(["desert", "swamp", "badlands"])
-        weights.extend([2, 2, 2])
+        options.extend(["desert", "swamp", "badlands", "town"])
+        weights.extend([2, 2, 2, 2])
     if floor >= 4:
         options.extend(["mountain", "tundra", "castle"])
         weights.extend([2, 2, 1])
     if floor >= 5:
-        options.append("volcanic")
-        weights.append(1)
-    if floor >= 3:
-        options.append("town")
-        weights.append(2)
-    if floor >= 5:
-        options.extend(["monster_town", "maze"])
-        weights.extend([1, 1])
+        options.extend(["volcanic", "monster_town", "maze"])
+        weights.extend([1, 1, 1])
     return random.choices(options, weights=weights, k=1)[0]
 
 
@@ -269,8 +264,20 @@ def random_region_name(region_type):
         "shrine": (["Wayside", "Quiet", "Sun", "Pilgrim's", "Stone"], ["Shrine", "Sanctum", "Chapel"]),
         "smith": (["Old", "Iron", "Ember", "Hammer", "Anvil"], ["Forge", "Smithy", "Works"]),
         "cartographer": (["Surveyor's", "Wayfinder's", "Lantern", "Road", "Atlas"], ["Office", "Charts", "Maps"]),
+        "cache":         (["Hidden", "Buried", "Stashed", "Forgotten", "Lost"],   ["Cache", "Stores", "Supplies", "Hoard"]),
+        "waystone":      (["Old", "Mossy", "Cracked", "Weathered", "Road"],        ["Waystone", "Marker", "Post", "Stone"]),
+        "barrow":        (["Ancestor's", "Forgotten", "Old", "Earthen", "Stone"],  ["Barrow", "Mound", "Burial", "Cairn"]),
+        "stone_circle":  (["Old", "Standing", "Thorn", "Moon", "Broken"],          ["Circle", "Ring", "Stones", "Henge"]),
+        "oasis":         (["Clear", "Still", "Deep", "Desert", "Salt"],            ["Oasis", "Spring", "Pool", "Watering Hole"]),
+        "hot_spring":    (["Scalding", "Steam", "Mineral", "Deep", "Sulfur"],      ["Spring", "Pool", "Vent", "Bath"]),
+        "watchtower":    (["Old", "Crumbling", "Stone", "Border", "High"],         ["Watchtower", "Tower", "Lookout", "Post"]),
+        "grove":         (["Ancient", "Still", "Quiet", "Mossy", "Hollow"],        ["Grove", "Copse", "Glade", "Thicket"]),
+        "necropolis":    (["Forgotten", "Sunken", "Old", "Bone", "Silent"],        ["Necropolis", "Tombs", "Crypts", "Vaults"]),
+        "geyser":        (["Steam", "Sulfur", "Hot", "Boiling", "Ash"],            ["Geyser", "Vent", "Spout", "Fumarole"]),
+        "standing_stone":(["Carved", "Old", "Worn", "Road", "Boundary"],           ["Stone", "Marker", "Pillar", "Stele"]),
+        "camp":          (["Abandoned", "Empty", "Old", "Burned", "Trail"],        ["Camp", "Campsite", "Bivouac", "Outpost"]),
     }
-    first, second = tables[region_type]
+    first, second = tables.get(region_type, tables["dungeon"])
     return f"{random.choice(first)} {random.choice(second)}"
 
 
@@ -327,8 +334,19 @@ def palette_for_region(region_type):
         "shrine": RegionPalette((126, 126, 152), (62, 58, 78), (72, 68, 90), (24, 22, 32), (26, 22, 38), (196, 186, 234), (248, 242, 255)),
         "smith": RegionPalette((146, 104, 74), (72, 52, 40), (82, 58, 42), (28, 20, 18), (34, 22, 18), (226, 164, 96), (255, 240, 220)),
         "cartographer": RegionPalette((96, 120, 138), (50, 64, 74), (56, 74, 88), (20, 26, 30), (22, 28, 34), (154, 204, 224), (240, 248, 252)),
+        "tavern": RegionPalette((138, 98, 62), (68, 54, 40), (78, 54, 36), (28, 22, 18), (34, 24, 18), (214, 158, 98), (255, 240, 210)),
+        "chapel": RegionPalette((130, 124, 158), (64, 60, 80), (74, 68, 94), (24, 22, 32), (26, 22, 40), (200, 188, 238), (250, 244, 255)),
+        "stable": RegionPalette((138, 112, 74), (72, 62, 46), (84, 66, 44), (30, 24, 18), (34, 26, 18), (210, 172, 108), (252, 238, 208)),
+        "house": RegionPalette((152, 120, 82), (78, 72, 62), (84, 64, 44), (32, 28, 24), (36, 26, 20), (192, 152, 104), (250, 238, 214)),
+        "hall": RegionPalette((148, 116, 78), (76, 70, 60), (80, 60, 40), (30, 26, 22), (34, 24, 18), (196, 158, 110), (252, 240, 216)),
+        "granary": RegionPalette((162, 144, 88), (86, 82, 54), (94, 86, 48), (34, 32, 20), (36, 32, 18), (222, 198, 118), (252, 246, 212)),
+        "barn": RegionPalette((154, 106, 68), (78, 58, 42), (88, 60, 38), (30, 22, 18), (36, 22, 16), (222, 154, 96), (254, 234, 206)),
+        "workshop": RegionPalette((140, 108, 72), (70, 56, 42), (80, 60, 40), (28, 22, 18), (34, 24, 18), (212, 164, 100), (252, 238, 210)),
+        "smokehouse": RegionPalette((110, 96, 82), (58, 52, 46), (64, 54, 42), (24, 22, 18), (28, 22, 16), (174, 148, 118), (244, 232, 216)),
+        "storehouse": RegionPalette((136, 120, 84), (70, 66, 50), (78, 68, 46), (28, 26, 20), (32, 28, 20), (208, 186, 124), (250, 244, 216)),
+        "cache": RegionPalette((88, 72, 54), (44, 38, 30), (50, 42, 34), (18, 16, 12), (22, 18, 14), (164, 130, 88), (240, 224, 196)),
     }
-    return palettes[region_type]
+    return palettes.get(region_type, palettes["town"])
 
 
 # Generators are imported after the core definitions to avoid circular imports.
@@ -374,6 +392,6 @@ def generate_region(floor, width, height, region_type=None, name=None, context=N
         return Region(generate_town(width, height, context=context), region_type, name, palette)
     if region_type == "monster_town":
         return Region(generate_monster_town(width, height, context=context), region_type, name, palette)
-    if region_type in {"inn", "clinic", "supply", "shrine", "smith", "cartographer", "tavern", "chapel", "stable"}:
+    if region_type in INTERIOR_REGION_TYPES:
         return Region(generate_interior(width, height, region_type), region_type, name, palette)
     return Region(Dungeon(width, height), region_type, name, palette)

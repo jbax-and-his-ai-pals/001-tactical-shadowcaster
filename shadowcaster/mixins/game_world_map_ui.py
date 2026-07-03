@@ -30,7 +30,7 @@ class WorldMapUIMixin(GameMixinBase):
         map_content_bottom_pad = 18
         map_content_width = map_area_width - map_content_left_pad - map_content_right_pad
         map_content_height = map_area_height - map_content_top_pad - map_content_bottom_pad
-        cell_size = 54
+        cell_size = max(28, min(120, int(54 * self.world_map_zoom)))
         visible_cols = max(5, map_content_width // cell_size)
         visible_rows = max(4, map_content_height // cell_size)
         center_x, center_y = self.world_map_view_center or self.selected_world_region or self.world_position
@@ -130,11 +130,14 @@ class WorldMapUIMixin(GameMixinBase):
         self.world_map_view_center = (current[0] + dx * 0.32, current[1] + dy * 0.32)
 
     def scroll_world_map_details(self, delta, content_height=None):
+        if content_height is not None:
+            self.world_map_detail_content_height = content_height
         layout = self.world_map_layout()
         if not layout:
             return
         viewport_height = self.world_map_detail_viewport_rect().height
-        max_scroll = max(0, (content_height or viewport_height) - viewport_height)
+        effective_height = self.world_map_detail_content_height or viewport_height
+        max_scroll = max(0, effective_height - viewport_height)
         self.world_map_detail_scroll = max(0, min(max_scroll, self.world_map_detail_scroll + delta))
 
     def world_map_detail_from_screen(self, screen_x, screen_y):
@@ -144,10 +147,35 @@ class WorldMapUIMixin(GameMixinBase):
         layout = self.world_map_layout()
         detail_frame = pygame.Rect(layout["detail_left"], layout["detail_top"], layout["detail_width"], layout["detail_height"])
         inset = detail_frame.inflate(-24, -24)
-        chip_y = detail_frame.y + 96
-        detail_content_top = chip_y + 38
+        chip_band_top = detail_frame.y + 98
+        detail_content_top = chip_band_top + 38
         viewport_height = detail_frame.height - (detail_content_top - detail_frame.y) - 16
         return pygame.Rect(inset.x, detail_content_top, inset.width, viewport_height)
+
+    def zoom_world_map(self, direction, pivot_screen=None):
+        layout = self.world_map_layout()
+        old_cell = layout["cell_size"]
+        factor = 1.18 if direction > 0 else (1.0 / 1.18)
+        new_zoom = max(28 / 54, min(120 / 54, self.world_map_zoom * factor))
+        new_cell = max(28, min(120, int(54 * new_zoom)))
+        if new_cell == old_cell:
+            return
+        if pivot_screen is not None:
+            cx = layout["center_pixel_x"]
+            cy = layout["center_pixel_y"]
+            wx = (pivot_screen[0] - cx) / old_cell + layout["center_x"]
+            wy = (pivot_screen[1] - cy) / old_cell + layout["center_y"]
+            self.world_map_zoom = new_zoom
+            new_layout = self.world_map_layout()
+            new_cx = new_layout["center_pixel_x"]
+            new_cy = new_layout["center_pixel_y"]
+            self.world_map_view_center = (
+                wx - (pivot_screen[0] - new_cx) / new_cell,
+                wy - (pivot_screen[1] - new_cy) / new_cell,
+            )
+        else:
+            self.world_map_zoom = new_zoom
+        self.world_map_center_animation = None
 
     def handle_world_map_wheel(self, event):
         pointer = getattr(event, "pos", None) or pygame.mouse.get_pos()
@@ -155,10 +183,7 @@ class WorldMapUIMixin(GameMixinBase):
         if self.world_map_detail_from_screen(*pointer):
             self.scroll_world_map_details(-event.y * 40)
             return
-        if pygame.key.get_mods() & pygame.KMOD_SHIFT:
-            self.pan_world_map(-event.y, 0)
-        else:
-            self.pan_world_map(0, -event.y)
+        self.zoom_world_map(event.y)
 
     def world_region_from_screen(self, screen_x, screen_y):
         regions = self.world_map_regions()
