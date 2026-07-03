@@ -42,6 +42,8 @@ from .constants import (
     COLOR_TERRAIN_HAYSTACK,
     COLOR_TERRAIN_FENCE,
     COLOR_TERRAIN_MUCK,
+    COLOR_TERRAIN_BARREL,
+    COLOR_TERRAIN_SIGN,
     VIEW_HEIGHT,
     VIEW_WIDTH,
     TILE_SIZE,
@@ -90,6 +92,8 @@ def terrain_marker_color(kind):
         "fallow": COLOR_TERRAIN_FALLOW,
         "haystack": COLOR_TERRAIN_HAYSTACK,
         "fence": COLOR_TERRAIN_FENCE,
+        "barrel": COLOR_TERRAIN_BARREL,
+        "sign": COLOR_TERRAIN_SIGN,
     }.get(kind, COLOR_TEXT)
 
 
@@ -241,6 +245,13 @@ def draw_terrain_marker(screen, screen_x, screen_y, kind, memory=False):
         pygame.draw.line(screen, color, (left + 4, center_y + 3), (left + TILE_SIZE - 4, center_y + 3), 1)
         for fx in (left + 6, center_x, left + TILE_SIZE - 6):
             pygame.draw.line(screen, color, (fx, top + 7), (fx, top + TILE_SIZE - 7), 1)
+    elif kind == "barrel":
+        pygame.draw.ellipse(screen, color, (left + 7, top + 6, TILE_SIZE - 14, TILE_SIZE - 10), 2)
+        pygame.draw.line(screen, color, (left + 7, center_y - 1), (left + TILE_SIZE - 7, center_y - 1), 1)
+        pygame.draw.line(screen, color, (left + 7, center_y + 3), (left + TILE_SIZE - 7, center_y + 3), 1)
+    elif kind == "sign":
+        pygame.draw.line(screen, color, (center_x, top + TILE_SIZE - 5), (center_x, top + 10), 2)
+        pygame.draw.rect(screen, color, (left + 6, top + 6, TILE_SIZE - 12, 9), 1)
 
 
 def draw_feature_footprint(screen, game, anchor, kind, memory=False):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+import time
 
 from ..constants import COLOR_FRIEND, COLOR_FRIEND_ANIMAL
 from ..game_typing import GameMixinBase
@@ -9,6 +10,13 @@ from ..systems import can_step, heuristic
 
 
 class ResidentsMixin(GameMixinBase):
+
+    def _service_adjacent_tile(self, spot):
+        for dx, dy in ((0, 1), (1, 0), (0, -1), (-1, 0), (1, 1), (-1, 1), (1, -1), (-1, -1)):
+            candidate = (spot[0] + dx, spot[1] + dy)
+            if not self.dungeon.is_blocked(*candidate):
+                return candidate
+        return None
 
     def spawn_residents(self):
         self.residents = []
@@ -22,9 +30,13 @@ class ResidentsMixin(GameMixinBase):
                     "shrine": ("caretaker", COLOR_FRIEND, "shrine", "Caretaker", ("Walk gently. Old blessings still answer here.", "The road bites less sharply when you carry a ward.")),
                     "smith": ("smith", COLOR_FRIEND, "smith", "Smith", ("Steel and will both need tending.", "If you're heading back out, go with a steadier hand.")),
                     "cartographer": ("surveyor", COLOR_FRIEND, "cartographer", "Surveyor", ("The frontier opens up once you've charted its edges.", "Roads are easier to trust when you know what lies beyond them.")),
+                    "tavern": ("barkeep", COLOR_FRIEND, "tavern", "Barkeep", ("Word travels fast through a good bar.", "Rest the feet, rest the mind.", "Travelers keep this place alive.")),
+                    "chapel": ("chaplain", COLOR_FRIEND, "chapel", "Chaplain", ("May the road treat you kindly.", "Blessings run deep when the road runs long.", "Light a thought for those still out there.")),
+                    "stable": ("stablehand", COLOR_FRIEND, "stable", "Stable Hand", ("Good horses know the back roads.", "A rested mount and a clear sky — that's all you need.", "I can point you toward routes the maps miss.")),
                 }
                 kind, color, marker, title, dialogue = residents[self.region_type]
-                self.residents.append(Resident(spot, kind, color, marker, title, dialogue, "stationary", spot, self.region_name))
+                npc_pos = self._service_adjacent_tile(spot) or spot
+                self.residents.append(Resident(npc_pos, kind, color, marker, title, dialogue, "stationary", npc_pos, self.region_name))
             return
         if self.region_type != "town":
             return
@@ -181,6 +193,36 @@ class ResidentsMixin(GameMixinBase):
                     local_behavior,
                 )
             )
+        # second biome-local for larger towns
+        if size in {"town", "large_town"}:
+            second_building = take_building()
+            if second_building is not None:
+                residents.append(
+                    resident_from_building(
+                        second_building,
+                        local_kind,
+                        COLOR_FRIEND,
+                        "settler",
+                        local_title,
+                        local_dialogue,
+                        "wander",
+                    )
+                )
+        # extra farmer for village+
+        if size in {"village", "town", "large_town"}:
+            extra_farm = take_building(("barn", "granary", "shed", "cottage"))
+            if extra_farm is not None:
+                residents.append(
+                    resident_from_building(
+                        extra_farm,
+                        "farmer",
+                        COLOR_FRIEND,
+                        "settler",
+                        "Farmer",
+                        ("Long days and short nights out here.", "Roots grow where you plant them."),
+                        "homebound",
+                    )
+                )
         if size == "large_town":
             elder_building = take_building(("hall", "house", "longhouse"))
             if elder_building is not None:
@@ -232,18 +274,32 @@ class ResidentsMixin(GameMixinBase):
         ]
         random.shuffle(animal_candidates)
         ambient_pool = []
-        if parent_biome in {"farmland", "plains", "forest"}:
+        if parent_biome in {"farmland", "plains"}:
             ambient_pool = [
                 ("chicken", "Chicken", ("The chicken scratches at the ground.",), "wander"),
                 ("chicken", "Chicken", ("The chicken eyes you cautiously.",), "wander"),
+                ("chicken", "Chicken", ("The chicken pecks at something near the path.",), "wander"),
             ]
-        if parent_biome in {"plains", "desert", "badlands"}:
+        elif parent_biome == "forest":
+            ambient_pool = [
+                ("chicken", "Chicken", ("The chicken scratches at the ground.",), "wander"),
+                ("cat", "Cat", ("The cat watches from a low branch.",), "wander"),
+            ]
+        if parent_biome in {"plains", "desert", "badlands", "farmland"}:
             ambient_pool.append(("dog", "Dog", ("The dog sniffs at the air nearby.",), "wander"))
-        if parent_biome in {"forest", "swamp", "mountain", "tundra"}:
+            ambient_pool.append(("dog", "Dog", ("The dog circles once, then sits.",), "wander"))
+        if parent_biome in {"swamp", "mountain", "tundra"}:
             ambient_pool.append(("cat", "Cat", ("The cat pauses, then looks away.",), "wander"))
-        if size in {"town", "large_town"}:
+        if parent_biome in {"volcanic", "badlands"}:
+            ambient_pool.append(("dog", "Dog", ("The dog eyes you from a distance.",), "wander"))
+        if size in {"village", "town", "large_town"}:
             ambient_pool.append(("cat", "Cat", ("The cat settles on a warm patch of path.",), "wander"))
+        if size in {"town", "large_town"}:
             ambient_pool.append(("dog", "Dog", ("The dog trots up, tail swinging.",), "wander"))
+            ambient_pool.append(("cat", "Cat", ("The cat flicks an ear and keeps walking.",), "wander"))
+        if size == "large_town":
+            ambient_pool.append(("dog", "Dog", ("The dog barks once, then settles.",), "wander"))
+            ambient_pool.append(("chicken", "Chicken", ("The chicken retreats around a corner.",), "wander"))
         for (akind, atitle, adialogue, abehavior), tile in zip(ambient_pool, animal_candidates):
             occupied_positions.add(tile)
             residents.append(Resident(tile, akind, COLOR_FRIEND_ANIMAL, "animal", atitle, adialogue, abehavior, tile, ""))
@@ -254,7 +310,10 @@ class ResidentsMixin(GameMixinBase):
         return next((resident for resident in self.residents if resident.position == position), None)
 
     def move_residents(self):
+        _t = time.perf_counter()
         if not self.residents:
+            if self.perf_overlay:
+                self.perf_timings["npc_ms"] = 0.0
             return
         town_paths = set(getattr(self.dungeon, "metadata", {}).get("town_paths", set())) if self.region_type == "town" else set()
         occupied = {enemy.position for enemy in self.enemies}
@@ -295,3 +354,5 @@ class ResidentsMixin(GameMixinBase):
             elif options:
                 resident.position = random.choice(options)
             occupied.add(resident.position)
+        if self.perf_overlay:
+            self.perf_timings["npc_ms"] = (time.perf_counter() - _t) * 1000

@@ -254,3 +254,39 @@ def render_travel_overlay(game):
         panel.blit(type_text, (12, 34))
         panel.blit(summary_text, (12, 58))
         game.screen.blit(panel, (left, top))
+
+
+def render_service_modal(game):
+    if not game.service_modal_open:
+        return
+    modal_width = 360
+    line_h = 24
+    modal_height = max(120, 56 + len(game.service_modal_lines) * line_h + 52)
+    x = (SCREEN_WIDTH - modal_width) // 2
+    y = (VIEW_HEIGHT * TILE_SIZE - modal_height) // 2
+
+    dim = pygame.Surface((SCREEN_WIDTH, VIEW_HEIGHT * TILE_SIZE), pygame.SRCALPHA)
+    dim.fill((0, 0, 0, 140))
+    game.screen.blit(dim, (0, 0))
+
+    modal = pygame.Surface((modal_width, modal_height), pygame.SRCALPHA)
+    modal.fill((18, 24, 36, 245))
+    pygame.draw.rect(modal, (180, 210, 240, 220), modal.get_rect(), 2, border_radius=14)
+
+    title_surf = game.font.render(game.service_modal_title, True, (255, 244, 170))
+    modal.blit(title_surf, title_surf.get_rect(centerx=modal_width // 2, y=14))
+    pygame.draw.line(modal, (80, 110, 150, 180), (20, 42), (modal_width - 20, 42), 1)
+
+    text_y = 52
+    for line in game.service_modal_lines:
+        surf = game.small_font.render(line, True, COLOR_TEXT)
+        modal.blit(surf, surf.get_rect(centerx=modal_width // 2, y=text_y))
+        text_y += line_h
+
+    ok_rect = game.service_modal_ok_rect().move(-x, -y)
+    pygame.draw.rect(modal, (44, 62, 88, 240), ok_rect, border_radius=8)
+    pygame.draw.rect(modal, (120, 168, 210, 220), ok_rect, 1, border_radius=8)
+    ok_label = game.small_font.render("OK", True, (220, 236, 252))
+    modal.blit(ok_label, ok_label.get_rect(center=ok_rect.center))
+
+    game.screen.blit(modal, (x, y))

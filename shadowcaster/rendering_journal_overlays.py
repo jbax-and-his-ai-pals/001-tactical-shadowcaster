@@ -40,7 +40,6 @@ def render_notice_board_overlay(game):
     pygame.draw.line(panel, (100, 86, 54, 200), (22, layout["header_bottom"] - top), (panel_w - 22, layout["header_bottom"] - top), 1)
 
     # quest kind labels and colors
-    kind_labels = {"delivery": "DELIVERY", "scout": "SCOUTING", "bounty": "BOUNTY"}
     kind_colors = {
         "delivery": (200, 180, 110),
         "scout": (120, 190, 200),
@@ -51,39 +50,54 @@ def render_notice_board_overlay(game):
 
     quests = game.notice_board_quests
     hovered_index = game.notice_board_hovered_index()
+    viewport_rect = layout["viewport_rect"]
+    viewport = pygame.Surface((viewport_rect.width, viewport_rect.height), pygame.SRCALPHA)
+    viewport.fill((20, 26, 38, 120))
+    pygame.draw.rect(viewport, (70, 64, 48, 110), viewport.get_rect(), 1, border_radius=10)
+    content_height = max(viewport_rect.height, game.notice_board_content_height())
+    content = pygame.Surface((viewport_rect.width, content_height), pygame.SRCALPHA)
+    content.fill((0, 0, 0, 0))
     for i, quest in enumerate(quests):
-        row_rect = layout["row_rects"][i].move(-left, -top)
+        row_rect = layout["row_rects"][i].move(-viewport_rect.left, -viewport_rect.top)
         ry = row_rect.top
         selected = i == game.notice_board_index
         hovered = i == hovered_index
         state = game.notice_board_quest_state(quest)
         fill = (34, 40, 56, 220) if selected else (30, 35, 48, 190) if hovered else (24, 28, 40, 160)
         border = (180, 154, 90, 220) if selected else (112, 126, 150, 190) if hovered else (60, 56, 44, 140)
-        pygame.draw.rect(panel, fill, row_rect, border_radius=8)
-        pygame.draw.rect(panel, border, row_rect, 2 if selected else 1, border_radius=8)
+        pygame.draw.rect(content, fill, row_rect, border_radius=8)
+        pygame.draw.rect(content, border, row_rect, 2 if selected else 1, border_radius=8)
 
         kcolor = kind_colors.get(quest.kind, COLOR_TEXT)
-        klabel = kind_labels.get(quest.kind, quest.kind.upper())
+        klabel = game.board_kind_label(quest)
         k_surf = game.small_font.render(f"[{klabel}]", True, kcolor)
-        panel.blit(k_surf, (row_rect.left + 14, ry + 10))
+        content.blit(k_surf, (row_rect.left + 14, ry + 10))
 
         scolor = status_colors.get(state, COLOR_TEXT)
         s_surf = game.small_font.render(status_labels.get(state, state), True, scolor)
-        panel.blit(s_surf, (row_rect.right - s_surf.get_width() - 14, ry + 10))
+        content.blit(s_surf, (row_rect.right - s_surf.get_width() - 14, ry + 10))
 
         desc_color = (220, 210, 185) if selected else (225, 230, 238) if hovered else COLOR_TEXT
         desc_lines = wrap_text(game.small_font, quest.description, desc_color, row_rect.width - 28)
-        for li, dl in enumerate(desc_lines[:2]):
-            panel.blit(dl, (row_rect.left + 14, ry + 34 + li * 18))
+        for li, dl in enumerate(desc_lines):
+            content.blit(dl, (row_rect.left + 14, ry + 34 + li * 18))
 
-        reward_label = f"Reward: {quest.reward_gold}g"
-        if quest.kind == "bounty" and state == "active":
-            existing = next((q for q in game.active_quests if q.id == quest.id), None)
-            if existing:
-                kills = game.enemies_defeated - existing.progress_count
-                reward_label += f"  —  {min(kills, quest.target_count)}/{quest.target_count} enemies"
+        reward_label = game.notice_board_reward_label(quest)
+        reward_y = ry + 34 + len(desc_lines) * 18 + 6
         r_surf = game.small_font.render(reward_label, True, (160, 200, 140) if selected else (142, 176, 120) if hovered else (120, 150, 100))
-        panel.blit(r_surf, (row_rect.left + 14, row_rect.bottom - 24))
+        content.blit(r_surf, (row_rect.left + 14, reward_y))
+    viewport.blit(content, (0, -game.notice_board_scroll))
+    panel.blit(viewport, (viewport_rect.left - left, viewport_rect.top - top))
+
+    max_scroll = game.notice_board_max_scroll()
+    if max_scroll > 0:
+        track_x = viewport_rect.right - left + 8
+        track = pygame.Rect(track_x, viewport_rect.top - top, 6, viewport_rect.height)
+        pygame.draw.rect(panel, (42, 52, 70), track, border_radius=4)
+        thumb_height = max(28, int(viewport_rect.height * (viewport_rect.height / max(viewport_rect.height, content_height))))
+        thumb_y = track.y + int((track.height - thumb_height) * (game.notice_board_scroll / max_scroll))
+        thumb = pygame.Rect(track.x, thumb_y, track.width, thumb_height)
+        pygame.draw.rect(panel, (180, 154, 90), thumb, border_radius=4)
 
     # footer
     hint_top = layout["hint_top"] - top
@@ -134,20 +148,17 @@ def render_journal_overlay(game):
     pygame.draw.rect(panel, (34, 42, 58, 88), inner_rect, 1, border_radius=12)
 
     title = game.font.render("Journal", True, (236, 244, 252))
-    counts = game.quest_summary_counts()
-    subtitle = game.small_font.render(
-        f"{counts['active']} active  •  {counts['completed']} completed",
-        True,
-        (180, 202, 224),
-    )
+    summary_lines = game.current_journal_summary_lines()
     panel.blit(title, title.get_rect(centerx=panel_w // 2, y=16))
-    panel.blit(subtitle, subtitle.get_rect(centerx=panel_w // 2, y=48))
-    draw_tabs(panel, game.small_font, game.quest_tabs(), game.journal_tab, 22, 18, panel_w - 44)
+    for index, line in enumerate(summary_lines):
+        summary = game.small_font.render(line, True, (180, 202, 224) if index == 0 else (166, 188, 212))
+        panel.blit(summary, summary.get_rect(centerx=panel_w // 2, y=48 + index * 20))
+    draw_tabs(panel, game.small_font, game.quest_tabs(), game.journal_tab, 22, layout["tab_top"] - top, panel_w - 44)
 
     viewport = pygame.Surface((viewport_rect.width, viewport_rect.height), pygame.SRCALPHA)
     viewport.fill((20, 26, 38, 168))
     pygame.draw.rect(viewport, (60, 76, 98, 120), viewport.get_rect(), 1, border_radius=10)
-    content_height = max(viewport_rect.height, game.journal_content_height() + 12)
+    content_height = max(viewport_rect.height, game.journal_content_height())
     content = pygame.Surface((viewport_rect.width, content_height), pygame.SRCALPHA)
     content.fill((0, 0, 0, 0))
 
@@ -162,14 +173,15 @@ def render_journal_overlay(game):
     else:
         y = 12
         content_width = viewport_rect.width - 28
-        for quest in entries:
+        for index, quest in enumerate(entries):
             body_lines = []
             for line in game.journal_entry_lines(quest):
                 body_lines.extend(wrap_text_lines(game.small_font, line, content_width - 18))
             row_height = 42 + len(body_lines) * 18 + 14
             row_rect = pygame.Rect(8, y, viewport_rect.width - 16, row_height)
-            fill = (26, 34, 48, 210) if quest.status == "active" else (22, 28, 40, 170)
-            border = (154, 206, 150) if quest.status == "active" else (108, 126, 148)
+            selected = index == game.journal_index
+            fill = (32, 42, 58, 220) if selected else (26, 34, 48, 210) if quest.status == "active" else (22, 28, 40, 170)
+            border = (212, 188, 118) if selected else (154, 206, 150) if quest.status == "active" else (108, 126, 148)
             pygame.draw.rect(content, fill, row_rect, border_radius=10)
             pygame.draw.rect(content, border, row_rect, 2 if quest.status == "active" else 1, border_radius=10)
 
@@ -198,15 +210,30 @@ def render_journal_overlay(game):
         pygame.draw.rect(panel, (130, 168, 206), thumb, border_radius=4)
 
     local_close = close_rect.move(-left, -top)
+    show_map_rect = layout["show_map_rect"].move(-left, -top)
+    abandon_rect = layout["abandon_rect"].move(-left, -top)
     close_hovered = close_rect.collidepoint(*game.mouse_screen_pos)
+    show_map_hovered = layout["show_map_rect"].collidepoint(*game.mouse_screen_pos)
+    abandon_hovered = layout["abandon_rect"].collidepoint(*game.mouse_screen_pos)
+    show_map_enabled = game.can_show_map_for_selected_journal_quest()
+    abandon_enabled = game.can_abandon_selected_journal_quest()
+    show_map_fill = (48, 66, 90, 220) if show_map_hovered and show_map_enabled else (40, 54, 74, 210) if show_map_enabled else (42, 44, 50, 170)
+    show_map_border = (144, 182, 220) if show_map_hovered and show_map_enabled else (118, 156, 194) if show_map_enabled else (90, 98, 102)
+    pygame.draw.rect(panel, show_map_fill, show_map_rect, border_radius=8)
+    pygame.draw.rect(panel, show_map_border, show_map_rect, 2, border_radius=8)
+    show_map_label = game.small_font.render("Show Map", True, (238, 245, 252) if show_map_enabled else (128, 136, 142))
+    panel.blit(show_map_label, show_map_label.get_rect(center=show_map_rect.center))
+    abandon_fill = (86, 54, 54, 220) if abandon_hovered and abandon_enabled else (70, 44, 44, 208) if abandon_enabled else (42, 44, 50, 170)
+    abandon_border = (210, 154, 154) if abandon_hovered and abandon_enabled else (176, 132, 132) if abandon_enabled else (90, 98, 102)
+    pygame.draw.rect(panel, abandon_fill, abandon_rect, border_radius=8)
+    pygame.draw.rect(panel, abandon_border, abandon_rect, 2, border_radius=8)
+    abandon_label = game.small_font.render("Abandon", True, (244, 230, 230) if abandon_enabled else (128, 136, 142))
+    panel.blit(abandon_label, abandon_label.get_rect(center=abandon_rect.center))
     close_fill = (72, 54, 58, 220) if close_hovered else (58, 42, 46, 210)
     pygame.draw.rect(panel, close_fill, local_close, border_radius=8)
     pygame.draw.rect(panel, (210, 164, 164) if close_hovered else (176, 132, 132), local_close, 2, border_radius=8)
     close_label = game.small_font.render("Close", True, (240, 224, 224))
     panel.blit(close_label, close_label.get_rect(center=local_close.center))
-
-    hint = game.small_font.render("Scroll to review your log of accepted and completed work.", True, COLOR_ACCENT)
-    panel.blit(hint, (22, panel_h - 38))
     game.screen.blit(panel, (left, top))
 
 
@@ -237,7 +264,7 @@ def render_log_overlay(game):
     viewport = pygame.Surface((viewport_rect.width, viewport_rect.height), pygame.SRCALPHA)
     viewport.fill((20, 26, 38, 168))
     pygame.draw.rect(viewport, (60, 76, 98, 120), viewport.get_rect(), 1, border_radius=10)
-    content_height = max(viewport_rect.height, game.log_content_height() + 12)
+    content_height = max(viewport_rect.height, game.log_content_height())
     content = pygame.Surface((viewport_rect.width, content_height), pygame.SRCALPHA)
     content.fill((0, 0, 0, 0))
 
@@ -259,7 +286,7 @@ def render_log_overlay(game):
             content.blit(stamp, (row_rect.left + 10, row_rect.top + 8))
             line_y = row_rect.top + 8
             for line in wrapped:
-                content.blit(game.small_font.render(line, True, COLOR_TEXT), (row_rect.left + 42, line_y))
+                content.blit(game.small_font.render(line, True, COLOR_TEXT), (row_rect.left + 50, line_y))
                 line_y += 18
             y += row_height + 8
 

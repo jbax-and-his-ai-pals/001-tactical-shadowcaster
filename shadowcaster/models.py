@@ -99,6 +99,11 @@ class Quest:
     status: str = "available"
     target_count: int = 0
     progress_count: int = 0
+    stage: int = 0
+    target_region_name: str = ""
+    target_landmark_name: str = ""
+    target_landmark_kind: str = ""
+    origin_town_name: str = ""
 
 
 @dataclass(frozen=True)

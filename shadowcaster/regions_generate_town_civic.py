@@ -120,17 +120,56 @@ def _assign_buildings(region, profile, plaza, houses):
         ("shrine", "Wayside Shrine"),
         ("smith", "Old Forge"),
         ("cartographer", "Surveyor's Office"),
+        ("tavern", "The Dusty Road Tavern"),
+        ("chapel", "Town Chapel"),
+        ("stable", "Town Stable"),
     ]
     flavor_buildings = {
-        "forest": [("home", "Woodcutter's Cottage"), ("home", "Miller's House"), ("work", "Herbal Shed"), ("civic", "Gathering Hall"), ("work", "Lumber Store")],
-        "plains": [("home", "Roadside Cottage"), ("work", "Granary"), ("work", "Stable"), ("civic", "Meeting Hall"), ("work", "Storehouse")],
-        "farmland": [("home", "Farmhouse"), ("work", "Barn"), ("work", "Granary"), ("work", "Stable"), ("civic", "Market Shed")],
-        "desert": [("home", "Adobe House"), ("work", "Camel Yard"), ("work", "Storehouse"), ("civic", "Shade Court"), ("work", "Water Depot")],
-        "swamp": [("home", "Raised Hut"), ("work", "Net Shed"), ("work", "Reed Loft"), ("civic", "Boardwalk Hall"), ("work", "Boat House")],
-        "mountain": [("home", "Stone House"), ("work", "Goat Pen"), ("work", "Tool Shed"), ("civic", "Watch Hall"), ("work", "Ore Store")],
-        "badlands": [("home", "Dust House"), ("work", "Tack Shed"), ("work", "Storehouse"), ("civic", "Outpost Hall"), ("work", "Feed Loft")],
-        "tundra": [("home", "Warm Hut"), ("work", "Smokehouse"), ("work", "Supply Shed"), ("civic", "Longhouse"), ("work", "Kennel")],
-        "volcanic": [("home", "Ash House"), ("work", "Coal Shed"), ("work", "Kiln Store"), ("civic", "Stone Hall"), ("work", "Water Cistern")],
+        "forest": [
+            ("home", "Woodcutter's Cottage"), ("home", "Trapper's Lodge"), ("home", "Miller's House"),
+            ("work", "Herbal Shed"), ("work", "Lumber Store"), ("work", "Drying Rack"), ("work", "Hunter's Cache"),
+            ("civic", "Gathering Hall"),
+        ],
+        "plains": [
+            ("home", "Roadside Cottage"), ("home", "Farmer's House"), ("home", "Drover's House"),
+            ("work", "Granary"), ("work", "Stable"), ("work", "Storehouse"), ("work", "Feed Barn"),
+            ("civic", "Meeting Hall"),
+        ],
+        "farmland": [
+            ("home", "Farmhouse"), ("home", "Miller's House"), ("home", "Shepherd's Cottage"),
+            ("work", "Barn"), ("work", "Granary"), ("work", "Stable"), ("work", "Root Cellar"),
+            ("civic", "Market Shed"),
+        ],
+        "desert": [
+            ("home", "Adobe House"), ("home", "Mudbrick House"), ("home", "Sand Lodge"),
+            ("work", "Camel Yard"), ("work", "Storehouse"), ("work", "Water Depot"), ("work", "Dye House"),
+            ("civic", "Shade Court"),
+        ],
+        "swamp": [
+            ("home", "Raised Hut"), ("home", "Stilt House"), ("home", "Reed Dwelling"),
+            ("work", "Net Shed"), ("work", "Reed Loft"), ("work", "Boat House"), ("work", "Smoke Hut"),
+            ("civic", "Boardwalk Hall"),
+        ],
+        "mountain": [
+            ("home", "Stone House"), ("home", "Quarrier's Lodge"), ("home", "Herder's Hut"),
+            ("work", "Goat Pen"), ("work", "Tool Shed"), ("work", "Ore Store"), ("work", "Charcoal Pit"),
+            ("civic", "Watch Hall"),
+        ],
+        "badlands": [
+            ("home", "Dust House"), ("home", "Drifter's Lodge"), ("home", "Clay Hut"),
+            ("work", "Tack Shed"), ("work", "Storehouse"), ("work", "Feed Loft"), ("work", "Scrap Yard"),
+            ("civic", "Outpost Hall"),
+        ],
+        "tundra": [
+            ("home", "Warm Hut"), ("home", "Longhouse Annex"), ("home", "Fur Trader's Lodge"),
+            ("work", "Smokehouse"), ("work", "Supply Shed"), ("work", "Kennel"), ("work", "Ice Store"),
+            ("civic", "Longhouse"),
+        ],
+        "volcanic": [
+            ("home", "Ash House"), ("home", "Cinder Lodge"), ("home", "Soot Cottage"),
+            ("work", "Coal Shed"), ("work", "Kiln Store"), ("work", "Water Cistern"), ("work", "Slag Pile"),
+            ("civic", "Stone Hall"),
+        ],
     }
 
     def house_distance(house):
@@ -146,11 +185,11 @@ def _assign_buildings(region, profile, plaza, houses):
     def district_label(role, house, kind=None):
         side = house_side_label(house).title()
         if role == "service":
-            if kind in {"supply", "cartographer", "inn"}:
+            if kind in {"supply", "cartographer", "inn", "tavern"}:
                 return "Market Square"
-            if kind in {"clinic", "shrine"}:
+            if kind in {"clinic", "shrine", "chapel"}:
                 return "Civic Square"
-            if kind == "smith":
+            if kind in {"smith", "stable"}:
                 return f"{side} Works"
             return "Town Center"
         if role == "civic":
@@ -222,21 +261,24 @@ def _assign_buildings(region, profile, plaza, houses):
         return candidates[:limit]
 
     exterior_decor = {
-        "inn": ["pew", "table"],
-        "clinic": ["flowers", "pew"],
-        "supply": ["crate", "crate"],
-        "shrine": ["flowers", "pew"],
-        "smith": ["anvil", "crate"],
-        "cartographer": ["table", "crate"],
+        "inn": ["pew", "table", "barrel"],
+        "clinic": ["flowers", "pew", "flowers"],
+        "supply": ["crate", "crate", "barrel"],
+        "shrine": ["flowers", "pew", "flowers"],
+        "smith": ["anvil", "crate", "barrel"],
+        "cartographer": ["table", "crate", "sign"],
+        "tavern": ["barrel", "barrel", "sign", "pew"],
+        "chapel": ["flowers", "pew", "flowers"],
+        "stable": ["hitch_post", "hitch_post", "crate", "barrel"],
         "home": ["flowers"],
         "work": ["crate"],
         "civic": ["pew"],
     }
     name_decor = {
-        "barn": ["crate", "hitch_post"],
-        "stable": ["hitch_post", "crate"],
-        "granary": ["crate", "crate"],
-        "market": ["stall", "crate"],
+        "barn": ["crate", "hitch_post", "barrel"],
+        "stable": ["hitch_post", "crate", "barrel"],
+        "granary": ["crate", "crate", "barrel"],
+        "market": ["stall", "crate", "sign"],
         "boat": ["crate", "hitch_post"],
         "reed": ["flowers", "crate"],
         "watch": ["brazier", "crate"],
@@ -246,8 +288,15 @@ def _assign_buildings(region, profile, plaza, houses):
         "camel": ["hitch_post", "crate"],
         "ore": ["crate", "anvil"],
         "tool": ["anvil", "crate"],
-        "smokehouse": ["brazier", "crate"],
+        "smokehouse": ["brazier", "crate", "barrel"],
         "kennel": ["hitch_post"],
+        "tavern": ["barrel", "sign"],
+        "chapel": ["flowers", "pew"],
+        "lodge": ["crate", "barrel"],
+        "shed": ["crate"],
+        "cellar": ["barrel", "crate"],
+        "pit": ["crate", "brazier"],
+        "slag": ["crate", "anvil"],
     }
     for building in region.metadata["town_buildings"]:
         anchor = building["door"]
@@ -256,7 +305,7 @@ def _assign_buildings(region, profile, plaza, houses):
         for key, decor in name_decor.items():
             if key in lowered_name:
                 decor_list.extend(decor)
-        slots = nearby_path_slots(anchor, limit=min(3, len(decor_list)))
+        slots = nearby_path_slots(anchor, limit=min(4, len(decor_list)))
         for tile, decor_kind in zip(slots, decor_list):
             if tile not in region.metadata["decor"]:
                 region.metadata["decor"][tile] = decor_kind

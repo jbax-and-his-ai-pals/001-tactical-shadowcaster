@@ -204,6 +204,7 @@ class MenuUIMixin(GameMixinBase):
         if self.journal_open:
             self.journal_tab = 0
             self.journal_scroll = 0
+            self.journal_index = -1
             self.message = "Journal open."
         else:
             self.message = f"You return to {self.region_name}."

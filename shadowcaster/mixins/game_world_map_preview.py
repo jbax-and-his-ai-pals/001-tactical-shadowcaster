@@ -16,7 +16,25 @@ class WorldMapPreviewMixin(GameMixinBase):
         current_key = self.region_key(self.world_position)
         if current_key not in regions:
             regions[current_key] = self.snapshot_current_region()
+        for coord in self.active_quest_preview_coords():
+            key = self.region_key(coord)
+            if key in regions:
+                continue
+            state = self.preview_world_regions.get(key)
+            if state is None:
+                state = self.create_world_region_state(coord)
+                self.preview_world_regions[key] = state
+            regions[key] = state
         return {self.parse_region_key(key): value for key, value in regions.items()}
+
+    def active_quest_preview_coords(self):
+        coords = set()
+        for quest in self.active_quests:
+            if quest.status != "active":
+                continue
+            coords.add(quest.to_world_pos)
+        coords.discard(self.world_position)
+        return sorted(coords)
 
     def world_map_regions(self):
         if self.world_map_mode == "local_debug":

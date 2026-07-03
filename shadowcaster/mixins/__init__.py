@@ -1,6 +1,7 @@
 from .game_combat import CombatMixin
 from .game_controls import ControlsMixin
 from .game_core import GameCoreMixin
+from .game_tuning import TuningMixin
 from .game_death_ui import DeathUIMixin
 from .game_autoexplore import AutoexploreMixin
 from .game_floor_generation import FloorGenerationMixin
@@ -8,13 +9,16 @@ from .game_input import InputMixin
 from .game_inspect import InspectMixin
 from .game_inventory import InventoryMixin
 from .game_journal_ui import JournalUIMixin
+from .game_log_ui import LogUIMixin
 from .game_menu_ui import MenuUIMixin
 from .game_overlay_clicks import OverlayClickMixin
 from .game_overlay_events import OverlayEventMixin
 from .game_overlay_input import OverlayInputMixin
 from .game_population import PopulationMixin
 from .game_movement import MovementMixin
+from .game_quest_text import QuestTextMixin
 from .game_quests import QuestsMixin
+from .game_resident_boons import ResidentBoonsMixin
 from .game_residents import ResidentsMixin
 from .game_rewards_ui import RewardsUIMixin
 from .game_terrain import TerrainMixin
@@ -40,14 +44,18 @@ __all__ = [
     "InspectMixin",
     "InventoryMixin",
     "JournalUIMixin",
+    "LogUIMixin",
     "MenuUIMixin",
     "MovementMixin",
     "OverlayClickMixin",
     "OverlayEventMixin",
     "OverlayInputMixin",
     "PopulationMixin",
+    "QuestTextMixin",
     "QuestsMixin",
+    "ResidentBoonsMixin",
     "ResidentsMixin",
+    "TuningMixin",
     "RewardsUIMixin",
     "TerrainMixin",
     "TownsMixin",

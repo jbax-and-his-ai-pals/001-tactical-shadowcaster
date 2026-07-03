@@ -60,6 +60,7 @@ class OverlayInputMixin(GameMixinBase):
                     self.move_inventory_selection(1 if vertical > 0 else -1)
                 elif overlay == "notice_board":
                     self.notice_board_index = (self.notice_board_index + (1 if vertical > 0 else -1)) % max(1, len(self.notice_board_quests))
+                    self.ensure_notice_board_selection_visible()
                 elif overlay == "choice":
                     self.adjust_choice_index(1 if vertical > 0 else -1)
                 elif overlay == "world_map":
@@ -158,9 +159,9 @@ class OverlayInputMixin(GameMixinBase):
             return True
         if overlay == "journal":
             if move == (0, -1):
-                self.scroll_journal(-36)
+                self.move_journal_selection(-1)
             elif move == (0, 1):
-                self.scroll_journal(36)
+                self.move_journal_selection(1)
             elif move == (-1, 0):
                 self.shift_journal_tab(-1)
             elif move == (1, 0):
@@ -175,8 +176,10 @@ class OverlayInputMixin(GameMixinBase):
         if overlay == "notice_board":
             if move == (0, -1):
                 self.notice_board_index = (self.notice_board_index - 1) % max(1, len(self.notice_board_quests))
+                self.ensure_notice_board_selection_visible()
             elif move == (0, 1):
                 self.notice_board_index = (self.notice_board_index + 1) % max(1, len(self.notice_board_quests))
+                self.ensure_notice_board_selection_visible()
             return True
         if overlay == "choice":
             if move in {(-1, 0), (0, -1)}:

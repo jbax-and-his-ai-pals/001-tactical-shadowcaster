@@ -146,6 +146,9 @@ class InputMixin(GameMixinBase):
         self.touch_ui_active = True
         self.mouse_screen_pos = (screen_x, screen_y)
         active_overlay = self.active_non_menu_overlay()
+        if active_overlay == "service_modal":
+            self.handle_service_modal_click(screen_x, screen_y)
+            return
         if active_overlay == "choice":
             self.handle_choice_click(screen_x, screen_y)
             return
@@ -207,6 +210,12 @@ class InputMixin(GameMixinBase):
             self.selected_inspect_tile = position
             self.stop_auto_movement()
             self._notice_board_interact()
+            return
+        service_spot = getattr(self.dungeon, "metadata", {}).get("service_spot")
+        if service_spot and position == service_spot and max(abs(position[0] - self.player[0]), abs(position[1] - self.player[1])) <= 1 and not self.service_claimed:
+            self.selected_inspect_tile = position
+            self.stop_auto_movement()
+            self.apply_town_service()
             return
         info = self.inspect_tile_info(position)
         if info:
@@ -298,6 +307,12 @@ class InputMixin(GameMixinBase):
                     continue
                 if event.key == pygame.K_PAGEDOWN:
                     self.scroll_message_log_by(-1)
+                    continue
+                if event.key == pygame.K_F9:
+                    self.perf_overlay = not self.perf_overlay
+                    continue
+                if event.key == pygame.K_F10:
+                    self.toggle_debug_omniscience()
                     continue
                 biome_debug = self.debug_biome_hotkeys().get(event.key)
                 if biome_debug:

@@ -74,11 +74,8 @@ class InspectMixin(GameMixinBase):
         landmark = next((landmark for landmark in self.landmarks if landmark.position == position), None)
         if landmark and (position in self.visible_tiles or position in self.seen_tiles):
             progress = self.landmark_progress(self.world_position, landmark)
-            landmark_lines = [
-                landmark.kind.replace("_", " ").title(),
-                progress["status"],
-                progress["detail"],
-            ]
+            identity = self.landmark_identity(self.world_position, self.snapshot_current_region(), landmark)
+            landmark_lines = [identity["hook"], progress["status"], progress["detail"]]
             if landmark.kind == "inn":
                 landmark_lines = ["Rest and recover", "One free rest", progress["detail"]]
             elif landmark.kind == "clinic":
@@ -91,6 +88,8 @@ class InspectMixin(GameMixinBase):
                 landmark_lines = ["Tune gear for the road", "One free field refit", progress["detail"]]
             elif landmark.kind == "cartographer":
                 landmark_lines = ["Reveal nearby regions", "One local survey", progress["detail"]]
+            elif identity.get("reward_hint"):
+                landmark_lines.append(identity["reward_hint"])
             return {
                 "title": self.inspect_title(landmark.name, position),
                 "lines": landmark_lines,
@@ -218,7 +217,8 @@ class InspectMixin(GameMixinBase):
     def current_inspect_info(self):
         if self.active_overlay():
             return None
-        hovered = self.inspect_tile_info(self.hovered_world_tile)
-        if hovered:
-            return hovered
+        if self.world_from_screen(*self.mouse_screen_pos) is not None:
+            hovered = self.inspect_tile_info(self.hovered_world_tile)
+            if hovered:
+                return hovered
         return self.inspect_tile_info(self.selected_inspect_tile)

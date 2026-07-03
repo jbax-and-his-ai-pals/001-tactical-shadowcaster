@@ -1,154 +1,109 @@
 from __future__ import annotations
+
 import hashlib
-import random
+
 from ..models import Quest
-from ..game_typing import GameMixinBase
+from .game_quest_text import QuestTextMixin
 
 
-class QuestsMixin(GameMixinBase):
-    def notice_board_context(self):
-        building_names = [building["name"] for building in self.town_building_data()]
-        home_name = next(
-            (name for name in building_names if "house" in name.lower() or "cottage" in name.lower() or "hut" in name.lower()),
-            self.region_name,
-        )
-        work_name = next(
-            (
-                name
-                for name in building_names
-                if any(term in name.lower() for term in ("granary", "barn", "store", "shed", "yard", "kiln", "stable", "market"))
-            ),
-            self.region_name,
-        )
-        civic_name = next(
-            (
-                name
-                for name in building_names
-                if any(term in name.lower() for term in ("hall", "square", "shrine", "office", "clinic"))
-            ),
-            self.region_name,
-        )
-        return {"home": home_name, "work": work_name, "civic": civic_name, "town": self.region_name}
-
-    def _notice_board_text(self):
-        import hashlib
-        seed_str = f"{self.world_seed}:{self.world_position[0]}:{self.world_position[1]}"
-        h = int(hashlib.md5(seed_str.encode()).hexdigest(), 16)
-        postings = [
-            "Travelers warned: reports of unusual creature movement along the eastern route",
-            "Lost: a grey pack mule last seen near the mill — reward offered",
-            "Work available at the granary — strong backs needed before the harvest",
-            "Route north is slow going after recent weather — allow extra time",
-            "Notice: new toll in effect at the river crossing, two coins each way",
-            "Caution: fog sits heavy in the low ground to the west each morning",
-            "Seeking reliable passage to neighboring settlements — ask at the inn",
-            "Reminder: all disputes over land boundaries to be settled at the hall",
-            "A shipment of supply goods is overdue — anyone with information, please report",
-            "Trade route reopened after repairs; roads are passable but muddy",
-            "Experienced guides wanted for escort through the borderlands — fair pay",
-            "Notice of annual gathering at the town square — all residents welcome",
-            "Lost: small carved amulet, silver-grey, near the market stalls",
-            "Warnings of rough weather inbound from the mountain pass",
-            "A wagon of trade goods is missing along the southern road — inquire within",
-        ]
-        return postings[h % len(postings)]
-
-    _QUEST_DIRECTIONS = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)]
-    _QUEST_DIR_NAMES = {
-        (1, 0): "east", (-1, 0): "west", (0, 1): "south", (0, -1): "north",
-        (1, 1): "southeast", (1, -1): "northeast", (-1, 1): "southwest", (-1, -1): "northwest",
-    }
-    _DELIVERY_ITEMS = [
-        ("quest_letter", "Sealed Letter", "a sealed letter", (220, 210, 160)),
-        ("quest_package", "Small Package", "a small package", (160, 130, 100)),
-        ("quest_medicine", "Medicine Bundle", "a medicine bundle", (160, 210, 180)),
-        ("quest_parcel", "Wrapped Parcel", "a wrapped parcel", (190, 180, 140)),
-    ]
-
+class QuestsMixin(QuestTextMixin):
     def _board_quest_delivery(self, wx, wy, slot):
-        import hashlib
-        h = int(hashlib.md5(f"delivery:{self.world_seed}:{wx}:{wy}:{slot}".encode()).hexdigest(), 16)
+        cycle = self.quest_posting_cycle()
+        h = int(hashlib.md5(f"delivery:{self.world_seed}:{wx}:{wy}:{slot}:{cycle}".encode()).hexdigest(), 16)
         dx, dy = self._QUEST_DIRECTIONS[h % 8]
         dist = (h >> 3) % 2 + 1
         to_pos = (wx + dx * dist, wy + dy * dist)
         dir_name = self._QUEST_DIR_NAMES[(dx, dy)]
         key, name, desc, _ = self._DELIVERY_ITEMS[h % len(self._DELIVERY_ITEMS)]
         reward = 20 + (h % 6) * 10
+        region_name = self.quest_preview_region_state(to_pos).get("region_name", f"a settlement to the {dir_name}")
         return Quest(
-            id=f"delivery_{wx}_{wy}_{slot}",
+            id=f"delivery_{wx}_{wy}_{slot}_{cycle}",
             kind="delivery",
             from_world_pos=(wx, wy),
             to_world_pos=to_pos,
-            to_town_hint=f"a settlement to the {dir_name}",
+            to_town_hint=region_name,
             item_key=key,
             item_name=name,
-            description=f"Carry {desc} to {dir_name}.",
+            description=self.delivery_description(desc, region_name, dir_name),
             reward_gold=reward,
+            target_region_name=region_name,
+            origin_town_name=self.region_name,
         )
 
     def _board_quest_scout(self, wx, wy, slot):
-        import hashlib
-        h = int(hashlib.md5(f"scout:{self.world_seed}:{wx}:{wy}:{slot}".encode()).hexdigest(), 16)
+        cycle = self.quest_posting_cycle()
+        h = int(hashlib.md5(f"scout:{self.world_seed}:{wx}:{wy}:{slot}:{cycle}".encode()).hexdigest(), 16)
         dx, dy = self._QUEST_DIRECTIONS[h % 8]
         dist = (h >> 3) % 3 + 1
         to_pos = (wx + dx * dist, wy + dy * dist)
         dir_name = self._QUEST_DIR_NAMES[(dx, dy)]
-        reward = 15 + (h % 4) * 5
+        region_name, landmark_name, landmark_kind = self.scout_target_details(to_pos, h)
+        reward = 20 + (h % 5) * 5
+        description = self.scout_description(region_name, dir_name, landmark_name)
         return Quest(
-            id=f"scout_{wx}_{wy}_{slot}",
+            id=f"scout_{wx}_{wy}_{slot}_{cycle}",
             kind="scout",
             from_world_pos=(wx, wy),
             to_world_pos=to_pos,
-            to_town_hint=f"to the {dir_name}",
+            to_town_hint=region_name,
             item_key="",
             item_name="",
-            description=f"Survey the region to the {dir_name} and report back.",
+            description=description,
             reward_gold=reward,
+            target_region_name=region_name,
+            target_landmark_name=landmark_name,
+            target_landmark_kind=landmark_kind,
+            origin_town_name=self.region_name,
         )
 
     def _board_quest_bounty(self, wx, wy, slot):
-        import hashlib
-        h = int(hashlib.md5(f"bounty:{self.world_seed}:{wx}:{wy}:{slot}".encode()).hexdigest(), 16)
-        target = (h % 4 + 1) * 5
-        reward = target * 4
+        cycle = self.quest_posting_cycle()
+        h = int(hashlib.md5(f"bounty:{self.world_seed}:{wx}:{wy}:{slot}:{cycle}".encode()).hexdigest(), 16)
+        dx, dy = self._QUEST_DIRECTIONS[h % 8]
+        dist = (h >> 3) % 2 + 1
+        to_pos = (wx + dx * dist, wy + dy * dist)
+        region_name, _region_type, objective, danger_tier = self.bounty_target_details(to_pos)
+        target = max(4, 3 + danger_tier * 2 + (h % 4))
+        reward = 18 + target * (3 + danger_tier)
         return Quest(
-            id=f"bounty_{wx}_{wy}_{slot}",
+            id=f"bounty_{wx}_{wy}_{slot}_{cycle}",
             kind="bounty",
             from_world_pos=(wx, wy),
-            to_world_pos=(wx, wy),
-            to_town_hint="here",
+            to_world_pos=to_pos,
+            to_town_hint=region_name,
             item_key="",
             item_name="",
-            description=f"Defeat {target} enemies and return to claim your reward.",
+            description=f"Travel to {region_name} to the {self.quest_direction_name((wx, wy), to_pos)}, {objective}, then return to {self.region_name}.",
             reward_gold=reward,
             target_count=target,
+            target_region_name=region_name,
+            origin_town_name=self.region_name,
         )
 
     def generate_board_quests(self) -> list:
-        import hashlib
         if self.region_type != "town":
             return []
         wx, wy = self.world_position
-        h = int(hashlib.md5(f"board:{self.world_seed}:{wx}:{wy}".encode()).hexdigest(), 16)
+        cycle = self.quest_posting_cycle()
+        h = int(hashlib.md5(f"board:{self.world_seed}:{wx}:{wy}:{cycle}".encode()).hexdigest(), 16)
         builders = [self._board_quest_delivery, self._board_quest_scout, self._board_quest_bounty]
-        order = [(h >> (i * 2)) % 3 for i in range(3)]
-        seen = set()
         quests = []
-        for idx in order:
-            if idx in seen:
-                idx = next(i for i in range(3) if i not in seen)
-            seen.add(idx)
-            quests.append(builders[idx](wx, wy, idx))
+        for slot in range(5):
+            idx = (h >> (slot * 3)) % len(builders)
+            quests.append(builders[idx](wx, wy, slot))
         return quests
 
     def open_notice_board(self):
         self.refresh_notice_board(keep_selection=False)
         self.notice_board_open = True
+        self.notice_board_scroll = 0
         self.stop_auto_movement()
 
     def close_notice_board(self):
         self.notice_board_open = False
         self.notice_board_quests = []
+        self.notice_board_scroll = 0
 
     def refresh_notice_board(self, keep_selection=True):
         selected_id = None
@@ -162,24 +117,20 @@ class QuestsMixin(GameMixinBase):
             matching_index = next((i for i, quest in enumerate(self.notice_board_quests) if quest.id == selected_id), None)
             if matching_index is not None:
                 self.notice_board_index = matching_index
+                self.ensure_notice_board_selection_visible()
                 return
-        if keep_selection:
-            self.notice_board_index = max(0, min(self.notice_board_index, len(self.notice_board_quests) - 1))
-        else:
-            self.notice_board_index = 0
+        self.notice_board_index = max(0, min(self.notice_board_index, len(self.notice_board_quests) - 1)) if keep_selection else 0
+        self.ensure_notice_board_selection_visible()
 
     def notice_board_quest_state(self, quest) -> str:
         existing = next((q for q in self.active_quests if q.id == quest.id), None)
-        if existing:
-            return existing.status
-        return "available"
+        return existing.status if existing else "available"
 
     def accept_board_quest(self, index: int):
         if index < 0 or index >= len(self.notice_board_quests):
             return
         template = self.notice_board_quests[index]
-        state = self.notice_board_quest_state(template)
-        if state != "available":
+        if self.notice_board_quest_state(template) != "available":
             return
         quest = Quest(
             id=template.id,
@@ -194,18 +145,27 @@ class QuestsMixin(GameMixinBase):
             status="active",
             target_count=template.target_count,
             progress_count=self.enemies_defeated,
+            stage=template.stage,
+            target_region_name=template.target_region_name,
+            target_landmark_name=template.target_landmark_name,
+            target_landmark_kind=template.target_landmark_kind,
+            origin_town_name=template.origin_town_name,
         )
         self.active_quests.append(quest)
         if quest.kind == "delivery":
-            _, name, _, color = next(
-                d for d in self._DELIVERY_ITEMS if d[0] == quest.item_key
-            )
+            _, _, _, color = next(d for d in self._DELIVERY_ITEMS if d[0] == quest.item_key)
             self.add_item(quest.item_key, quest.item_name, "quest", color, "quest")
-            self.message = f"Quest accepted: deliver {quest.item_name} to {quest.to_town_hint} for {quest.reward_gold}g."
+            self.message = f"Quest accepted: deliver {quest.item_name} to {self.quest_target_label(quest)} for {quest.reward_gold}g."
         elif quest.kind == "scout":
-            self.message = f"Quest accepted: scout {quest.to_town_hint} for {quest.reward_gold}g."
+            if quest.target_landmark_name:
+                self.message = (
+                    f"Quest accepted: confirm {quest.target_landmark_name} in {self.quest_target_label(quest)}, "
+                    f"then report back to {quest.origin_town_name}."
+                )
+            else:
+                self.message = f"Quest accepted: scout {self.quest_target_label(quest)} and report back to {quest.origin_town_name}."
         elif quest.kind == "bounty":
-            self.message = f"Quest accepted: defeat {quest.target_count} enemies for {quest.reward_gold}g."
+            self.message = f"Quest accepted: hunt in {self.quest_target_label(quest)} and return for {quest.reward_gold}g."
         if self.notice_board_open:
             self.refresh_notice_board(keep_selection=True)
 
@@ -215,6 +175,19 @@ class QuestsMixin(GameMixinBase):
     def active_quests_in_progress(self) -> list:
         return [q for q in self.active_quests if q.status == "active"]
 
+    def scout_objective_met(self, quest):
+        if self.world_position != quest.to_world_pos:
+            return False
+        if not quest.target_landmark_name:
+            return True
+        for landmark in self.landmarks:
+            if landmark.name != quest.target_landmark_name:
+                continue
+            if quest.target_landmark_kind and landmark.kind != quest.target_landmark_kind:
+                continue
+            return landmark.position in self.seen_tiles
+        return False
+
     def _complete_quest(self, quest):
         quest.status = "complete"
         self.gold += quest.reward_gold
@@ -222,21 +195,34 @@ class QuestsMixin(GameMixinBase):
             item = self.inventory_item(quest.item_key)
             if item is not None:
                 self.inventory.remove(item)
-            self.message = f"Quest complete — {quest.item_name} delivered. Received {quest.reward_gold}g. Total: {self.gold}g."
+            self.message = f"Quest complete - {quest.item_name} delivered. Received {quest.reward_gold}g. Total: {self.gold}g."
         elif quest.kind == "scout":
-            self.message = f"Quest complete — region scouted. Received {quest.reward_gold}g. Total: {self.gold}g."
+            target_label = quest.target_landmark_name or quest.target_region_name or "the region"
+            self.message = f"Quest complete - report filed on {target_label}. Received {quest.reward_gold}g. Total: {self.gold}g."
         elif quest.kind == "bounty":
-            self.message = f"Quest complete — bounty fulfilled. Received {quest.reward_gold}g. Total: {self.gold}g."
+            self.message = f"Quest complete - contract settled for {quest.target_region_name}. Received {quest.reward_gold}g. Total: {self.gold}g."
         if self.notice_board_open and self.region_type == "town":
             self.refresh_notice_board(keep_selection=True)
 
     def check_quest_completion(self):
         for quest in self.active_quests_in_progress():
-            if quest.kind in {"delivery", "scout"}:
+            if quest.kind == "delivery":
                 if self.region_type == "town" and quest.to_world_pos == self.world_position:
                     self._complete_quest(quest)
+            elif quest.kind == "scout":
+                if quest.stage == 0 and self.scout_objective_met(quest):
+                    quest.stage = 1
+                    target_label = quest.target_landmark_name or quest.target_region_name or quest.to_town_hint
+                    home_name = quest.origin_town_name or self.region_name
+                    self.message = f"Lead confirmed at {target_label}. Return to {home_name} for payment."
+                elif quest.stage >= 1 and self.region_type == "town" and self.world_position == quest.from_world_pos:
+                    self._complete_quest(quest)
             elif quest.kind == "bounty":
-                kills = self.enemies_defeated - quest.progress_count
+                if quest.stage == 0 and self.world_position == quest.to_world_pos:
+                    quest.stage = 1
+                    quest.progress_count = self.enemies_defeated
+                    self.message = f"Bounty ground reached: {quest.target_region_name}. Make the area safe, then return to {quest.origin_town_name}."
+                kills = self.enemies_defeated - quest.progress_count if quest.stage >= 1 else 0
                 if kills >= quest.target_count and self.world_position == quest.from_world_pos and self.region_type == "town":
                     self._complete_quest(quest)
 

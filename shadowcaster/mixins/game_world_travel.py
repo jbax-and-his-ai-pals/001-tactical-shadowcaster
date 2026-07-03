@@ -158,7 +158,7 @@ class WorldTravelMixin(GameMixinBase):
         if self.in_local_region() and self.region_depth == 1:
             if self.region_type == "town":
                 return {"south": self.carve_edge_exit("south")}
-            if self.region_type in {"inn", "clinic", "supply", "shrine", "smith", "cartographer"}:
+            if self.region_type in {"inn", "clinic", "supply", "shrine", "smith", "cartographer", "tavern", "chapel", "stable"}:
                 exit_tile = getattr(self.dungeon, "metadata", {}).get("interior_exit")
                 if exit_tile:
                     return {"south": exit_tile}

@@ -94,7 +94,8 @@ Line counts drift — run `python -B utils/largest_py_files.py shadowcaster/mixi
 | `game_menu_ui.py` | menu layout, menu activation, visible option filtering |
 | `game_rewards_ui.py` | reward and provisioner choice system |
 | `game_death_ui.py` | death overlay layout and stat tab content |
-| `game_journal_ui.py` | journal and recent-log overlay layout/state |
+| `game_journal_ui.py` | journal overlay layout/state, quest selection/actions |
+| `game_log_ui.py` | recent-log overlay layout/state |
 | `game_autoexplore.py` | autoexplore targeting, frontier scoring, path selection |
 | `game_visibility.py` | FOV, seen tiles, exploration progress, terrain feature generation |
 | `game_terrain.py` | terrain candidate selection and vision transparency sync |
@@ -202,6 +203,7 @@ For a fuller walkthrough, read `docs/ARCHITECTURE.md`.
 - Exploration progress should count only tiles reachable from the player start, and completion should use meaningful reachable frontier logic rather than raw "some visible tile exists somewhere" logic
 - Connected region types can link at their edges into a persistent world grid; stairs still provide vertical/floor progression inside local delves
 - The world map supports clicking discovered regions for stats, and should increasingly surface landmark/site progress
+- World-map region detail now also tracks notable-site state more explicitly (`hidden`, `marked`, `open`, `cleared`) and surfaces a short site-outlook line plus richer landmark summaries; if you change landmark progression semantics, update both `landmark_progress()` and the world-map stats/rendering together
 - Settlement size now also feeds into world-map presentation through simple skyline markers for towns and monster towns; if settlement-size tiers change, keep the map visualization and region-detail stats in sync
 - The world map also has a local debug preview mode: it can show a radius of nearby generated neighbors around the current region, and previewed regions are cached so later actual entry reuses the same generated state
 - Multi-level local delves award a bottom-floor cache and open a return portal back outside
@@ -209,6 +211,7 @@ For a fuller walkthrough, read `docs/ARCHITECTURE.md`.
 - Settlements now carry size/context metadata and parent-biome flavor; if you add new town-facing UI, prefer using the display-label helpers rather than recomputing names ad hoc
 - Hover inspect should stay informational only for distant entities; actual resident/NPC interaction text belongs to adjacency/interact actions
 - Gear is no longer town-only: deeper local delves and some higher-danger overworld regions can place unowned weapons or armor directly on the map, and duplicate non-consumable finds currently salvage into ammo instead of creating redundant inventory stacks
+- Journal flow is now selection-first rather than click-to-open-map: entries are selected, `Show Map` only enables for selected active quests whose target region is truly discovered (not just preview-generated), and `Abandon` only enables for selected active quests
 
 ## Smoke-Testing Without a Display
 Pygame needs a video driver even headless. Use this pattern for quick verification scripts (no test suite exists yet):
@@ -242,3 +245,4 @@ Adding any of these means: extend the cycle in `create_upgrade_pickup`, add tuni
 - Future town work should use transition tiles or doors into dedicated interior maps rather than cramming interiors onto the outdoor map
 - Next roadmap step under consideration: deepening town interactions beyond one-shot service rooms; generation-side groundwork now includes service rooms, door integrity, biome-aware settlement metadata, non-service building flavor, and simple resident routines/patrols
 - Input work is now far enough along that regressions often show up in overlays first; if a modal changes, verify keyboard, mouse, controller, and touch all still have a viable path through it
+- The current near-term roadmap slice is still Phase 1 scaffolding: landmark/site identity and world-map/site progress were just strengthened, so the next natural feature step is multi-step place-based quest chains or non-combat landmark rewards rather than another broad UI refactor

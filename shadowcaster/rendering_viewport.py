@@ -194,7 +194,7 @@ def render_side_panel(screen, game, map_pixel_width):
     stat_box.fill((24, 28, 40, 180))
     pygame.draw.rect(stat_box, (70, 95, 130, 210), stat_box.get_rect(), 1, border_radius=10)
     summary_line = game.small_font.render(
-        f"{weapon.name if weapon else game.weapon_name}  •  {armor.name if armor else 'No armor'}  •  {game.status_summary()}",
+        f"{weapon.name if weapon else game.weapon_name}  -  {armor.name if armor else 'No armor'}  -  {game.status_summary()}",
         True,
         COLOR_TEXT,
     )
@@ -252,7 +252,7 @@ def render_side_panel(screen, game, map_pixel_width):
     counts = game.quest_summary_counts()
     journal_title = game.small_font.render("Journal", True, (245, 248, 252))
     journal_detail = game.small_font.render(
-        f"{counts['active']} active  •  {counts['completed']} complete",
+        f"{counts['active']} active  -  {counts['completed']} complete",
         True,
         COLOR_TEXT,
     )

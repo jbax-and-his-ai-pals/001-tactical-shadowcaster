@@ -20,6 +20,9 @@ if TYPE_CHECKING:
         # members suppresses false-positive attribute errors inside mixins
         # while preserving runtime behavior.
         floor_explorable_tiles: set[tuple[int, int]]
+        service_modal_open: bool
+        service_modal_title: str
+        service_modal_lines: list[str]
         dungeon: RegionMapLike
         player: tuple[int, int]
         health: int
@@ -53,6 +56,9 @@ if TYPE_CHECKING:
         mouse_screen_pos: tuple[int, int]
         exploration_choice_index: int
         bottom_reward_claimed: bool
+        debug_omniscient: bool
+        perf_overlay: bool
+        perf_timings: dict
         last_interest_tiles: Any
         upgrade_pickup: Any
         heal_pickup: Any

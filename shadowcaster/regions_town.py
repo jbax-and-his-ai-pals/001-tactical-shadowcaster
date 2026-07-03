@@ -37,52 +37,172 @@ def generate_interior(width, height, region_type):
     foyer = region.carve_rect(room.center[0] - 1, room.y + room.h - 3, 3, 2)
     carve_path(region, foyer.center, room.center, width=2)
     service_spot = room.center
+    decor = region.metadata["decor"]
+    cx, cy = room.center
+
     if region_type == "inn":
+        # Two side wings with beds; common table; reception counter; barrel
         region.carve_rect(room.x + 1, room.y + 1, 4, room.h - 4)
         region.carve_rect(room.x + room.w - 5, room.y + 1, 4, room.h - 4)
-        service_spot = (room.center[0], room.y + 2)
+        service_spot = (cx, room.y + 2)
         for y in range(room.y + 2, room.y + room.h - 3, 3):
-            region.metadata["decor"][(room.x + 2, y)] = "bed"
-            region.metadata["decor"][(room.x + room.w - 3, y)] = "bed"
-        region.metadata["decor"][(room.center[0], room.center[1] + 1)] = "table"
+            decor[(room.x + 2, y)] = "bed"
+            decor[(room.x + room.w - 3, y)] = "bed"
+        decor[(cx, cy)] = "table"
+        decor[(cx, cy + 2)] = "table"
+        decor[(cx, room.y + room.h - 4)] = "table"         # reception counter
+        decor[(room.x + 2, room.y + room.h - 3)] = "barrel"
+        decor[(room.x + room.w - 3, room.y + 2)] = "shelves"
+
     elif region_type == "clinic":
+        # Two wings, multiple beds each; medicine shelves; treatment table at centre
         left_wing = region.carve_rect(room.x + 1, room.y + 2, 4, room.h - 5)
         right_wing = region.carve_rect(room.x + room.w - 5, room.y + 2, 4, room.h - 5)
         carve_path(region, left_wing.center, room.center, width=1)
         carve_path(region, right_wing.center, room.center, width=1)
-        region.metadata["decor"][(left_wing.center[0], left_wing.center[1])] = "bed"
-        region.metadata["decor"][(right_wing.center[0], right_wing.center[1])] = "bed"
-        region.metadata["decor"][(room.center[0], room.y + 2)] = "shelves"
+        service_spot = (cx, cy)
+        for y in range(room.y + 3, room.y + room.h - 3, 3):
+            decor[(room.x + 2, y)] = "bed"
+            decor[(room.x + room.w - 3, y)] = "bed"
+        for x in range(cx - 2, cx + 3, 2):
+            decor[(x, room.y + 2)] = "shelves"
+        decor[(cx, cy)] = "table"                           # treatment table
+        decor[(room.x + 2, room.y + 2)] = "crate"
+        decor[(room.x + room.w - 3, room.y + 2)] = "crate"
+
     elif region_type == "supply":
+        # Back storage; floor browsing with table + barrels; crate shelves
         region.carve_rect(room.x + 2, room.y + 2, room.w - 4, 2)
         region.carve_rect(room.x + 2, room.y + room.h - 5, room.w - 4, 2)
-        service_spot = (room.center[0], room.y + 2)
+        service_spot = (cx, room.y + 2)
         for x in range(room.x + 3, room.x + room.w - 3, 3):
-            region.metadata["decor"][(x, room.y + 2)] = "crate"
-            region.metadata["decor"][(x, room.y + room.h - 4)] = "crate"
+            decor[(x, room.y + 2)] = "crate"
+            decor[(x, room.y + room.h - 4)] = "crate"
+        decor[(cx, cy)] = "table"
+        decor[(room.x + 2, cy)] = "barrel"
+        decor[(room.x + room.w - 3, cy)] = "barrel"
+        decor[(cx - 2, room.y + room.h - 4)] = "barrel"
+
     elif region_type == "shrine":
-        altar = region.carve_rect(room.center[0] - 2, room.y + 1, 5, 3)
-        carve_path(region, room.center, altar.center, width=2)
-        region.carve_rect(room.x + 2, room.center[1] - 1, room.w - 4, 3)
-        service_spot = altar.center
-        region.metadata["decor"][altar.center] = "altar"
-        for x in range(room.x + 4, room.x + room.w - 4, 4):
-            region.metadata["decor"][(x, room.center[1] + 1)] = "pew"
+        # Wide altar alcove; 3-tile altar; double pew rows; braziers; side alcoves
+        altar_alcove = region.carve_rect(cx - 3, room.y + 1, 7, 4)
+        carve_path(region, room.center, altar_alcove.center, width=3)
+        left_alcove = region.carve_rect(room.x + 1, cy - 3, 3, 6)
+        right_alcove = region.carve_rect(room.x + room.w - 4, cy - 3, 3, 6)
+        carve_path(region, left_alcove.center, altar_alcove.center, width=1)
+        carve_path(region, right_alcove.center, altar_alcove.center, width=1)
+        region.carve_rect(room.x + 4, cy - 1, room.w - 8, 3)
+        ax, ay = altar_alcove.center
+        service_spot = (ax, ay)
+        for dx in (-1, 0, 1):
+            decor[(ax + dx, ay)] = "altar"
+        decor[(ax - 2, ay + 1)] = "brazier"
+        decor[(ax + 2, ay + 1)] = "brazier"
+        decor[left_alcove.center] = "flowers"
+        decor[(left_alcove.center[0], left_alcove.center[1] - 2)] = "brazier"
+        decor[right_alcove.center] = "flowers"
+        decor[(right_alcove.center[0], right_alcove.center[1] - 2)] = "brazier"
+        for x in range(room.x + 5, room.x + room.w - 5, 4):
+            decor[(x, cy - 1)] = "pew"
+            decor[(x, cy + 1)] = "pew"
+        decor[(room.x + 2, room.y + room.h - 4)] = "brazier"
+        decor[(room.x + room.w - 3, room.y + room.h - 4)] = "brazier"
+
     elif region_type == "smith":
+        # Forge in back corner; anvil + work bench; brazier glow; material crates
         forge = region.carve_rect(room.x + room.w - 6, room.y + 2, 4, room.h - 5)
-        bench = region.carve_rect(room.x + 2, room.center[1] - 1, room.w - 10, 3)
+        bench = region.carve_rect(room.x + 2, cy - 1, room.w - 10, 3)
         carve_path(region, bench.center, forge.center, width=2)
         service_spot = forge.center
-        region.metadata["decor"][forge.center] = "forge"
-        region.metadata["decor"][bench.center] = "anvil"
+        decor[forge.center] = "forge"
+        decor[bench.center] = "anvil"
+        decor[(bench.center[0] - 2, bench.center[1])] = "table"
+        decor[(room.x + 2, room.y + 2)] = "crate"
+        decor[(room.x + 2, room.y + 4)] = "crate"
+        decor[(forge.center[0], min(forge.center[1] + 2, room.y + room.h - 3))] = "brazier"
+        decor[(room.x + 2, room.y + room.h - 4)] = "barrel"
+
     elif region_type == "cartographer":
-        map_table = region.carve_rect(room.center[0] - 3, room.center[1] - 1, 7, 3)
-        shelf = region.carve_rect(room.x + 2, room.y + 2, room.w - 4, 2)
-        carve_path(region, shelf.center, map_table.center, width=2)
+        # Central map table; shelves on three sides; side alcoves; consultation table
+        map_table = region.carve_rect(cx - 3, cy - 1, 7, 3)
+        shelf_top = region.carve_rect(room.x + 2, room.y + 2, room.w - 4, 2)
+        left_shelf = region.carve_rect(room.x + 1, cy - 2, 3, 5)
+        right_shelf = region.carve_rect(room.x + room.w - 4, cy - 2, 3, 5)
+        carve_path(region, shelf_top.center, map_table.center, width=2)
+        carve_path(region, left_shelf.center, map_table.center, width=1)
+        carve_path(region, right_shelf.center, map_table.center, width=1)
         service_spot = map_table.center
-        region.metadata["decor"][map_table.center] = "table"
+        decor[map_table.center] = "table"
         for x in range(room.x + 3, room.x + room.w - 3, 4):
-            region.metadata["decor"][(x, room.y + 2)] = "shelves"
+            decor[(x, room.y + 2)] = "shelves"
+        decor[left_shelf.center] = "shelves"
+        decor[right_shelf.center] = "shelves"
+        decor[(cx, room.y + room.h - 4)] = "table"
+        decor[(cx - 2, room.y + room.h - 4)] = "crate"
+
+    elif region_type == "tavern":
+        # Bar at top; scattered tables; booths; barrel cluster; sign near door
+        bar = region.carve_rect(room.x + 2, room.y + 2, room.w - 4, 2)
+        left_booth = region.carve_rect(room.x + 1, cy - 2, 4, 4)
+        right_booth = region.carve_rect(room.x + room.w - 5, cy - 2, 4, 4)
+        carve_path(region, bar.center, room.center, width=2)
+        service_spot = bar.center
+        decor[bar.center] = "table"
+        for x in range(room.x + 4, room.x + room.w - 4, 4):
+            decor[(x, cy - 1)] = "table"
+            decor[(x, cy + 2)] = "table"
+        decor[left_booth.center] = "pew"
+        decor[right_booth.center] = "pew"
+        decor[(room.x + 2, room.y + room.h - 4)] = "barrel"
+        decor[(room.x + 3, room.y + room.h - 4)] = "barrel"
+        decor[(room.x + room.w - 3, room.y + room.h - 4)] = "barrel"
+        decor[(cx, room.y + room.h - 4)] = "sign"
+
+    elif region_type == "chapel":
+        # Wide pulpit; 3-tile altar; double pew rows; braziers; side alcoves with flowers
+        pulpit = region.carve_rect(cx - 3, room.y + 1, 7, 4)
+        carve_path(region, room.center, pulpit.center, width=3)
+        left_alcove = region.carve_rect(room.x + 1, cy - 2, 3, 5)
+        right_alcove = region.carve_rect(room.x + room.w - 4, cy - 2, 3, 5)
+        carve_path(region, left_alcove.center, pulpit.center, width=1)
+        carve_path(region, right_alcove.center, pulpit.center, width=1)
+        region.carve_rect(room.x + 4, cy - 1, room.w - 8, 3)
+        px, py = pulpit.center
+        service_spot = (px, py)
+        for dx in (-1, 0, 1):
+            decor[(px + dx, py)] = "altar"
+        decor[(px - 2, py + 1)] = "brazier"
+        decor[(px + 2, py + 1)] = "brazier"
+        decor[left_alcove.center] = "flowers"
+        decor[(left_alcove.center[0], left_alcove.center[1] - 1)] = "brazier"
+        decor[right_alcove.center] = "flowers"
+        decor[(right_alcove.center[0], right_alcove.center[1] - 1)] = "brazier"
+        for x in range(room.x + 5, room.x + room.w - 5, 4):
+            decor[(x, cy - 1)] = "pew"
+            decor[(x, cy + 1)] = "pew"
+        decor[(room.x + 2, room.y + room.h - 4)] = "brazier"
+        decor[(room.x + room.w - 3, room.y + room.h - 4)] = "brazier"
+
+    elif region_type == "stable":
+        # Four stalls with stall dividers and hay; wide aisle; trough; hitch posts
+        stall_h = max(3, (room.h - 4) // 2)
+        left_stall_a = region.carve_rect(room.x + 1, room.y + 2, 4, stall_h)
+        left_stall_b = region.carve_rect(room.x + 1, room.y + 2 + stall_h + 1, 4, stall_h)
+        right_stall_a = region.carve_rect(room.x + room.w - 5, room.y + 2, 4, stall_h)
+        right_stall_b = region.carve_rect(room.x + room.w - 5, room.y + 2 + stall_h + 1, 4, stall_h)
+        trough = region.carve_rect(cx - 2, room.y + 2, 5, 2)
+        carve_path(region, trough.center, room.center, width=2)
+        service_spot = trough.center
+        decor[trough.center] = "table"
+        for stall in (left_stall_a, left_stall_b, right_stall_a, right_stall_b):
+            decor[stall.center] = "stall"
+            hay_y = min(stall.center[1] + 1, stall.y + stall.h - 1)
+            decor[(stall.center[0], hay_y)] = "crate"
+        decor[(room.x + 2, room.y + room.h - 3)] = "hitch_post"
+        decor[(room.x + room.w - 3, room.y + room.h - 3)] = "hitch_post"
+        decor[(cx - 1, room.y + room.h - 3)] = "barrel"
+        decor[(cx + 1, room.y + room.h - 3)] = "barrel"
+
     door_x = foyer.center[0]
     door_y = room.y + room.h - 1
     region.tiles[door_x][door_y] = 0

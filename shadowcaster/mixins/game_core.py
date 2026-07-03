@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from typing import cast
 
 import pygame
@@ -41,58 +42,6 @@ from ..systems import direction_toward
 
 
 class GameCoreMixin(GameMixinBase):
-    @staticmethod
-    def default_tuning():
-        return {
-            "heal_pickup_floor_interval": 3,
-            "heal_pickup_restore": 1,
-            "heal_pickup_require_missing_hp": 1,
-            "full_explore_vitality_bonus": 1,
-            "full_explore_power_bonus": 1,
-            "full_explore_recovery_medkits": 1,
-            "full_explore_recovery_tonics": 1,
-            "medkit_heal": 4,
-            "bottom_reward_ammo": 2,
-            "bottom_reward_medkits": 2,
-            "delve_reward_vitality_bonus": 3,
-            "delve_reward_power_bonus": 1,
-            "delve_reward_recovery_tonics": 1,
-            "vitality_upgrade_amount": 2,
-            "power_upgrade_amount": 1,
-            "light_upgrade_amount": 1,
-            "haste_upgrade_amount": 8,
-            "reach_upgrade_amount": 1,
-            "completion_modal_duration_ms": 1500,
-            "enemy_status_duration": 3,
-            "shaman_poison_duration": 1,
-        }
-
-    @staticmethod
-    def tuner_schema():
-        return [
-            {"key": "heal_pickup_floor_interval", "label": "Heal pickup every N floors", "min": 1, "max": 6, "step": 1},
-            {"key": "heal_pickup_restore", "label": "Heal pickup restore", "min": 1, "max": 6, "step": 1},
-            {"key": "heal_pickup_require_missing_hp", "label": "Require missing HP for spawn", "min": 0, "max": 1, "step": 1},
-            {"key": "full_explore_vitality_bonus", "label": "100% vitality bonus", "min": 1, "max": 4, "step": 1},
-            {"key": "full_explore_power_bonus", "label": "100% power bonus", "min": 1, "max": 3, "step": 1},
-            {"key": "full_explore_recovery_medkits", "label": "100% reward medkits", "min": 0, "max": 3, "step": 1},
-            {"key": "full_explore_recovery_tonics", "label": "100% reward tonics", "min": 0, "max": 3, "step": 1},
-            {"key": "medkit_heal", "label": "Medkit healing", "min": 1, "max": 10, "step": 1},
-            {"key": "enemy_status_duration", "label": "Enemy status duration", "min": 1, "max": 5, "step": 1},
-            {"key": "shaman_poison_duration", "label": "Shaman poison duration", "min": 1, "max": 4, "step": 1},
-            {"key": "bottom_reward_ammo", "label": "Delve reward: recovery ammo", "min": 0, "max": 5, "step": 1},
-            {"key": "bottom_reward_medkits", "label": "Delve reward: recovery medkits", "min": 0, "max": 4, "step": 1},
-            {"key": "delve_reward_vitality_bonus", "label": "Delve reward: vitality bonus", "min": 1, "max": 6, "step": 1},
-            {"key": "delve_reward_power_bonus", "label": "Delve reward: power bonus", "min": 1, "max": 3, "step": 1},
-            {"key": "delve_reward_recovery_tonics", "label": "Delve reward: recovery tonics", "min": 0, "max": 3, "step": 1},
-            {"key": "vitality_upgrade_amount", "label": "Vitality upgrade HP", "min": 1, "max": 6, "step": 1},
-            {"key": "power_upgrade_amount", "label": "Power upgrade damage", "min": 1, "max": 4, "step": 1},
-            {"key": "light_upgrade_amount", "label": "Light upgrade radius", "min": 1, "max": 4, "step": 1},
-            {"key": "haste_upgrade_amount", "label": "Haste upgrade (ms per pickup)", "min": 2, "max": 15, "step": 1},
-            {"key": "reach_upgrade_amount", "label": "Reach upgrade (tiles per pickup)", "min": 1, "max": 2, "step": 1},
-            {"key": "completion_modal_duration_ms", "label": "Popup duration (ms)", "min": 900, "max": 3000, "step": 100},
-        ]
-
     def __init__(self):
         pygame.init()
         pygame.joystick.init()
@@ -101,6 +50,9 @@ class GameCoreMixin(GameMixinBase):
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont("consolas", 22, bold=True)
         self.small_font = pygame.font.SysFont("consolas", 18)
+        self.tiny_font = pygame.font.SysFont("consolas", 14)
+        self.perf_overlay = False
+        self.perf_timings: dict = {}
         self._message = ""
         self.message_log = []
         self.max_message_log = 50
@@ -157,6 +109,7 @@ class GameCoreMixin(GameMixinBase):
         self.journal_open = False
         self.journal_tab = 0
         self.journal_scroll = 0
+        self.journal_index = -1
         self.log_open = False
         self.log_scroll = 0
         self.inventory = []
@@ -165,11 +118,16 @@ class GameCoreMixin(GameMixinBase):
         self.notice_board_open = False
         self.notice_board_quests = []
         self.notice_board_index = 0
+        self.notice_board_scroll = 0
         self.tuning = self.default_tuning()
         self.exploration_reward_pending = None
         self.town_choice_pending = None
         self.exploration_choice_index = 0
         self.completion_modal_text = ""
+        self.service_modal_open = False
+        self.service_modal_title = ""
+        self.service_modal_lines = []
+        self.debug_omniscient = False
         self.death_stats_tab = 0
         self.death_cause = ""
         self.newly_discovered_tiles = set()
@@ -261,6 +219,7 @@ class GameCoreMixin(GameMixinBase):
         self.journal_open = False
         self.journal_tab = 0
         self.journal_scroll = 0
+        self.journal_index = -1
         self.log_open = False
         self.log_scroll = 0
         self.floor_items = []
@@ -313,7 +272,12 @@ class GameCoreMixin(GameMixinBase):
         self.notice_board_open = False
         self.notice_board_quests = []
         self.notice_board_index = 0
+        self.notice_board_scroll = 0
         self.completion_modal_text = ""
+        self.service_modal_open = False
+        self.service_modal_title = ""
+        self.service_modal_lines = []
+        self.debug_omniscient = False
         self.death_stats_tab = 0
         self.newly_discovered_tiles = set()
         self.turn_newly_discovered_tiles = set()
@@ -356,6 +320,8 @@ class GameCoreMixin(GameMixinBase):
             return "game_over"
         if self.has_pending_choice():
             return "choice"
+        if self.service_modal_open:
+            return "service_modal"
         if self.notice_board_open:
             return "notice_board"
         if self.inventory_open:
@@ -391,10 +357,18 @@ class GameCoreMixin(GameMixinBase):
     def run(self):
         self.running = True
         while self.running:
+            _t0 = time.perf_counter()
             keep_running = self.handle_input()
             if not self.running or not keep_running:
                 break
             self.update_continuous_movement()
+            _t1 = time.perf_counter()
             self.render()
+            _t2 = time.perf_counter()
             self.clock.tick(FPS)
+            if self.perf_overlay:
+                self.perf_timings["fps"] = self.clock.get_fps()
+                self.perf_timings["work_ms"] = (_t2 - _t0) * 1000
+                self.perf_timings["logic_ms"] = (_t1 - _t0) * 1000
+                self.perf_timings["render_ms"] = (_t2 - _t1) * 1000
         pygame.quit()

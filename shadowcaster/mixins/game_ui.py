@@ -196,20 +196,30 @@ class UIMixin(GameMixinBase):
         return -1
 
     def notice_board_layout(self):
-        panel_w, panel_h = 660, 500
+        panel_w = 660
+        panel_h = min(560, SCREEN_HEIGHT - 40)
         left = (SCREEN_WIDTH - panel_w) // 2
+        scrollbar_gutter = 18
+        row_width = panel_w - 36 - scrollbar_gutter
+        header_height = 86
+        quest_area_top_offset = 110
+        row_gap = 12
+        footer_gap = 26
+        row_rects = []
+        current_y = quest_area_top_offset
+        for quest in self.notice_board_quests:
+            line_count = self.wrap_line_count(quest.description, row_width - 28)
+            row_height = max(86, 66 + line_count * 18)
+            row_rects.append(pygame.Rect(left + 18, current_y, row_width, row_height))
+            current_y += row_height + row_gap
         top = (SCREEN_HEIGHT - panel_h) // 2
-        header_bottom = top + 86
-        quest_area_top = top + 110
-        row_h = 96
-        row_rects = [
-            pygame.Rect(left + 18, quest_area_top + i * row_h, panel_w - 36, row_h - 10)
-            for i in range(len(self.notice_board_quests))
-        ]
+        header_bottom = top + header_height
+        row_rects = [rect.move(0, top) for rect in row_rects]
         hint_top = top + panel_h - 92
         button_top = top + panel_h - 52
         confirm_rect = pygame.Rect(left + 24, button_top, 188, 34)
         close_rect = pygame.Rect(left + panel_w - 148, button_top, 124, 34)
+        viewport_rect = pygame.Rect(left + 18, top + quest_area_top_offset, row_width, max(120, hint_top - (top + quest_area_top_offset) - 14))
         return {
             "left": left,
             "top": top,
@@ -217,16 +227,52 @@ class UIMixin(GameMixinBase):
             "panel_h": panel_h,
             "header_bottom": header_bottom,
             "row_rects": row_rects,
+            "viewport_rect": viewport_rect,
+            "scrollbar_gutter": scrollbar_gutter,
             "hint_top": hint_top,
             "confirm_rect": confirm_rect,
             "close_rect": close_rect,
         }
 
+    def notice_board_content_height(self):
+        layout = self.notice_board_layout()
+        if not layout["row_rects"]:
+            return layout["viewport_rect"].height
+        first_top = layout["viewport_rect"].top
+        last_bottom = layout["row_rects"][-1].bottom
+        return max(layout["viewport_rect"].height, last_bottom - first_top)
+
+    def notice_board_max_scroll(self):
+        layout = self.notice_board_layout()
+        return max(0, self.notice_board_content_height() - layout["viewport_rect"].height)
+
+    def scroll_notice_board(self, delta):
+        self.notice_board_scroll = max(0, min(self.notice_board_max_scroll(), self.notice_board_scroll + delta))
+
+    def ensure_notice_board_selection_visible(self):
+        layout = self.notice_board_layout()
+        if not layout["row_rects"]:
+            self.notice_board_scroll = 0
+            return
+        self.notice_board_index = max(0, min(self.notice_board_index, len(layout["row_rects"]) - 1))
+        row_rect = layout["row_rects"][self.notice_board_index]
+        viewport = layout["viewport_rect"]
+        row_top = row_rect.top - viewport.top
+        row_bottom = row_rect.bottom - viewport.top
+        if row_top < self.notice_board_scroll:
+            self.notice_board_scroll = row_top
+        elif row_bottom > self.notice_board_scroll + viewport.height:
+            self.notice_board_scroll = row_bottom - viewport.height
+        self.notice_board_scroll = max(0, min(self.notice_board_max_scroll(), self.notice_board_scroll))
+
     def notice_board_choice_from_screen(self, screen_x, screen_y):
         layout = self.notice_board_layout()
-        for index, rect in enumerate(layout["row_rects"]):
-            if rect.collidepoint(screen_x, screen_y):
-                return ("row", index)
+        viewport = layout["viewport_rect"]
+        if viewport.collidepoint(screen_x, screen_y):
+            for index, rect in enumerate(layout["row_rects"]):
+                shifted = rect.move(0, -self.notice_board_scroll)
+                if shifted.collidepoint(screen_x, screen_y):
+                    return ("row", index)
         if layout["confirm_rect"].collidepoint(screen_x, screen_y):
             return ("confirm", None)
         if layout["close_rect"].collidepoint(screen_x, screen_y):

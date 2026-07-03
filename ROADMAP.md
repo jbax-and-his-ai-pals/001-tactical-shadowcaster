@@ -52,6 +52,7 @@
 - Exploration completion now resolves "visible but effectively unreachable" frontier edge cases instead of relying only on raw seen-tile counts
 - World-map inspection for discovered regions
 - World map now also has a local debug preview mode for the current region and nearby generated neighbors
+- World-map region detail now tracks notable-site state more clearly, including marked/open/cleared site progress, richer landmark summaries, and stronger route-choice hints
 - Landmark-based local regions embedded into overworld maps
 - Bottom-floor reward cache plus return portal for multilevel delves
 - Main menu plus multi-save/load shell
@@ -249,6 +250,7 @@ Ordered candidates for the next several slices:
 - Settlement visuals should scale with importance: small towns can stay one tile, while larger towns and cities should eventually occupy multiple overworld tiles with visible district and house-pattern variation
 - Biome identity should deepen through three layers: palette/markers, traversal/combat behavior, and settlement/social flavor
 - Favor "world expedition" features over generic roguelite bulk such as crafting trees, loot floods, or huge enemy catalogs with tiny differences
+- The current cheapest high-value world-loop work is still site-driven: landmarks should tell the player what kind of opportunity remains there before we add larger social/economy systems
 - A reusable engine/content split makes sense eventually, but only after more fantasy systems are proven; the likely seam is engine systems underneath data-driven biome/theme content packs
 - When coasts, rivers, and larger water systems arrive, biome placement should stop being fully independent: coast orientation, river flow, and adjacent-region continuity should come from a higher-level world layout rather than per-region randomness
 - Input support is now multi-surface (keyboard/mouse, controller, touch), so UX changes should be checked across all active overlays rather than assuming keyboard-only focus

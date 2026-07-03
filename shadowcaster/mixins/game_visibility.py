@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 import pygame
 from ..constants import VIEW_HEIGHT, VIEW_WIDTH
 from ..systems import compute_fov
@@ -27,11 +28,36 @@ class VisibilityMixin(GameMixinBase):
                         reveal.add(neighbor)
         self.seen_tiles = reveal
 
+    def toggle_debug_omniscience(self):
+        self.debug_omniscient = not self.debug_omniscient
+        if self.debug_omniscient:
+            self.reveal_entire_map()
+        self.update_visibility()
+
     def update_visibility(self):
         previous_visible = getattr(self, "visible_tiles", set())
         previous_seen = set(getattr(self, "seen_tiles", set()))
+        if getattr(self, "debug_omniscient", False):
+            all_tiles = {
+                (x, y)
+                for x in range(self.dungeon.width)
+                for y in range(self.dungeon.height)
+                if not self.dungeon.is_blocked(x, y)
+            }
+            self.visible_tiles = all_tiles
+            self.seen_tiles.update(all_tiles)
+            self.newly_visible_tiles = all_tiles - previous_visible
+            self.newly_discovered_tiles = all_tiles - previous_seen
+            self.turn_newly_discovered_tiles.update(self.newly_discovered_tiles)
+            self.exploration_progress = 100
+            self.best_exploration_percent = 100
+            self.update_camera()
+            return
         bonus = 5 if self.terrain_features.get(self.player) == "high_ground" else 0
+        _t = time.perf_counter()
         self.visible_tiles = compute_fov(self.player[0], self.player[1], self.light_radius + bonus, self.dungeon)
+        if self.perf_overlay:
+            self.perf_timings["fov_ms"] = (time.perf_counter() - _t) * 1000
         self.newly_visible_tiles = self.visible_tiles - previous_visible
         self.newly_discovered_tiles = self.visible_tiles - previous_seen
         self.turn_newly_discovered_tiles.update(self.newly_discovered_tiles)

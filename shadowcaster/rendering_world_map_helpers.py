@@ -57,8 +57,8 @@ def draw_world_map_site_marker(screen, rect, kind, color, slot_index):
     elif kind == "monster_town":
         pygame.draw.line(screen, COLOR_BG, (marker_rect.x + 3, marker_rect.y + 3), (marker_rect.right - 3, marker_rect.bottom - 3), 2)
         pygame.draw.line(screen, COLOR_BG, (marker_rect.right - 3, marker_rect.y + 3), (marker_rect.x + 3, marker_rect.bottom - 3), 2)
-    elif kind in {"inn", "clinic", "supply", "shrine", "smith", "cartographer"}:
-        glyph = {"inn": "I", "clinic": "+", "supply": "S", "shrine": "*", "smith": "H", "cartographer": "M"}[kind]
+    elif kind in {"inn", "clinic", "supply", "shrine", "smith", "cartographer", "tavern", "chapel", "stable"}:
+        glyph = {"inn": "I", "clinic": "+", "supply": "S", "shrine": "*", "smith": "H", "cartographer": "M", "tavern": "T", "chapel": "C", "stable": "L"}[kind]
         font = pygame.font.SysFont("consolas", max(10, marker_size - 1), bold=True)
         text = font.render(glyph, True, COLOR_BG)
         screen.blit(text, text.get_rect(center=marker_rect.center))

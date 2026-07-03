@@ -80,6 +80,11 @@ class MovementMixin(GameMixinBase):
             self.stop_auto_movement()
             self._notice_board_interact()
             return True
+        service_spot = getattr(self.dungeon, "metadata", {}).get("service_spot")
+        if service_spot and self.player == service_spot and not self.service_claimed:
+            self.stop_auto_movement()
+            self.apply_town_service()
+            return True
         terrain_message = self.apply_terrain_effect()
         self.after_player_turn(base_message=terrain_message)
         if automated and self.should_interrupt_auto_move():

@@ -1,7 +1,10 @@
 import pygame
 
 from .constants import (
+    COLOR_BG,
     COLOR_HIDDEN,
+    COLOR_TEXT,
+    SCREEN_HEIGHT,
     SCREEN_WIDTH,
     VIEW_HEIGHT,
     VIEW_WIDTH,
@@ -18,7 +21,7 @@ from .rendering_overlays import (
     render_completion_modal, render_reward_choice_overlay, render_tuner_overlay,
     render_inventory_overlay, render_game_over_overlay, render_travel_overlay,
     render_menu_overlay, render_notice_board_overlay, render_journal_overlay,
-    render_log_overlay,
+    render_log_overlay, render_service_modal,
 )
 
 
@@ -69,8 +72,50 @@ def render_game(game):
         render_reward_choice_overlay(game)
     elif active_overlay == "notice_board":
         render_notice_board_overlay(game)
+    elif active_overlay == "service_modal":
+        render_service_modal(game)
     elif active_overlay == "game_over":
         render_game_over_overlay(game)
     if game.menu_mode:
         render_menu_overlay(game)
+    if game.perf_overlay:
+        render_perf_overlay(game)
     pygame.display.flip()
+
+
+def render_perf_overlay(game):
+    t = game.perf_timings
+    fps = t.get("fps", 0.0)
+    work = t.get("work_ms", 0.0)
+    logic = t.get("logic_ms", 0.0)
+    render = t.get("render_ms", 0.0)
+    fov = t.get("fov_ms", 0.0)
+    npc = t.get("npc_ms", 0.0)
+    n_npcs = len(getattr(game, "residents", []))
+    n_enemies = len(getattr(game, "enemies", []))
+    n_visible = len(getattr(game, "visible_tiles", set()))
+    n_seen = len(getattr(game, "seen_tiles", set()))
+    dungeon = getattr(game, "dungeon", None)
+    region_size = f"{dungeon.width}x{dungeon.height}" if dungeon else "?"
+
+    rows = [
+        f"F9: perf on    FPS {fps:5.1f}    work {work:5.1f}ms  (logic {logic:4.1f}ms  render {render:4.1f}ms)",
+        f"fov {fov:4.1f}ms   npc {npc:4.1f}ms   npcs {n_npcs}  enemies {n_enemies}",
+        f"visible {n_visible}  seen {n_seen}  region {region_size}",
+    ]
+
+    font = game.tiny_font
+    line_h = font.get_height() + 2
+    pad = 6
+    box_w = max(font.size(r)[0] for r in rows) + pad * 2
+    box_h = len(rows) * line_h + pad * 2
+    box_x = 4
+    box_y = SCREEN_HEIGHT - box_h - 4
+
+    surf = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+    surf.fill((0, 0, 0, 200))
+    pygame.draw.rect(surf, (*COLOR_TEXT, 80), surf.get_rect(), 1)
+    for i, row in enumerate(rows):
+        label = font.render(row, True, COLOR_TEXT)
+        surf.blit(label, (pad, pad + i * line_h))
+    game.screen.blit(surf, (box_x, box_y))

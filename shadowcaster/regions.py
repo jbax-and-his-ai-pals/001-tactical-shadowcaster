@@ -374,6 +374,6 @@ def generate_region(floor, width, height, region_type=None, name=None, context=N
         return Region(generate_town(width, height, context=context), region_type, name, palette)
     if region_type == "monster_town":
         return Region(generate_monster_town(width, height, context=context), region_type, name, palette)
-    if region_type in {"inn", "clinic", "supply", "shrine", "smith", "cartographer"}:
+    if region_type in {"inn", "clinic", "supply", "shrine", "smith", "cartographer", "tavern", "chapel", "stable"}:
         return Region(generate_interior(width, height, region_type), region_type, name, palette)
     return Region(Dungeon(width, height), region_type, name, palette)

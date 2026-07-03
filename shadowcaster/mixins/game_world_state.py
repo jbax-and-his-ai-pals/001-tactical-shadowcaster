@@ -94,10 +94,21 @@ class WorldStateMixin(GameMixinBase):
 
     def landmark_progress(self, coord, landmark):
         states = self.landmark_local_states(coord, landmark)
+        world_state = self.world_regions.get(self.region_key(coord))
+        discovered_in_world = bool(world_state and landmark.position in world_state.get("seen_tiles", set()))
         if not states:
+            if discovered_in_world:
+                return {
+                    "visited": True,
+                    "cleared": False,
+                    "entered": False,
+                    "status": "Located",
+                    "detail": "Site marked on your map",
+                }
             return {
                 "visited": False,
                 "cleared": False,
+                "entered": False,
                 "status": "Unvisited",
                 "detail": "No delve entered yet",
             }
@@ -119,6 +130,7 @@ class WorldStateMixin(GameMixinBase):
         return {
             "visited": True,
             "cleared": bottom_claimed,
+            "entered": True,
             "status": status,
             "detail": detail,
         }

@@ -71,7 +71,7 @@ class PopulationMixin(GameMixinBase):
 
     def spawn_enemies(self):
         self.enemies = []
-        if self.region_type in {"town", "inn", "clinic", "supply", "shrine", "smith", "cartographer"}:
+        if self.region_type in {"town", "inn", "clinic", "supply", "shrine", "smith", "cartographer", "tavern", "chapel", "stable"}:
             self.enemies_spawned = 0
             return
         positions = self.enemy_spawn_positions()

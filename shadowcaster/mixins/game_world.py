@@ -36,7 +36,7 @@ class WorldMixin(GameMixinBase):
         return {"dungeon", "cave", "castle", "town", "ruins", "monster_town"}
 
     def exploration_rewards_enabled(self, region_type=None):
-        return (region_type or self.region_type) not in {"inn", "clinic", "supply", "shrine", "smith", "cartographer"}
+        return (region_type or self.region_type) not in {"inn", "clinic", "supply", "shrine", "smith", "cartographer", "tavern", "chapel", "stable"}
 
     def is_overworld_region(self, region_type=None):
         return (region_type or self.region_type) in self.overworld_region_types()

@@ -172,6 +172,14 @@ def render_world_map_overlay(game):
                 survey_rect = pygame.Rect(rect.right - 16, rect.bottom - 16, 10, 10)
                 pygame.draw.rect(game.screen, (166, 220, 255), survey_rect, border_radius=3)
                 pygame.draw.rect(game.screen, COLOR_BG, survey_rect, 1, border_radius=3)
+            if stats_for_cell and stats_for_cell.get("active_quest_targets_here"):
+                quest_target_rect = pygame.Rect(rect.right - 16, rect.top + 6, 10, 10)
+                pygame.draw.rect(game.screen, (255, 210, 116), quest_target_rect, border_radius=3)
+                pygame.draw.rect(game.screen, COLOR_BG, quest_target_rect, 1, border_radius=3)
+            if stats_for_cell and stats_for_cell.get("active_quest_turnins_here"):
+                turnin_rect = pygame.Rect(rect.right - 16, rect.top + 20, 10, 10)
+                pygame.draw.rect(game.screen, (148, 230, 162), turnin_rect, border_radius=3)
+                pygame.draw.rect(game.screen, COLOR_BG, turnin_rect, 1, border_radius=3)
         if selected:
             glow = rect.inflate(10, 10)
             pygame.draw.rect(game.screen, (164, 222, 255), glow, 1, border_radius=12)
@@ -217,6 +225,18 @@ def render_world_map_overlay(game):
             chip_x += draw_world_map_chip(game.screen, game.small_font, f"Depth {stats['depth']}/{stats['max_depth']}", chip_x, chip_y, (190, 168, 255))
             chip_x += 8
         chip_x += draw_world_map_chip(game.screen, game.small_font, f"Danger {stats['danger_tier']}", chip_x, chip_y, (255, 154, 90))
+        if stats.get("landmarks_open"):
+            chip_x += 8
+            chip_x += draw_world_map_chip(game.screen, game.small_font, f"Sites Open {stats['landmarks_open']}", chip_x, chip_y, (255, 210, 116))
+        elif stats.get("landmarks_cleared") and stats.get("landmarks_total") and stats["landmarks_cleared"] == stats["landmarks_total"]:
+            chip_x += 8
+            chip_x += draw_world_map_chip(game.screen, game.small_font, "Sites Cleared", chip_x, chip_y, (148, 230, 162))
+        if stats.get("active_quest_targets_here"):
+            chip_x += 8
+            chip_x += draw_world_map_chip(game.screen, game.small_font, "Quest Target", chip_x, chip_y, (255, 210, 116))
+        if stats.get("active_quest_turnins_here"):
+            chip_x += 8
+            chip_x += draw_world_map_chip(game.screen, game.small_font, "Turn-In", chip_x, chip_y, (148, 230, 162))
         if stats.get("expandable_preview"):
             loading = game.small_font.render("Frontier expansion available.", True, COLOR_TEXT)
             hint = game.small_font.render("Click the + tile to generate that region.", True, (204, 218, 234))
@@ -239,22 +259,30 @@ def render_world_map_overlay(game):
 
         section_y = 0
         section_y = draw_world_map_section(content, game.small_font, "Overview", 0, section_y, inset.width, (232, 240, 248))
+        outlook = stats["site_outlook"]
+        outlook_color = (
+            (110, 210, 150) if "resolved" in outlook or "No notable" in outlook
+            else (255, 210, 90) if "Open site" in outlook or "not yet entered" in outlook
+            else COLOR_TEXT
+        )
         overview_lines = [
-            f"Exploration {stats['exploration']}%",
-            f"Foes {stats['foes_remaining']} remaining, {stats['foes_defeated']} defeated",
-            f"Residents seen {stats['residents']}",
-            f"Links {stats['exits_found']} ({', '.join(direction.title() for direction in stats['exit_directions']) if stats['exit_directions'] else 'none marked'})",
-            f"Sites visited {stats['landmarks_visited']} / {stats['landmarks_total']}",
-            f"Theme {stats['theme'].title()}",
+            (f"Exploration {stats['exploration']}%", COLOR_TEXT),
+            (f"Foes {stats['foes_remaining']} remaining, {stats['foes_defeated']} defeated", COLOR_TEXT),
+            (f"Residents seen {stats['residents']}", COLOR_TEXT),
+            (f"Links {stats['exits_found']} ({', '.join(direction.title() for direction in stats['exit_directions']) if stats['exit_directions'] else 'none marked'})", COLOR_TEXT),
+            (f"Sites located {stats['landmarks_visited']} / {stats['landmarks_total']}", COLOR_TEXT),
+            (outlook, outlook_color),
+            (f"Theme {stats['theme'].title()}", COLOR_TEXT),
         ]
         if stats["settlement_size"]:
-            overview_lines.append(f"Settlement {stats['settlement_size']} with {stats['settlement_buildings']} structures")
+            overview_lines.append((f"Settlement {stats['settlement_size']} with {stats['settlement_buildings']} structures", COLOR_TEXT))
+            overview_lines.append((f"Prosperity {stats['prosperity_label']} ({stats['prosperity_score']})", COLOR_TEXT))
         if stats["parent_biome"]:
-            overview_lines.append(f"Parent biome {stats['parent_biome'].title()}")
+            overview_lines.append((f"Parent biome {stats['parent_biome'].title()}", COLOR_TEXT))
         text_y = section_y
-        for line in overview_lines:
+        for line, color in overview_lines:
             for wrapped in wrap_text_lines(game.small_font, line, inset.width - 4):
-                surface = game.small_font.render(wrapped, True, COLOR_TEXT)
+                surface = game.small_font.render(wrapped, True, color)
                 content.blit(surface, (0, text_y))
                 text_y += 19
 
@@ -262,11 +290,20 @@ def render_world_map_overlay(game):
         section_y = draw_world_map_section(content, game.small_font, "Progress", 0, section_y, inset.width, (232, 240, 248))
         progress_lines = []
         if stats["landmarks_total"]:
+            progress_lines.append(
+                f"Site states: hidden {stats['landmarks_unvisited']} / marked {stats['landmarks_located_only']} / open {stats['landmarks_open']} / cleared {stats['landmarks_cleared']}"
+            )
+            progress_lines.append(f"Sites entered {stats['landmarks_entered']} / {stats['landmarks_total']}")
             progress_lines.append(f"Sites cleared {stats['landmarks_cleared']} / {stats['landmarks_total']}")
             if stats["landmark_type_counts"]:
                 progress_lines.append("Site mix: " + ", ".join(stats["landmark_type_counts"][:4]))
         else:
             progress_lines.append("No major sites marked here yet.")
+        if stats["quests_completed"]:
+            progress_lines.append(
+                f"Contracts completed {stats['quests_completed']} "
+                f"(D {stats['quest_delivery']} / S {stats['quest_scout']} / B {stats['quest_bounty']})"
+            )
         if stats["full_clear_reward_claimed"]:
             progress_lines.append("Full-clear reward claimed")
         if stats["bottom_reward_claimed"] and stats["max_depth"] > 1:
@@ -281,6 +318,16 @@ def render_world_map_overlay(game):
                 text_y += 19
 
         section_y = text_y + 8
+        if stats["active_quest_lines"]:
+            section_y = draw_world_map_section(content, game.small_font, "Active Work", 0, section_y, inset.width, (232, 240, 248))
+            text_y = section_y
+            for line in stats["active_quest_lines"]:
+                for wrapped in wrap_text_lines(game.small_font, line, inset.width - 4):
+                    surface = game.small_font.render(wrapped, True, COLOR_TEXT)
+                    content.blit(surface, (0, text_y))
+                    text_y += 19
+            section_y = text_y + 8
+
         section_y = draw_world_map_section(content, game.small_font, "Continuity", 0, section_y, inset.width, (232, 240, 248))
         text_y = section_y
         for wrapped in wrap_text_lines(game.small_font, stats["continuity_text"], inset.width - 4):
@@ -293,16 +340,28 @@ def render_world_map_overlay(game):
         text_y = section_y
         if stats["landmark_summaries"]:
             for landmark in stats["landmark_summaries"]:
-                heading = f"{landmark['name']} [{landmark['kind'].replace('_', ' ').title()}]"
+                heading = f"{landmark['name']} [{landmark['label']}]"
                 for wrapped in wrap_text_lines(game.small_font, heading, inset.width - 4):
                     surface = game.small_font.render(wrapped, True, (166, 224, 255))
                     content.blit(surface, (0, text_y))
                     text_y += 19
-                detail = f"{landmark['status']} - {landmark['detail']}"
-                for wrapped in wrap_text_lines(game.small_font, detail, inset.width - 10):
-                    surface = game.small_font.render(wrapped, True, COLOR_TEXT)
-                    content.blit(surface, (8, text_y))
-                    text_y += 18
+                status_color = (
+                    (110, 210, 150) if landmark["cleared"]
+                    else (255, 210, 90) if landmark["entered"]
+                    else COLOR_TEXT
+                )
+                detail_lines = [
+                    (f"{landmark['status']} — {landmark['detail']}", status_color),
+                    (landmark["hook"], COLOR_TEXT),
+                    (landmark["reward_hint"], (220, 196, 110)),
+                ]
+                if landmark.get("biome_flavor"):
+                    detail_lines.append((landmark["biome_flavor"], (168, 182, 196)))
+                for line, color in detail_lines:
+                    for wrapped in wrap_text_lines(game.small_font, line, inset.width - 10):
+                        surface = game.small_font.render(wrapped, True, color)
+                        content.blit(surface, (8, text_y))
+                        text_y += 18
                 text_y += 4
         else:
             empty = game.small_font.render("No notable sites recorded.", True, COLOR_TEXT)

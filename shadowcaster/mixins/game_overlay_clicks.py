@@ -58,8 +58,24 @@ class OverlayClickMixin(GameMixinBase):
         if tab_index is not None:
             self.set_journal_tab(tab_index)
             return True
-        if self.journal_close_rect().collidepoint(screen_x, screen_y):
+        action = self.journal_action_from_screen(screen_x, screen_y)
+        if action == "close":
             self.toggle_journal()
+            return True
+        if action == "show_map":
+            quest = self.selected_active_journal_quest()
+            if quest is not None and self.can_show_map_for_selected_journal_quest():
+                self.open_world_map_for_quest(quest)
+            return True
+        if action == "abandon":
+            quest = self.selected_active_journal_quest()
+            if quest is not None and self.can_abandon_selected_journal_quest():
+                self.abandon_quest(quest)
+            return True
+        quest_index = self.journal_entry_index_at_screen(screen_x, screen_y)
+        if quest_index is not None:
+            self.journal_index = quest_index
+            self.ensure_journal_selection_visible()
             return True
         if dismiss_on_miss:
             self.toggle_journal()
@@ -145,6 +161,21 @@ class OverlayClickMixin(GameMixinBase):
             self.message = f"Centering on {self.world_map_regions()[selected]['region_name']}."
             return True
         return self.handle_world_map_click(screen_x, screen_y)
+
+    def handle_service_modal_click(self, screen_x, screen_y):
+        ok_rect = self.service_modal_ok_rect()
+        if ok_rect and ok_rect.collidepoint(screen_x, screen_y):
+            self.close_service_modal()
+            return True
+        return False
+
+    def service_modal_ok_rect(self):
+        modal_width = 360
+        modal_height = max(120, 80 + len(self.service_modal_lines) * 24)
+        x = (SCREEN_WIDTH - modal_width) // 2
+        y = (VIEW_HEIGHT * TILE_SIZE - modal_height) // 2
+        btn_w, btn_h = 100, 32
+        return pygame.Rect(x + (modal_width - btn_w) // 2, y + modal_height - btn_h - 14, btn_w, btn_h)
 
     def handle_game_over_click(self, screen_x, screen_y, dismiss_on_miss=False):
         tab_index = self.death_tab_from_screen(screen_x, screen_y)

@@ -45,7 +45,8 @@ Current gameplay mixins:
 | `shadowcaster/mixins/game_menu_ui.py` | main/pause menu, tuner, inventory/journal/log toggles and layout |
 | `shadowcaster/mixins/game_rewards_ui.py` | reward choice and provisioner choice handling |
 | `shadowcaster/mixins/game_death_ui.py` | death overlay layout and stat-tab content |
-| `shadowcaster/mixins/game_journal_ui.py` | journal and recent-log overlay layout/state |
+| `shadowcaster/mixins/game_journal_ui.py` | journal overlay layout/state, quest selection, journal action gating |
+| `shadowcaster/mixins/game_log_ui.py` | recent-log overlay layout/state |
 | `shadowcaster/mixins/game_autoexplore.py` | frontier scoring, autoexplore targeting, safe route selection |
 | `shadowcaster/mixins/game_combat.py` | combat resolution, statuses, ranged/melee attacks, end-of-turn enemy actions |
 | `shadowcaster/mixins/game_visibility.py` | visibility, seen-tile logic, exploration metrics, camera sync |
@@ -111,6 +112,7 @@ Some state is intentionally shared across many mixins:
 - `self.visible_tiles`, `self.seen_tiles`, `self.floor_explorable_tiles`
 - overlay booleans like `self.world_map_open`, `self.inventory_open`, `self.tuner_open`
 - world/local state like `self.world_regions`, `self.local_regions`, `self.current_local_region`
+- journal/log state such as `self.journal_index`, `self.journal_scroll`, `self.log_scroll`, and selected quest gating helpers used by both input and rendering
 
 If you add a new subsystem, check whether it is:
 - render-only
@@ -144,6 +146,7 @@ Important consequences:
 - entering a landmark snapshots the current parent region first
 - lower floors are separate persisted local-region states
 - preview-generated world-map regions must not leak visible play-state
+- “Discovered” and “previewed” world regions are intentionally different. UI that gates player-facing actions like journal `Show Map` should rely on true discovered-region membership (`world_regions` / current region), not the broader preview layer used by the world map
 
 ## Verification
 

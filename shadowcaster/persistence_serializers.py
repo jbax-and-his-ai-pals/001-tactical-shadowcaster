@@ -169,6 +169,11 @@ def quest_to_data(quest):
         "status": quest.status,
         "target_count": quest.target_count,
         "progress_count": quest.progress_count,
+        "stage": quest.stage,
+        "target_region_name": quest.target_region_name,
+        "target_landmark_name": quest.target_landmark_name,
+        "target_landmark_kind": quest.target_landmark_kind,
+        "origin_town_name": quest.origin_town_name,
     }
 
 
@@ -186,6 +191,11 @@ def quest_from_data(data):
         status=data.get("status", "active"),
         target_count=data.get("target_count", 0),
         progress_count=data.get("progress_count", 0),
+        stage=data.get("stage", 0),
+        target_region_name=data.get("target_region_name", ""),
+        target_landmark_name=data.get("target_landmark_name", ""),
+        target_landmark_kind=data.get("target_landmark_kind", ""),
+        origin_town_name=data.get("origin_town_name", ""),
     )
 
 

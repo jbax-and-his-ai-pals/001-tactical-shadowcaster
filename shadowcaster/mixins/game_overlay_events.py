@@ -8,10 +8,21 @@ from ..game_typing import GameMixinBase
 
 class OverlayEventMixin(GameMixinBase):
 
+    def close_service_modal(self):
+        self.service_modal_open = False
+        self.service_modal_title = ""
+        self.service_modal_lines = []
+
     def handle_overlay_event(self, event):
         overlay = self.active_overlay()
         if not overlay:
             return False
+        if overlay == "service_modal":
+            if event.type == pygame.KEYDOWN and event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE, pygame.K_ESCAPE):
+                self.close_service_modal()
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                self.handle_service_modal_click(*event.pos)
+            return True
         if overlay == "choice":
             if event.type == pygame.KEYDOWN:
                 self.handle_overlay_keydown(event)
@@ -65,6 +76,8 @@ class OverlayEventMixin(GameMixinBase):
                 self.handle_overlay_keydown(event)
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 self.handle_notice_board_click(*event.pos)
+            elif event.type == pygame.MOUSEWHEEL:
+                self.scroll_notice_board(-event.y * 36)
             return True
         if overlay == "travel":
             if event.type == pygame.KEYDOWN:
@@ -163,8 +176,14 @@ class OverlayEventMixin(GameMixinBase):
                 self.close_notice_board()
             elif event.key in (pygame.K_UP, pygame.K_w):
                 self.notice_board_index = (self.notice_board_index - 1) % max(1, len(self.notice_board_quests))
+                self.ensure_notice_board_selection_visible()
             elif event.key in (pygame.K_DOWN, pygame.K_s):
                 self.notice_board_index = (self.notice_board_index + 1) % max(1, len(self.notice_board_quests))
+                self.ensure_notice_board_selection_visible()
+            elif event.key == pygame.K_PAGEUP:
+                self.scroll_notice_board(-144)
+            elif event.key == pygame.K_PAGEDOWN:
+                self.scroll_notice_board(144)
             elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
                 if self.notice_board_confirm_available():
                     self.accept_board_quest(self.notice_board_index)
@@ -187,13 +206,21 @@ class OverlayEventMixin(GameMixinBase):
             elif event.key in (pygame.K_RIGHT, pygame.K_d, pygame.K_e):
                 self.shift_journal_tab(1)
             elif event.key in (pygame.K_UP, pygame.K_w):
-                self.scroll_journal(-36)
+                self.move_journal_selection(-1)
             elif event.key in (pygame.K_DOWN, pygame.K_s):
-                self.scroll_journal(36)
+                self.move_journal_selection(1)
             elif event.key == pygame.K_PAGEUP:
                 self.scroll_journal(-144)
             elif event.key == pygame.K_PAGEDOWN:
                 self.scroll_journal(144)
+            elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE, pygame.K_m):
+                quest = self.selected_active_journal_quest()
+                if quest is not None and self.can_show_map_for_selected_journal_quest():
+                    self.open_world_map_for_quest(quest)
+            elif event.key in (pygame.K_DELETE, pygame.K_BACKSPACE):
+                quest = self.selected_active_journal_quest()
+                if quest is not None and self.can_abandon_selected_journal_quest():
+                    self.abandon_quest(quest)
             return True
         if overlay == "log":
             if event.key in (pygame.K_l, pygame.K_ESCAPE):
@@ -284,6 +311,14 @@ class OverlayEventMixin(GameMixinBase):
         if overlay == "journal":
             if button in (1, 7):
                 self.toggle_journal()
+            elif button == 0:
+                quest = self.selected_active_journal_quest()
+                if quest is not None and self.can_show_map_for_selected_journal_quest():
+                    self.open_world_map_for_quest(quest)
+            elif button == 2:
+                quest = self.selected_active_journal_quest()
+                if quest is not None and self.can_abandon_selected_journal_quest():
+                    self.abandon_quest(quest)
             elif button == 4:
                 self.shift_journal_tab(-1)
             elif button == 5:
