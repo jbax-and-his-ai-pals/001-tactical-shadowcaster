@@ -5,134 +5,10 @@ import hashlib
 from ..constants import COLOR_ACCENT, COLOR_HEAL
 from ..models import Quest
 from .game_quest_board import QuestBoardMixin
+from .game_quest_generation import QuestGenerationMixin
 
 
-class QuestsMixin(QuestBoardMixin):
-    def chain_objective_kind(self, target_region_name, landmark_name, danger_tier, seed_value):
-        if landmark_name:
-            if danger_tier >= 3 and seed_value % 4 == 0:
-                return "hunt"
-            if seed_value % 3 == 0:
-                return "survey"
-            return "recover"
-        if danger_tier >= 2 and seed_value % 2 == 0:
-            return "hunt"
-        return "survey"
-
-    def _board_quest_delivery(self, wx, wy, slot):
-        cycle = self.quest_posting_cycle()
-        h = int(hashlib.md5(f"delivery:{self.world_seed}:{wx}:{wy}:{slot}:{cycle}".encode()).hexdigest(), 16)
-        dx, dy = self._QUEST_DIRECTIONS[h % 8]
-        dist = (h >> 3) % 2 + 1
-        to_pos = (wx + dx * dist, wy + dy * dist)
-        dir_name = self._QUEST_DIR_NAMES[(dx, dy)]
-        key, name, desc, _ = self._DELIVERY_ITEMS[h % len(self._DELIVERY_ITEMS)]
-        reward = 20 + (h % 6) * 10 + self.town_quest_reward_bonus((wx, wy))
-        region_name = self.quest_preview_region_state(to_pos).get("region_name", f"a settlement to the {dir_name}")
-        return Quest(
-            id=f"delivery_{wx}_{wy}_{slot}_{cycle}",
-            kind="delivery",
-            from_world_pos=(wx, wy),
-            to_world_pos=to_pos,
-            to_town_hint=region_name,
-            item_key=key,
-            item_name=name,
-            description=self.delivery_description(desc, region_name, dir_name, h),
-            reward_gold=reward,
-            target_region_name=region_name,
-            origin_town_name=self.region_name,
-        )
-
-    def _board_quest_scout(self, wx, wy, slot):
-        cycle = self.quest_posting_cycle()
-        h = int(hashlib.md5(f"scout:{self.world_seed}:{wx}:{wy}:{slot}:{cycle}".encode()).hexdigest(), 16)
-        dx, dy = self._QUEST_DIRECTIONS[h % 8]
-        dist = (h >> 3) % 3 + 1
-        to_pos = (wx + dx * dist, wy + dy * dist)
-        dir_name = self._QUEST_DIR_NAMES[(dx, dy)]
-        region_name, landmark_name, landmark_kind = self.scout_target_details(to_pos, h)
-        reward = 20 + (h % 5) * 5 + self.town_quest_reward_bonus((wx, wy))
-        description = self.scout_description(region_name, dir_name, landmark_name, h)
-        return Quest(
-            id=f"scout_{wx}_{wy}_{slot}_{cycle}",
-            kind="scout",
-            from_world_pos=(wx, wy),
-            to_world_pos=to_pos,
-            to_town_hint=region_name,
-            item_key="",
-            item_name="",
-            description=description,
-            reward_gold=reward,
-            target_region_name=region_name,
-            target_landmark_name=landmark_name,
-            target_landmark_kind=landmark_kind,
-            origin_town_name=self.region_name,
-        )
-
-    def _board_quest_bounty(self, wx, wy, slot):
-        cycle = self.quest_posting_cycle()
-        h = int(hashlib.md5(f"bounty:{self.world_seed}:{wx}:{wy}:{slot}:{cycle}".encode()).hexdigest(), 16)
-        dx, dy = self._QUEST_DIRECTIONS[h % 8]
-        dist = (h >> 3) % 2 + 1
-        to_pos = (wx + dx * dist, wy + dy * dist)
-        region_name, _region_type, objective, danger_tier = self.bounty_target_details(to_pos)
-        target = max(4, 3 + danger_tier * 2 + (h % 4))
-        reward = 18 + target * (3 + danger_tier) + self.town_quest_reward_bonus((wx, wy))
-        return Quest(
-            id=f"bounty_{wx}_{wy}_{slot}_{cycle}",
-            kind="bounty",
-            from_world_pos=(wx, wy),
-            to_world_pos=to_pos,
-            to_town_hint=region_name,
-            item_key="",
-            item_name="",
-            description=self.bounty_description(region_name, self.quest_direction_name((wx, wy), to_pos), objective, _region_type, h),
-            reward_gold=reward,
-            target_count=target,
-            target_region_name=region_name,
-            origin_town_name=self.region_name,
-        )
-
-    def _board_quest_chain(self, wx, wy, slot):
-        cycle = self.quest_posting_cycle()
-        h = int(hashlib.md5(f"chain:{self.world_seed}:{wx}:{wy}:{slot}:{cycle}".encode()).hexdigest(), 16)
-        dx, dy = self._QUEST_DIRECTIONS[h % 8]
-        dist = (h >> 3) % 2 + 1
-        to_pos = (wx + dx * dist, wy + dy * dist)
-        dir_name = self._QUEST_DIR_NAMES[(dx, dy)]
-        region_name, landmark_name, landmark_kind = self.scout_target_details(to_pos, h)
-        _name, _region_type, _objective, danger_tier = self.bounty_target_details(to_pos)
-        reward = 25 + (h % 5) * 10 + self.town_quest_reward_bonus((wx, wy))
-        objective_key = self.chain_objective_kind(region_name, landmark_name, danger_tier, h)
-        target_count = 0
-        if landmark_name:
-            lead_template, supply_kind, evidence_name = self._CHAIN_LEADS[h % len(self._CHAIN_LEADS)]
-            description = self.chain_description(landmark_name, region_name, dir_name, lead_template, h)
-        else:
-            lead_template, supply_kind, evidence_name = self._CHAIN_FALLBACK_LEADS[h % len(self._CHAIN_FALLBACK_LEADS)]
-            description = self.chain_fallback_description(region_name, dir_name, lead_template, h)
-        if objective_key == "survey":
-            description += f" A broad survey of the area will do."
-        elif objective_key == "hunt":
-            target_count = max(2, min(5, 1 + danger_tier + (h % 2)))
-            description += f" Thin out {target_count} local threats before you head back."
-        return Quest(
-            id=f"chain_{wx}_{wy}_{slot}_{cycle}",
-            kind="chain",
-            from_world_pos=(wx, wy),
-            to_world_pos=to_pos,
-            to_town_hint=region_name,
-            item_key=supply_kind,
-            item_name=evidence_name,
-            description=description,
-            reward_gold=reward,
-            target_count=target_count,
-            target_region_name=region_name,
-            target_landmark_name=landmark_name,
-            target_landmark_kind=landmark_kind,
-            objective_key=objective_key,
-            origin_town_name=self.region_name,
-        )
+class QuestsMixin(QuestGenerationMixin, QuestBoardMixin):
 
     def generate_board_quests(self) -> list:
         if self.region_type != "town":
@@ -284,20 +160,54 @@ class QuestsMixin(QuestBoardMixin):
             return landmark.position in self.seen_tiles
         return False
 
+    def _record_quest_consequences(self, quest):
+        """Persist map-intel and supply-depth side-effects after quest completion."""
+        if quest.kind == "scout":
+            target_key = self.region_key(quest.to_world_pos)
+            if target_key in self.world_regions:
+                self.world_regions[target_key]["scouted"] = True
+        if quest.kind in ("delivery", "chain") and not self._is_social_quest(quest):
+            dest_key = self.region_key(quest.to_world_pos)
+            dest = self.world_regions.get(dest_key)
+            if dest and dest.get("region_type") == "town":
+                dest["supply_depth"] = dest.get("supply_depth", 0) + 1
+
     def _complete_quest(self, quest):
         quest.status = "complete"
+        self._record_quest_consequences(quest)
         self.gold += quest.reward_gold
         town_response = self.town_response_line(quest.from_world_pos)
-        if quest.kind == "delivery":
+        if quest.kind == "delivery" and self._is_social_quest(quest):
+            self.message = f"Errand complete — {quest.item_name} delivered. Received {quest.reward_gold}g. Total: {self.gold}g."
+        elif quest.kind == "delivery":
             item = self.inventory_item(quest.item_key)
             if item is not None:
                 self.inventory.remove(item)
-            self.message = f"Quest complete - {quest.item_name} delivered. Received {quest.reward_gold}g. Total: {self.gold}g."
+            lead = self.reveal_one_adjacent_world_region_from(quest.to_world_pos)
+            route_note = f" Your contact there points you toward {lead[1]}." if lead else ""
+            self.message = f"Quest complete - {quest.item_name} delivered. Received {quest.reward_gold}g. Total: {self.gold}g.{route_note}"
         elif quest.kind == "scout":
             target_label = quest.target_landmark_name or quest.target_region_name or "the region"
-            self.message = f"Quest complete - report filed on {target_label}. Received {quest.reward_gold}g. Total: {self.gold}g."
+            revealed = self.reveal_adjacent_world_regions_from(quest.to_world_pos)
+            # Scout track bonus: extend the survey one step further for each tier
+            track = self.dominant_track()
+            if track and track[0] == "Scout":
+                extra_hops = track[1]  # tier 1 → 1, tier 2 → 2
+                for coord, _ in list(revealed)[:extra_hops]:
+                    for bonus in self.reveal_adjacent_world_regions_from(coord):
+                        if bonus not in revealed:
+                            revealed.append(bonus)
+            if revealed:
+                names = ", ".join(n for _, n in revealed[:2])
+                extra = f" and {len(revealed) - 2} more" if len(revealed) > 2 else ""
+                map_note = f" Survey adds routes to the map: {names}{extra}."
+            else:
+                map_note = ""
+            self.message = f"Quest complete - report filed on {target_label}. Received {quest.reward_gold}g. Total: {self.gold}g.{map_note}"
         elif quest.kind == "bounty":
-            self.message = f"Quest complete - contract settled for {quest.target_region_name}. Received {quest.reward_gold}g. Total: {self.gold}g."
+            lead = self.reveal_one_adjacent_world_region_from(quest.to_world_pos)
+            route_note = f" The cleared ground opens a route to {lead[1]}." if lead else ""
+            self.message = f"Quest complete - contract settled for {quest.target_region_name}. Received {quest.reward_gold}g. Total: {self.gold}g.{route_note}"
         elif quest.kind == "chain":
             target_label = quest.target_landmark_name or quest.target_region_name or "the site"
             if quest.item_key == "medkit":
@@ -325,9 +235,20 @@ class QuestsMixin(QuestBoardMixin):
         if self.notice_board_open and self.region_type == "town":
             self.refresh_notice_board(keep_selection=True)
 
+    def _is_social_quest(self, quest):
+        return quest.kind == "delivery" and quest.id.startswith("social_")
+
     def check_quest_completion(self):
         for quest in self.active_quests_in_progress():
-            if quest.kind == "delivery":
+            if self._is_social_quest(quest):
+                if quest.stage == 0 and self.region_type == "town" and quest.to_world_pos == self.world_position:
+                    quest.stage = 1
+                    arrival_msg = self.social_quest_arrival_message(quest) if hasattr(self, "social_quest_arrival_message") else f"You deliver {quest.item_name}."
+                    home = quest.origin_town_name or "the town you came from"
+                    self.message = f"{arrival_msg} Return to {home} for {quest.reward_gold}g."
+                elif quest.stage >= 1 and self.region_type == "town" and self.world_position == quest.from_world_pos:
+                    self._complete_quest(quest)
+            elif quest.kind == "delivery":
                 if self.region_type == "town" and quest.to_world_pos == self.world_position:
                     self._complete_quest(quest)
             elif quest.kind == "scout":

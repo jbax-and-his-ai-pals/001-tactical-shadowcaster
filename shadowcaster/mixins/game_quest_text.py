@@ -118,12 +118,15 @@ class QuestTextMixin(GameMixinBase):
         danger_tier = max(1, int(state.get("danger_tier", 1)))
         return region_name, region_type, objective, danger_tier
 
-    def scout_description(self, region_name, dir_name, landmark_name, seed_value):
+    def scout_description(self, region_name, dir_name, landmark_name, seed_value, landmark_kind="", region_type="", danger_tier=1):
         biome = self.town_biome_context()
         intro = flavored_text(SCOUT_INTROS, biome, self.notice_board_context(), seed_value)
         if landmark_name:
-            return f"{intro} Travel to {region_name} to the {dir_name}, confirm {landmark_name}, then return to {self.region_name}."
-        return f"{intro} Travel to {region_name} to the {dir_name}, survey the area, then return to {self.region_name}."
+            base = f"{intro} Travel to {region_name} to the {dir_name}, confirm {landmark_name}, then return to {self.region_name}."
+        else:
+            base = f"{intro} Travel to {region_name} to the {dir_name}, survey the area, then return to {self.region_name}."
+        intel = self._quest_intel_suffix(region_type, danger_tier, landmark_kind)
+        return f"{base} {intel}".strip() if intel else base
 
     def board_kind_label(self, quest):
         if self.is_priority_quest(quest):
@@ -197,15 +200,59 @@ class QuestTextMixin(GameMixinBase):
         home_name = quest.origin_town_name or f"({quest.from_world_pos[0]}, {quest.from_world_pos[1]})"
         return f"{evidence.capitalize()} secured. Return to {home_name} for {quest.reward_gold}g + {self.chain_reward_label(quest.item_key)}."
 
-    def delivery_description(self, desc, region_name, dir_name, seed_value):
+    def _quest_intel_suffix(self, region_type, danger_tier, landmark_kind=None):
+        """One or two sentences of pre-arrival context about the destination."""
+        landmark_notes = {
+            "barrow":        "Local word: an old burial mound — grave goods may remain.",
+            "dungeon":       "Local word: a deep site, expect organized resistance inside.",
+            "castle":        "Local word: a fortification — well-guarded but worth the trip.",
+            "ruins":         "Local word: ruins that still draw scavengers.",
+            "cave":          "Local word: a cave system that runs deeper than it looks.",
+            "shrine":        "Local word: an old shrine, still active by some accounts.",
+            "grove":         "Local word: a dense grove — worth the detour.",
+            "necropolis":    "Local word: a necropolis — wealth and risk in equal measure.",
+            "monster_town":  "Local word: hostile ground. Clear the gate before pushing in.",
+            "watchtower":    "Local word: a watchtower with a clear view of the roads.",
+            "waystone":      "Local word: a waystone — old routes marked in stone.",
+            "standing_stone":"Local word: a standing stone with old directions scratched into it.",
+            "oasis":         "Local word: a clean oasis — water and rest before the next stretch.",
+            "hot_spring":    "Local word: a hot spring — good for clearing ailments.",
+            "stone_circle":  "Local word: a stone circle with a palpable resonance.",
+            "geyser":        "Local word: a geyser — a traveler's kit was spotted nearby.",
+            "camp":          "Local word: an abandoned camp — someone left in a hurry.",
+        }
+        type_notes = {
+            "dungeon":       "Organized resistance expected inside.",
+            "castle":        "The site is fortified — come prepared.",
+            "ruins":         "Scavengers have been through; something may still be worth finding.",
+            "cave":          "The cave system runs deeper than it looks.",
+            "monster_town":  "Hostile ground. Push in ready to fight.",
+            "shrine":        "The shrine still draws travelers.",
+        }
+        parts = []
+        if landmark_kind and landmark_kind in landmark_notes:
+            parts.append(landmark_notes[landmark_kind])
+        elif region_type in type_notes:
+            parts.append(type_notes[region_type])
+        if danger_tier >= 3:
+            parts.append("Danger runs high in this stretch — come ready.")
+        elif danger_tier >= 2:
+            parts.append(f"Threat tier {danger_tier} reported in the area.")
+        return " ".join(parts)
+
+    def delivery_description(self, desc, region_name, dir_name, seed_value, region_type="", danger_tier=1):
         biome = self.town_biome_context()
         intro = flavored_text(DELIVERY_INTROS, biome, self.notice_board_context(), seed_value)
-        return f"{intro} Carry {desc} to {region_name} to the {dir_name}."
+        base = f"{intro} Carry {desc} to {region_name} to the {dir_name}."
+        intel = self._quest_intel_suffix(region_type, danger_tier)
+        return f"{base} {intel}".strip() if intel else base
 
-    def bounty_description(self, region_name, dir_name, objective, region_type, seed_value):
+    def bounty_description(self, region_name, dir_name, objective, region_type, seed_value, danger_tier=1):
         biome = self.town_biome_context()
         intro = flavored_text(BOUNTY_INTROS, biome, self.notice_board_context(), seed_value)
-        return f"{intro} Travel to {region_name} to the {dir_name}, {objective}, then return to {self.region_name}."
+        base = f"{intro} Travel to {region_name} to the {dir_name}, {objective}, then return to {self.region_name}."
+        intel = self._quest_intel_suffix(region_type, danger_tier)
+        return f"{base} {intel}".strip() if intel else base
 
     def chain_description(self, landmark_name, region_name, dir_name, lead_template, seed_value):
         context = {**self.notice_board_context(), "landmark": landmark_name, "region": region_name, "dir_name": dir_name}

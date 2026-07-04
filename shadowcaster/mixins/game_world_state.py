@@ -46,6 +46,8 @@ class WorldStateMixin(GameMixinBase):
             "return_portal": self.return_portal,
             "enemies_defeated": self.enemies_defeated,
             "enemies_spawned": self.enemies_spawned,
+            "growth_tier_acked": getattr(self, "_growth_tier_acked", 0),
+            "supply_depth": getattr(self, "_supply_depth", 0),
         }
 
     def store_current_region(self):
@@ -267,6 +269,8 @@ class WorldStateMixin(GameMixinBase):
         self.return_portal = state.get("return_portal")
         self.enemies_defeated = state.get("enemies_defeated", 0)
         self.enemies_spawned = state.get("enemies_spawned", len(state["enemies"]) + self.enemies_defeated)
+        self._growth_tier_acked = state.get("growth_tier_acked", 0)
+        self._supply_depth = state.get("supply_depth", 0)
         self.entrance = state["entrance"]
         self.up_stairs = state.get("up_stairs")
         self.stairs = state["stairs"]

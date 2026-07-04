@@ -43,9 +43,12 @@ class WorldTravelMixin(GameMixinBase):
         return (region_type or self.region_type) in {"dungeon", "cave", "monster_town", "ruins", "castle", "maze"}
 
     def reveal_adjacent_world_regions(self):
+        return self.reveal_adjacent_world_regions_from(self.world_position)
+
+    def reveal_adjacent_world_regions_from(self, from_coord):
         revealed = []
         for direction in ("north", "south", "west", "east"):
-            coord = self.move_coord(self.world_position, direction)
+            coord = self.move_coord(from_coord, direction)
             key = self.region_key(coord)
             if key in self.world_regions:
                 continue

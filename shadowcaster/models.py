@@ -25,6 +25,7 @@ class Enemy:
     on_hit_effect: str | None = None
     attack_range: int = 1
     preferred_range: int = 1
+    moves_per_turn: int = 1
     status_effects: dict[str, int] = field(default_factory=dict)
 
 

@@ -9,16 +9,19 @@ from ..systems import heuristic
 class TownsRevealMixin(GameMixinBase):
 
     def reveal_one_adjacent_world_region(self):
+        return self.reveal_one_adjacent_world_region_from(self.world_position)
+
+    def reveal_one_adjacent_world_region_from(self, from_coord):
         candidates = []
         for direction in ("north", "south", "west", "east"):
-            coord = self.move_coord(self.world_position, direction)
+            coord = self.move_coord(from_coord, direction)
             key = self.region_key(coord)
             if key in self.world_regions:
                 continue
             candidates.append(coord)
         if not candidates:
             return None
-        with self.seed_scope("scout_reveal", self.world_position, tuple(sorted(candidates))):
+        with self.seed_scope("scout_reveal", from_coord, tuple(sorted(candidates))):
             coord = random.choice(candidates)
         state = self.create_world_region_state(coord)
         self.world_regions[self.region_key(coord)] = state

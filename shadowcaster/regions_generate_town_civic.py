@@ -123,6 +123,9 @@ def _assign_buildings(region, profile, plaza, houses):
         ("tavern", "The Dusty Road Tavern"),
         ("chapel", "Town Chapel"),
         ("stable", "Town Stable"),
+        ("bathhouse", "Public Bathhouse"),
+        ("armory", "Town Armory"),
+        ("apothecary", "Apothecary"),
     ]
     flavor_buildings = {
         "forest": [
@@ -187,9 +190,9 @@ def _assign_buildings(region, profile, plaza, houses):
         if role == "service":
             if kind in {"supply", "cartographer", "inn", "tavern"}:
                 return "Market Square"
-            if kind in {"clinic", "shrine", "chapel"}:
+            if kind in {"clinic", "shrine", "chapel", "bathhouse", "apothecary"}:
                 return "Civic Square"
-            if kind in {"smith", "stable"}:
+            if kind in {"smith", "stable", "armory"}:
                 return f"{side} Works"
             return "Town Center"
         if role == "civic":

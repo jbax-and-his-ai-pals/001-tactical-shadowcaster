@@ -7,6 +7,7 @@ from ..game_typing import GameMixinBase
 from ..models import Resident
 from ..resident_data import (
     BIOME_LOCALS, BIOME_NAME_POOL, CHILD_OBSERVATIONS,
+    RESIDENT_KIND_CONCERNS,
     WANDERER_DIRECTION_FLAVOR, WANDERER_NAMES, WANDERER_REGION_FLAVOR,
 )
 from ..systems import can_step, heuristic
@@ -40,6 +41,20 @@ class ResidentsTownMixin(GameMixinBase):
             line = concern_by_type.get(rtype)
             if line:
                 return line
+        return None
+
+    def _resident_concern(self, kind):
+        """Return a concern line for this resident kind based on adjacent known regions, or None."""
+        for direction in ("north", "south", "east", "west"):
+            coord = self.move_coord(self.world_position, direction)
+            state = self.world_regions.get(self.region_key(coord))
+            if not state:
+                continue
+            rtype = state.get("region_type", "")
+            rname = state.get("region_name", "the area")
+            template = RESIDENT_KIND_CONCERNS.get((kind, rtype))
+            if template:
+                return template.format(rname=rname)
         return None
 
     def _spawn_town_residents(self, size, plaza, town_paths, parent_biome, occupied_positions):
@@ -107,18 +122,26 @@ class ResidentsTownMixin(GameMixinBase):
 
         farmer_building = take_building(("farm", "granary", "barn")) or take_building()
         if farmer_building is not None:
+            farmer_lines = ["Fields are kinder than ruins, but not by much.", "Most places have something worth finding if you look long enough."]
+            farmer_concern = self._resident_concern("farmer")
+            if farmer_concern:
+                farmer_lines.insert(0, farmer_concern)
             residents.append(resident_from_building(
                 farmer_building, "farmer", COLOR_FRIEND, "settler", "Farmer",
-                ("Fields are kinder than ruins, but not by much.", "Most places have something worth finding if you look long enough."),
+                tuple(farmer_lines),
                 name=self._resident_name(parent_biome),
             ))
 
         if size in {"village", "town", "large_town"}:
             watch_building = take_building(("hall", "watch"))
             watch_anchor = watch_building.get("door") if watch_building else plaza
+            watch_lines = ["Keep moving if the streets feel too quiet.", "A good town sees the road before the road sees it."]
+            watch_concern = self._resident_concern("watch")
+            if watch_concern:
+                watch_lines.insert(0, watch_concern)
             residents.append(Resident(
                 claim_resident_tile(watch_anchor), "watch", COLOR_FRIEND, "friend", "Watcher",
-                ("Keep moving if the streets feel too quiet.", "A good town sees the road before the road sees it."),
+                tuple(watch_lines),
                 "patrol", watch_anchor,
                 watch_building["name"] if watch_building else "Town Watch",
                 self._resident_name(parent_biome),
@@ -128,9 +151,13 @@ class ResidentsTownMixin(GameMixinBase):
         if size in {"town", "large_town"}:
             vendor_building = take_building(("market", "store", "stable"))
             vendor_anchor = vendor_building.get("door") if vendor_building else plaza
+            vendor_lines = ["A busy square keeps a town alive.", "If you keep traveling, keep your pack honest."]
+            vendor_concern = self._resident_concern("vendor")
+            if vendor_concern:
+                vendor_lines.insert(0, vendor_concern)
             residents.append(Resident(
                 claim_resident_tile(vendor_anchor), "vendor", COLOR_FRIEND, "settler", "Street Vendor",
-                ("A busy square keeps a town alive.", "If you keep traveling, keep your pack honest."),
+                tuple(vendor_lines),
                 "plaza", plaza,
                 vendor_building["name"] if vendor_building else "Market Row",
                 self._resident_name(parent_biome),
@@ -140,8 +167,12 @@ class ResidentsTownMixin(GameMixinBase):
         local_building = take_building(local_terms) or take_building()
         if local_building is not None:
             local_behavior = "stationary" if local_kind in {"herbalist", "mason", "kilnkeeper"} else "homebound"
+            local_lines = list(local_dialogue)
+            local_concern = self._resident_concern(local_kind)
+            if local_concern:
+                local_lines.insert(0, local_concern)
             residents.append(resident_from_building(
-                local_building, local_kind, COLOR_FRIEND, "settler", local_title, local_dialogue,
+                local_building, local_kind, COLOR_FRIEND, "settler", local_title, tuple(local_lines),
                 local_behavior, name=self._resident_name(parent_biome),
             ))
 
@@ -156,18 +187,26 @@ class ResidentsTownMixin(GameMixinBase):
         if size in {"village", "town", "large_town"}:
             extra_farm = take_building(("barn", "granary", "shed", "cottage"))
             if extra_farm is not None:
+                extra_farmer_lines = ["Long days and short nights out here.", "Roots grow where you plant them."]
+                extra_farmer_concern = self._resident_concern("farmer")
+                if extra_farmer_concern:
+                    extra_farmer_lines.insert(0, extra_farmer_concern)
                 residents.append(resident_from_building(
                     extra_farm, "farmer", COLOR_FRIEND, "settler", "Farmer",
-                    ("Long days and short nights out here.", "Roots grow where you plant them."),
+                    tuple(extra_farmer_lines),
                     "homebound", name=self._resident_name(parent_biome),
                 ))
 
         if size == "large_town":
             elder_building = take_building(("hall", "house", "longhouse"))
             if elder_building is not None:
+                elder_lines = ["A town lasts by remembering what the road forgets.", "Settlements grow slowly, then all at once."]
+                elder_concern = self._resident_concern("elder")
+                if elder_concern:
+                    elder_lines.insert(0, elder_concern)
                 residents.append(resident_from_building(
                     elder_building, "elder", COLOR_FRIEND, "settler", "Elder",
-                    ("A town lasts by remembering what the road forgets.", "Settlements grow slowly, then all at once."),
+                    tuple(elder_lines),
                     "stationary", name=self._resident_name(parent_biome),
                 ))
 

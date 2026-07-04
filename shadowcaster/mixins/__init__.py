@@ -5,6 +5,8 @@ from .game_tuning import TuningMixin
 from .game_death_ui import DeathUIMixin
 from .game_autoexplore import AutoexploreMixin
 from .game_floor_generation import FloorGenerationMixin
+from .game_harvest import HarvestMixin
+from .game_social_quests import SocialQuestsMixin
 from .game_input import InputMixin
 from .game_inspect import InspectMixin
 from .game_inventory import InventoryMixin
@@ -26,6 +28,7 @@ from .game_rewards_ui import RewardsUIMixin
 from .game_terrain import TerrainMixin
 from .game_landmark_services import LandmarkServicesMixin
 from .game_towns import TownsMixin
+from .game_towns_services import TownsServicesMixin
 from .game_town_reactions import TownReactionsMixin
 from .game_towns_reveal import TownsRevealMixin
 from .game_ui import UIMixin
@@ -45,6 +48,8 @@ __all__ = [
     "DeathUIMixin",
     "AutoexploreMixin",
     "FloorGenerationMixin",
+    "HarvestMixin",
+    "SocialQuestsMixin",
     "InputMixin",
     "InspectMixin",
     "InventoryMixin",
@@ -67,6 +72,7 @@ __all__ = [
     "TerrainMixin",
     "LandmarkServicesMixin",
     "TownsMixin",
+    "TownsServicesMixin",
     "TownReactionsMixin",
     "TownsRevealMixin",
     "UIMixin",

@@ -1,6 +1,31 @@
 from __future__ import annotations
 
+import random
+
+from ..constants import COLOR_FRIEND
 from ..game_typing import GameMixinBase
+from ..models import Resident
+
+
+_GROWTH_RESIDENT_TIER1 = (
+    "vendor", COLOR_FRIEND, "settler", "Street Vendor",
+    (
+        "The square's been picking up since you started coming through.",
+        "Word travels — a friendly face opens a few extra doors.",
+        "New stall opened last week. Your work here's noticed.",
+    ),
+    "plaza",
+)
+
+_GROWTH_RESIDENT_TIER2 = (
+    "elder", COLOR_FRIEND, "settler", "Town Elder",
+    (
+        "This town's seen better years, but your help has made a real difference.",
+        "The notice board's been busy since you've been through.",
+        "A settlement earns its name through its decisions. So does a traveler.",
+    ),
+    "stationary",
+)
 
 
 class TownReactionsMixin(GameMixinBase):
@@ -97,3 +122,59 @@ class TownReactionsMixin(GameMixinBase):
             "elder": "These streets remember who helps them.",
         }
         return role_lines.get(resident.kind, response)
+
+    def load_region_state(self, state, arrival_direction=None):
+        super().load_region_state(state, arrival_direction=arrival_direction)
+        if state.get("region_type") == "town" and arrival_direction is not None:
+            self._check_town_growth()
+            if hasattr(self, "sell_harvest_goods"):
+                sell_msg = self.sell_harvest_goods()
+                if sell_msg:
+                    if self.message:
+                        self.message = f"{self.message} {sell_msg}"
+                    else:
+                        self.message = sell_msg
+
+    def _check_town_growth(self):
+        tier = self.town_service_bonus_tier()
+        if tier <= self._growth_tier_acked:
+            return
+        self._apply_town_growth(tier)
+        self._growth_tier_acked = tier
+        self.store_current_region()
+
+    def _growth_resident_tile(self):
+        occupied = {r.position for r in self.residents}
+        candidates = [
+            tile for tile in self.floor_explorable_tiles
+            if tile not in occupied and not self.dungeon.is_blocked(*tile)
+        ]
+        if not candidates:
+            return self.entrance
+        path_tiles = set(getattr(self.dungeon, "metadata", {}).get("town_paths", set()))
+        path_candidates = [t for t in candidates if t in path_tiles]
+        pool = path_candidates or candidates
+        return random.choice(pool)
+
+    def _apply_town_growth(self, tier):
+        new_residents = []
+        if tier >= 1 and not any(getattr(r, "_growth", False) for r in self.residents):
+            kind, color, marker, title, dialogue, behavior = _GROWTH_RESIDENT_TIER1
+            pos = self._growth_resident_tile()
+            r = Resident(pos, kind, color, marker, title, dialogue, behavior)
+            r._growth = True
+            new_residents.append(r)
+        if tier >= 2 and sum(1 for r in self.residents if getattr(r, "_growth", False)) < 2:
+            kind, color, marker, title, dialogue, behavior = _GROWTH_RESIDENT_TIER2
+            pos = self._growth_resident_tile()
+            r = Resident(pos, kind, color, marker, title, dialogue, behavior)
+            r._growth = True
+            new_residents.append(r)
+        self.residents.extend(new_residents)
+        if new_residents:
+            label = self.town_attitude_label()
+            self.message = (
+                f"You enter {self.region_name}. "
+                f"The town feels different — standing here: {label}. "
+                f"{'A new face has appeared in the square.' if len(new_residents) == 1 else 'New faces have appeared in the square.'}"
+            )

@@ -96,11 +96,22 @@ class WorldMapStatsMixin(GameMixinBase):
             base = "This area feels like a transition zone."
         else:
             base = "This region stands apart from its neighbors."
+        suffix = ""
         if harsher >= 2:
-            return base + " The frontier grows more dangerous nearby."
-        if safer >= 2:
-            return base + " Nearby territory looks gentler."
-        return base
+            suffix = " The frontier grows more dangerous nearby."
+        elif safer >= 2:
+            suffix = " Nearby territory looks gentler."
+        intel_notes = []
+        if state.get("scouted"):
+            intel_notes.append("Scouted — full field report on file.")
+        supply_depth = state.get("supply_depth", 0)
+        if supply_depth >= 3:
+            intel_notes.append("Well-supplied — deep provisioner stock.")
+        elif supply_depth >= 1:
+            intel_notes.append("Supply reputation established here.")
+        if intel_notes:
+            return base + suffix + " " + " ".join(intel_notes)
+        return base + suffix
 
     def region_stats(self, coord, regions_map=None):
         if regions_map is None:
@@ -349,6 +360,8 @@ class WorldMapStatsMixin(GameMixinBase):
             "settlement_rank": self.settlement_size_rank(state),
             "settlement_buildings": self.settlement_building_count(state),
             "parent_biome": self.settlement_parent_biome(state),
+            "scouted": state.get("scouted", False),
+            "supply_depth": state.get("supply_depth", 0),
         }
 
     def region_walkable_count(self, state):

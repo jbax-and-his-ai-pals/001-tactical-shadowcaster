@@ -151,7 +151,14 @@ class GameCoreMixin(GameMixinBase):
 
     @property
     def light_radius(self):
-        return self.base_light_radius + self.light_bonus
+        base = self.base_light_radius + self.light_bonus
+        weapon = self.equipped_weapon
+        armor = self.equipped_armor
+        if weapon and weapon.key == "longbow":
+            base += 1
+        if armor and armor.key == "travel_cloak":
+            base += 1
+        return base
 
     @property
     def autoexplore_interval(self):
@@ -159,7 +166,8 @@ class GameCoreMixin(GameMixinBase):
 
     @property
     def melee_range(self):
-        return 1 + self.reach_bonus
+        bonus = 1 if (self.equipped_weapon and self.equipped_weapon.key == "spear") else 0
+        return 1 + self.reach_bonus + bonus
 
     @property
     def equipped_weapon(self):

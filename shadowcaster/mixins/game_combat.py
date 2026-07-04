@@ -18,8 +18,19 @@ from ..game_typing import GameMixinBase
 
 
 class CombatMixin(GameMixinBase):
+    def _armor_damage_reduction(self):
+        armor = self.equipped_armor
+        if not armor:
+            return 0
+        if armor.key == "war_plate":
+            return 2
+        if armor.key == "leather_armor":
+            return 1
+        return 0
+
     def take_damage(self, amount, cause=None):
-        amount = max(1, amount - self.effective_defense) if amount > 0 else amount
+        if amount > 0:
+            amount = max(1, amount - self.effective_defense - self._armor_damage_reduction())
         self.health -= amount
         if self.health <= 0:
             self.health = 0
@@ -35,6 +46,16 @@ class CombatMixin(GameMixinBase):
     def add_status(self, statuses, effect, duration):
         if not effect or duration <= 0:
             return False
+        # Armor passives only modify statuses applied to the player
+        if statuses is self.player_statuses and effect in ("poison", "burn"):
+            armor = self.equipped_armor
+            if armor:
+                if armor.key == "war_plate":
+                    return False  # immune to burn/poison
+                if armor.key == "plate_coat" and random.random() < 0.25:
+                    return False  # 25% chance to block
+                if armor.key == "chain_mail":
+                    duration = max(1, duration - 1)
         current = statuses.get(effect, 0)
         statuses[effect] = max(current, duration)
         return statuses[effect] != current
@@ -76,6 +97,8 @@ class CombatMixin(GameMixinBase):
                 elif effect == "burn":
                     enemy.health -= 1
                     messages.append(f"The {enemy.kind} burns.")
+                elif effect == "stun":
+                    pass  # stun dealt with in enemy turn loop
                 enemy.status_effects[effect] -= 1
                 if enemy.status_effects[effect] <= 0:
                     del enemy.status_effects[effect]
@@ -85,12 +108,28 @@ class CombatMixin(GameMixinBase):
                     break
         return messages
 
+    def _weapon_passive_on_kill(self, kind):
+        weapon = self.equipped_weapon
+        if not weapon:
+            return None
+        if weapon.key == "dagger":
+            gained = min(1, self.max_health - self.health)
+            if gained > 0:
+                self.health += gained
+                return f"The kill restores {gained} HP."
+        if weapon.key == "halberd":
+            self.add_status(self.player_statuses, "ward", 1)
+            return "The decisive blow grants ward."
+        return None
+
     def damage_enemy(self, enemy, amount, effect=None, duration=0):
         enemy.health -= amount
         effect_applied = self.add_status(enemy.status_effects, effect, duration)
         if enemy.health <= 0:
+            passive_msg = self._weapon_passive_on_kill(enemy.kind)
             self.remove_enemy(enemy)
-            return f"You bring down the {enemy.kind}."
+            kill_msg = f"You bring down the {enemy.kind}."
+            return f"{kill_msg} {passive_msg}" if passive_msg else kill_msg
         detail = f"The {enemy.kind} has {enemy.health}/{enemy.max_health} HP left."
         if effect_applied and effect:
             detail += f" {effect.title()} takes hold."
@@ -159,7 +198,12 @@ class CombatMixin(GameMixinBase):
             self.attack_flash = enemy.position
             self.facing = direction_toward(self.player, enemy.position)
             message = self.damage_enemy(enemy, self.effective_melee_damage)
-            self.after_player_turn(player_acted=False, base_message=f"You strike the {enemy.kind}. {message}")
+            weapon = self.equipped_weapon
+            stun_msg = ""
+            if weapon and weapon.key == "warhammer" and enemy in self.enemies and random.random() < 0.25:
+                self.add_status(enemy.status_effects, "stun", 1)
+                stun_msg = " The blow staggers it."
+            self.after_player_turn(player_acted=False, base_message=f"You strike the {enemy.kind}. {message}{stun_msg}")
             return
         resident = self.choose_adjacent_resident()
         if resident is not None:
@@ -178,7 +222,16 @@ class CombatMixin(GameMixinBase):
         if self.ammo <= 0:
             self.message = "Your ranged weapon clicks empty."
             return
-        self.ammo -= 1
+        weapon = self.equipped_weapon
+        if weapon and weapon.key == "shortbow":
+            self._shortbow_shot_count = getattr(self, "_shortbow_shot_count", 0) + 1
+            if self._shortbow_shot_count % 3 == 0:
+                pass  # free shot — don't consume ammo
+            else:
+                self.ammo -= 1
+        else:
+            self._shortbow_shot_count = 0
+            self.ammo -= 1
         enemy, shot_line = self.choose_ranged_target()
         self.shot_flash = shot_line
         if enemy:
@@ -227,30 +280,56 @@ class CombatMixin(GameMixinBase):
         occupied_positions = {enemy.position for enemy in self.enemies}
         enemy_messages = []
         for enemy in visible_enemies:
-            distance = heuristic(enemy.position, self.player)
-            if enemy.attack_range > 1 and distance <= enemy.attack_range and self.line_to_target(enemy.position):
-                self.take_damage(enemy.damage, f"the {enemy.kind}")
-                effect_applied = self.apply_enemy_hit_effect(enemy, enemy_messages)
-                if self.run_has_ended():
-                    return
-                effect_text = f" and inflicts {enemy.on_hit_effect}" if effect_applied else ""
-                enemy_messages.append(f"The {enemy.kind} strikes from range for {enemy.damage}{effect_text}.")
+            if enemy.status_effects.get("stun", 0) > 0:
+                enemy_messages.append(f"The {enemy.kind} is staggered.")
                 continue
-            path = find_path(self.dungeon, enemy.position, self.player, occupied=occupied_positions - {enemy.position})
-            if path:
-                next_step = path[0]
-                if next_step == self.player:
+            acted = False
+            for _step in range(max(1, enemy.moves_per_turn)):
+                distance = heuristic(enemy.position, self.player)
+                # Ranged attack if in range and has line of sight
+                if enemy.attack_range > 1 and distance <= enemy.attack_range and self.line_to_target(enemy.position):
                     self.take_damage(enemy.damage, f"the {enemy.kind}")
                     effect_applied = self.apply_enemy_hit_effect(enemy, enemy_messages)
                     if self.run_has_ended():
                         return
                     effect_text = f" and inflicts {enemy.on_hit_effect}" if effect_applied else ""
-                    enemy_messages.append(f"The {enemy.kind} hits you for {enemy.damage}{effect_text}.")
-                    continue
-                occupied_positions.discard(enemy.position)
-                enemy.position = next_step
-                occupied_positions.add(enemy.position)
-                enemy_messages.append(f"The {enemy.kind} closes in.")
+                    enemy_messages.append(f"The {enemy.kind} strikes from range for {enemy.damage}{effect_text}.")
+                    acted = True
+                    break
+                # Preferred-range retreat: back away when too close
+                if enemy.preferred_range > 1 and distance < enemy.preferred_range:
+                    dx = enemy.position[0] - self.player[0]
+                    dy = enemy.position[1] - self.player[1]
+                    step_x = enemy.position[0] + (1 if dx > 0 else -1 if dx < 0 else 0)
+                    step_y = enemy.position[1] + (1 if dy > 0 else -1 if dy < 0 else 0)
+                    retreat = (step_x, step_y)
+                    if (not self.dungeon.is_blocked(*retreat) and retreat not in occupied_positions):
+                        occupied_positions.discard(enemy.position)
+                        enemy.position = retreat
+                        occupied_positions.add(enemy.position)
+                    acted = True
+                    break
+                # Move toward player
+                path = find_path(self.dungeon, enemy.position, self.player, occupied=occupied_positions - {enemy.position})
+                if path:
+                    next_step = path[0]
+                    if next_step == self.player:
+                        self.take_damage(enemy.damage, f"the {enemy.kind}")
+                        effect_applied = self.apply_enemy_hit_effect(enemy, enemy_messages)
+                        if self.run_has_ended():
+                            return
+                        effect_text = f" and inflicts {enemy.on_hit_effect}" if effect_applied else ""
+                        enemy_messages.append(f"The {enemy.kind} hits you for {enemy.damage}{effect_text}.")
+                        acted = True
+                        break
+                    occupied_positions.discard(enemy.position)
+                    enemy.position = next_step
+                    occupied_positions.add(enemy.position)
+                    if _step == 0:
+                        label = "dashes" if enemy.moves_per_turn > 1 else "closes in"
+                        enemy_messages.append(f"The {enemy.kind} {label}.")
+                else:
+                    break
         self.move_residents()
         self.update_visibility()
         parts = [pending_message]

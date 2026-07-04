@@ -183,11 +183,44 @@ class JournalStatsMixin(GameMixinBase):
             "chain": counts.get("chain", 0),
         }
 
+    def progression_tracks(self):
+        """Returns {name: (score, tier)} for all 4 tracks. Tier 0=unranked, 1=named, 2=mastery."""
+        counts = self.completed_quest_counts()
+        surface = len(getattr(self, "claimed_surface_landmark_keys", set()))
+        pc = self.powerups_collected
+        kills = getattr(self, "total_monsters_killed", 0)
+        clears = getattr(self, "full_clears", 0)
+        world_seen = len(getattr(self, "world_regions", {}))
+        scores = {
+            "Scout":      counts.get("scout", 0) * 4 + surface * 2,
+            "Delver":     kills // 5 + pc.get("power", 0) * 4 + pc.get("vitality", 0) * 3 + clears * 5,
+            "Warden":     counts.get("bounty", 0) * 4 + self.total_towns_helped() * 3 + counts.get("chain", 0) * 3,
+            "Pathfinder": world_seen + surface * 3 + counts.get("delivery", 0) * 2,
+        }
+        return {n: (s, 2 if s >= 20 else 1 if s >= 8 else 0) for n, s in scores.items()}
+
+    def dominant_track(self):
+        """Returns (track_name, tier) for the highest-scoring named track, or None."""
+        tracks = self.progression_tracks()
+        best = max(tracks.items(), key=lambda kv: kv[1][0])
+        name, (score, tier) = best
+        return (name, tier) if tier >= 1 else None
+
+    def track_tier_label(self, name, tier):
+        labels = {("Scout", 1): "Scout", ("Scout", 2): "Master Scout",
+                  ("Delver", 1): "Delver", ("Delver", 2): "Master Delver",
+                  ("Warden", 1): "Warden", ("Warden", 2): "Master Warden",
+                  ("Pathfinder", 1): "Pathfinder", ("Pathfinder", 2): "Master Pathfinder"}
+        return labels.get((name, tier), name)
+
     def current_journal_summary_lines(self):
         counts = self.quest_summary_counts()
+        track = self.dominant_track()
+        track_label = self.track_tier_label(track[0], track[1]) if track else "Unnamed"
         lines = [f"{counts['active']} active"] if self.journal_tab == 0 else [
             f"{counts['completed']} completed",
             f"Towns helped {counts['towns_helped']}  -  D {counts['delivery']} / S {counts['scout']} / B {counts['bounty']} / C {counts['chain']}",
+            f"Role: {track_label}",
         ]
         if self.region_type == "town":
             lines.append(

@@ -42,7 +42,11 @@ class QuestBoardMixin(GameMixinBase):
 
     def town_quest_reward_bonus(self, coord):
         score = self.town_attitude_score(coord)
-        return min(24, score * 3)
+        base = min(24, score * 3)
+        track = self.dominant_track()
+        if track and track[0] == "Warden":
+            base += 12 if track[1] >= 2 else 5
+        return base
 
     def town_quest_slots(self, coord):
         score = self.town_attitude_score(coord)

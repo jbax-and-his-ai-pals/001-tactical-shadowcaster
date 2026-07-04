@@ -11,12 +11,17 @@ from ..systems import heuristic
 class ResidentBoonsMixin(GameMixinBase):
 
     def _return_line(self, resident):
-        """Pick a contextual second-visit line for a resident whose boon is claimed."""
+        """Pick a return-visit line. Prefers boon-referencing lines when a boon was previously given."""
         pool = RETURN_DIALOGUE.get(resident.kind)
-        line = random.choice(pool) if pool else "They've already done what they can for now."
+        if not pool:
+            return "They've already done what they can for now."
+        claim_key = f"resident:{resident.kind}"
+        boon_given = claim_key in self.interaction_claims
+        boon_ref_pool = pool[3:] if len(pool) > 3 else ()
+        generic_pool = pool[:3] if len(pool) >= 3 else pool
+        line = random.choice(boon_ref_pool if boon_given and boon_ref_pool else generic_pool)
         name = resident.name
-        if name and pool:
-            # Prefix with the resident's name for personal touch
+        if name:
             line = f"{name}: {line[0].lower()}{line[1:]}" if line[0].isupper() else f"{name}: {line}"
         return line
 

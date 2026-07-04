@@ -44,32 +44,34 @@ class InventoryMixin(GameMixinBase):
 
     def region_gear_preferences(self):
         weapon_preferences = {
-            "desert": ["longbow", "spear"],
-            "plains": ["longbow", "spear"],
-            "farmland": ["spear", "dagger"],
-            "swamp": ["spear", "dagger"],
-            "mountain": ["warhammer", "spear"],
-            "tundra": ["spear", "warhammer"],
-            "volcanic": ["warhammer", "dagger"],
-            "castle": ["warhammer", "longbow"],
-            "dungeon": ["warhammer", "dagger"],
-            "cave": ["warhammer", "spear"],
-            "ruins": ["dagger", "spear"],
-            "badlands": ["longbow", "warhammer"],
+            "desert":   ["longbow", "shortbow", "spear"],
+            "plains":   ["longbow", "spear", "shortbow"],
+            "farmland": ["spear", "dagger", "shortbow"],
+            "swamp":    ["spear", "dagger", "shortbow"],
+            "mountain": ["warhammer", "halberd", "spear"],
+            "tundra":   ["spear", "warhammer", "halberd"],
+            "volcanic": ["warhammer", "halberd", "dagger"],
+            "castle":   ["halberd", "warhammer", "longbow"],
+            "dungeon":  ["warhammer", "halberd", "dagger"],
+            "cave":     ["warhammer", "spear", "dagger"],
+            "ruins":    ["dagger", "spear", "shortbow"],
+            "badlands": ["longbow", "warhammer", "halberd"],
+            "forest":   ["shortbow", "dagger", "spear"],
         }
         armor_preferences = {
-            "desert": ["travel_cloak", "leather_armor"],
-            "plains": ["travel_cloak", "leather_armor"],
+            "desert":   ["travel_cloak", "leather_armor"],
+            "plains":   ["travel_cloak", "leather_armor"],
             "farmland": ["travel_cloak", "leather_armor"],
-            "swamp": ["leather_armor", "chain_mail"],
+            "swamp":    ["leather_armor", "chain_mail"],
             "mountain": ["chain_mail", "plate_coat"],
-            "tundra": ["chain_mail", "travel_cloak"],
-            "volcanic": ["chain_mail", "plate_coat"],
-            "castle": ["plate_coat", "chain_mail"],
-            "dungeon": ["chain_mail", "plate_coat"],
-            "cave": ["leather_armor", "chain_mail"],
-            "ruins": ["leather_armor", "chain_mail"],
-            "badlands": ["travel_cloak", "chain_mail"],
+            "tundra":   ["chain_mail", "leather_armor"],
+            "volcanic": ["plate_coat", "chain_mail"],
+            "castle":   ["plate_coat", "war_plate"],
+            "dungeon":  ["plate_coat", "war_plate"],
+            "cave":     ["leather_armor", "chain_mail"],
+            "ruins":    ["leather_armor", "chain_mail"],
+            "badlands": ["chain_mail", "travel_cloak"],
+            "forest":   ["travel_cloak", "leather_armor"],
         }
         return weapon_preferences.get(self.region_type, []), armor_preferences.get(self.region_type, [])
 
@@ -93,7 +95,10 @@ class InventoryMixin(GameMixinBase):
     def add_ground_item_to_inventory(self, ground_item):
         item = ground_item.item
         existing = self.inventory_item(item.key)
-        if existing is not None and existing.category != "consumable":
+        if item.category == "harvest":
+            if hasattr(self, "can_carry_harvest") and not self.can_carry_harvest(item.key):
+                return f"You're already carrying as much {item.name} as you can manage."
+        if existing is not None and existing.category not in ("consumable", "harvest"):
             self.ammo += 1
             return f"You already know this gear. You salvage the spare for 1 ammo."
         self.add_item(
@@ -112,7 +117,15 @@ class InventoryMixin(GameMixinBase):
             ward_duration=item.ward_duration,
         )
         if item.category == "consumable":
-            return f"You tuck away {item.name}."
+            cache_finds = {
+                "medkit": "You find a stashed healing potion — left here by someone who didn't come back for it.",
+                "tonic":  "You find a ward tonic wedged out of sight. Someone hid it well.",
+            }
+            return cache_finds.get(item.key, f"You tuck away {item.name}.")
+        if item.category == "harvest":
+            if hasattr(self, "harvest_item_message"):
+                return self.harvest_item_message(item.key) + " Sell it at a town market."
+            return f"You gather {item.name}. Sell it at a town."
         return f"You pick up {item.name}. Open your inventory to equip it."
 
     def equip_item(self, key):
@@ -195,21 +208,62 @@ class InventoryMixin(GameMixinBase):
             return GroundItem(position=position, item=self.item_from_catalog(category, key))
         return None
 
+    def create_hidden_cache_item(self, exclude=None):
+        """A consumable stash hidden in exploration terrain."""
+        exclude = exclude or set()
+        position = self.place_feature(exclude=exclude)
+        if position is None:
+            return None
+        danger = self._world_danger_bonus() if hasattr(self, "_world_danger_bonus") else min(2, self.danger_tier // 2)
+        # Weight toward tonics in dangerous areas, medkits elsewhere
+        if danger >= 2 and random.random() < 0.5:
+            item = Item("tonic", "Ward Tonic", "consumable", COLOR_ACCENT, "power",
+                        description="Clears statuses and grants ward.")
+        else:
+            item = Item("medkit", "Healing Potion", "consumable", COLOR_HEAL, "vitality",
+                        description="Restores health.")
+        return GroundItem(position=position, item=item)
+
     def generate_floor_items(self, pickups_enabled):
         if not pickups_enabled or self.region_type in {"town", "monster_town"}:
             return []
-        item_count = 0
-        if self.in_local_region():
-            if self.region_depth >= 2 and not self.is_bottom_floor():
-                item_count = 1
-        elif self.danger_tier >= 4 and random.random() < 0.4:
-            item_count = 1
         items = []
         exclude = {self.player, self.stairs, self.up_stairs, self.delve_goal, self.return_portal}
-        for _ in range(item_count):
+
+        # Gear drops in deep local regions
+        if self.in_local_region() and self.region_depth >= 2 and not self.is_bottom_floor():
             ground_item = self.create_floor_item(exclude=exclude | {item.position for item in items})
             if ground_item is not None:
                 items.append(ground_item)
+
+        # Gear drops in high-danger world regions (existing behaviour)
+        elif not self.in_local_region() and self.danger_tier >= 4 and random.random() < 0.4:
+            ground_item = self.create_floor_item(exclude=exclude | {item.position for item in items})
+            if ground_item is not None:
+                items.append(ground_item)
+
+        # Hidden caches: consumable stashes in exploration terrain
+        track = self.dominant_track() if hasattr(self, "dominant_track") else None
+        cache_chance = 0.0
+        if not self.in_local_region() and self.region_type not in {"town", "monster_town"}:
+            base = 0.45 if self.region_type in {"forest", "swamp", "tundra", "mountain", "cave"} else 0.3
+            if track and track[0] == "Pathfinder":
+                base += 0.25 if track[1] >= 2 else 0.15
+            cache_chance = min(0.85, base)
+        elif self.in_local_region() and self.region_depth == 1 and self.region_type in {"dungeon", "cave", "ruins"}:
+            base = 0.25
+            if track and track[0] == "Delver":
+                base += 0.3 if track[1] >= 2 else 0.15
+            cache_chance = min(0.75, base)
+
+        if cache_chance and random.random() < cache_chance:
+            cache = self.create_hidden_cache_item(exclude=exclude | {item.position for item in items})
+            if cache is not None:
+                items.append(cache)
+
+        if hasattr(self, "generate_harvest_nodes"):
+            items.extend(self.generate_harvest_nodes())
+
         return items
 
     def create_upgrade_pickup(self, exclude=None):

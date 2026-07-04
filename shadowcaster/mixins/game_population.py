@@ -105,6 +105,7 @@ class PopulationMixin(GameMixinBase):
                     profile.get("effect") or self.rules["enemy_on_hit_effect"],
                     profile.get("attack_range", 1),
                     profile.get("preferred_range", 1),
+                    profile.get("moves_per_turn", 1),
                 )
             )
         self.enemies_spawned = len(self.enemies)
@@ -141,6 +142,17 @@ class PopulationMixin(GameMixinBase):
                 effect = "burn" if self.region_type == "volcanic" else "poison"
                 return {"kind": "shaman", "color": (180, 110, 255), "damage": 1, "marker": "shaman", "health": 2, "effect": effect, "attack_range": 4, "preferred_range": 2}
             return {"kind": "bogling", "color": (138, 188, 112), "damage": 1, "marker": "beast", "health": 2}
+        # Lurker: fast ambusher — 2 moves per turn, fragile, high damage
+        if self.region_type in ("dungeon", "cave", "ruins") and threat >= 3 and index == 0:
+            return {"kind": "lurker", "color": (160, 100, 220), "damage": 2, "marker": "enemy", "health": 2, "moves_per_turn": 2}
+        # Warden: high-HP blocker — must be cleared to safely pass
+        if self.region_type in ("castle", "dungeon") and threat >= 4 and index == enemy_count - 1:
+            return {"kind": "warden", "color": (140, 150, 160), "damage": 1, "marker": "enemy", "health": 7}
+        # Hexer: ranged debuffer — backs off when player is close
+        if self.region_type in ("desert", "volcanic", "badlands") and threat >= 3 and index == 0:
+            effect = "burn" if self.region_type == "volcanic" else "poison"
+            return {"kind": "hexer", "color": (220, 160, 80), "damage": 1, "marker": "shaman", "health": 2,
+                    "effect": effect, "attack_range": 5, "preferred_range": 4}
         if threat >= 3 and index == enemy_count - 1:
             return {"kind": "brute", "color": COLOR_ENEMY_BRUTE, "damage": 2, "marker": "enemy", "health": 5}
         return {"kind": "stalker", "color": COLOR_ENEMY, "damage": 1, "marker": "enemy", "health": 3}
