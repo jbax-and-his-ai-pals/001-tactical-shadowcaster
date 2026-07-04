@@ -3,6 +3,13 @@ from __future__ import annotations
 import hashlib
 
 from ..game_typing import GameMixinBase
+from ..quest_flavor import (
+    BOUNTY_INTROS,
+    CHAIN_RETURN_LINES,
+    DELIVERY_INTROS,
+    SCOUT_INTROS,
+    flavored_text,
+)
 
 
 class QuestTextMixin(GameMixinBase):
@@ -24,16 +31,16 @@ class QuestTextMixin(GameMixinBase):
         ("quest_parcel", "Wrapped Parcel", "a wrapped parcel", (190, 180, 140)),
     ]
     _CHAIN_LEADS = [
-        ("Strange markings were spotted near {landmark} in {region}. Someone needs to get eyes on it and report back.", "ammo", "field notes"),
-        ("Word came through that {landmark} in {region} has gone quiet. We need a first-hand account.", "medkit", "a witness sketch"),
-        ("A courier mentioned something odd about {landmark} near {region} before moving on. Worth a look.", "tonic", "a courier's note"),
-        ("A trader came through with news of {landmark} out in {region}. The details didn't add up. Find out what's there.", "intel", "a trader's ledger scrap"),
-        ("The scouts flagged {landmark} in {region} as worth checking before the next route posting.", "ammo", "survey marks"),
-        ("An old map note pointed to {landmark} somewhere around {region}. Confirm it still stands.", "tonic", "a map rubbing"),
+        ("Strange markings were spotted near {landmark} in {region}. Someone at {civic} wants proper eyes on it.", "ammo", "field notes"),
+        ("Word came through {work} that {landmark} in {region} has gone quiet. We need a first-hand account.", "medkit", "a witness sketch"),
+        ("A courier passing {town} mentioned something odd about {landmark} near {region}. Worth a look.", "tonic", "a courier's note"),
+        ("A trader reached {work} with news of {landmark} out in {region}. The details did not add up.", "intel", "a trader's ledger scrap"),
+        ("The scouts at {civic} flagged {landmark} in {region} as worth checking before the next route posting.", "ammo", "survey marks"),
+        ("An old map note kept near {home} pointed to {landmark} somewhere around {region}. Confirm it still stands.", "tonic", "a map rubbing"),
     ]
     _CHAIN_FALLBACK_LEADS = [
-        ("Someone passed through with unsettled news from {region}. Survey the area and bring back what you find.", "ammo", "field notes"),
-        ("The region of {region} has been off the regular route for too long. A firsthand look would help.", "intel", "a survey sketch"),
+        ("Someone passed through {town} with unsettled news from {region}. Survey the area and bring back what you find.", "ammo", "field notes"),
+        ("The routes discussed at {civic} have ignored {region} for too long. A firsthand look would help.", "intel", "a survey sketch"),
     ]
     _CHAIN_REWARD_LABELS = {
         "ammo": "+2 ammo",
@@ -45,6 +52,11 @@ class QuestTextMixin(GameMixinBase):
         "survey": "Survey",
         "recover": "Recover",
         "hunt": "Hunt",
+    }
+    _PRIORITY_THEME_LABELS = {
+        "watch": "Watch Contract",
+        "survey": "Survey Contract",
+        "relief": "Relief Contract",
     }
     _BOUNTY_TARGETS = {
         "forest": "drive off prowlers",
@@ -106,22 +118,25 @@ class QuestTextMixin(GameMixinBase):
         danger_tier = max(1, int(state.get("danger_tier", 1)))
         return region_name, region_type, objective, danger_tier
 
-    def scout_description(self, region_name, dir_name, landmark_name):
+    def scout_description(self, region_name, dir_name, landmark_name, seed_value):
         biome = self.town_biome_context()
-        intros = {
-            "forest": "The woods have gone quiet in an unusual way.",
-            "swamp": "No one trusts the marsh reports secondhand.",
-            "mountain": "The pass watchers want fresh eyes on the road.",
-            "tundra": "Tracks vanish quickly in the frost, so timing matters.",
-            "desert": "Caravan talk is too muddled to trust on its own.",
-            "volcanic": "Too many ash-road rumors are contradicting each other.",
-        }
-        intro = intros.get(biome, "The town wants a firsthand report from the road.")
+        intro = flavored_text(SCOUT_INTROS, biome, self.notice_board_context(), seed_value)
         if landmark_name:
             return f"{intro} Travel to {region_name} to the {dir_name}, confirm {landmark_name}, then return to {self.region_name}."
         return f"{intro} Travel to {region_name} to the {dir_name}, survey the area, then return to {self.region_name}."
 
     def board_kind_label(self, quest):
+        if self.is_priority_quest(quest):
+            theme_label = self._PRIORITY_THEME_LABELS.get(getattr(quest, "theme_key", ""), "Priority")
+            if quest.stage >= 2:
+                return theme_label.upper()
+            if quest.stage == 1 and quest.objective_key == "hunt":
+                return f"{theme_label} HUNT".upper()
+            if quest.stage == 1 and quest.objective_key == "survey":
+                return f"{theme_label} SURVEY".upper()
+            if quest.stage == 1:
+                return theme_label.upper()
+            return theme_label.upper()
         if quest.kind == "bounty" and quest.stage >= 1:
             return "TURN-IN"
         if quest.kind == "scout" and quest.stage >= 1:
@@ -182,26 +197,27 @@ class QuestTextMixin(GameMixinBase):
         home_name = quest.origin_town_name or f"({quest.from_world_pos[0]}, {quest.from_world_pos[1]})"
         return f"{evidence.capitalize()} secured. Return to {home_name} for {quest.reward_gold}g + {self.chain_reward_label(quest.item_key)}."
 
-    def delivery_description(self, desc, region_name, dir_name):
+    def delivery_description(self, desc, region_name, dir_name, seed_value):
         biome = self.town_biome_context()
-        intros = {
-            "farmland": "The stores need moving before the wagons turn.",
-            "desert": "Caravans are stretched thin across the heat.",
-            "swamp": "The marsh roads are unreliable this week.",
-            "mountain": "The pass settlements are short on steady runners.",
-            "tundra": "Cold weather has cut the easy routes.",
-            "volcanic": "The ash roads are too rough for regular couriers.",
-        }
-        intro = intros.get(biome, "A neighboring settlement needs a dependable courier.")
+        intro = flavored_text(DELIVERY_INTROS, biome, self.notice_board_context(), seed_value)
         return f"{intro} Carry {desc} to {region_name} to the {dir_name}."
 
-    def chain_description(self, landmark_name, region_name, dir_name, lead_template):
-        text = lead_template.format(landmark=landmark_name, region=region_name)
-        return f"{text} Return to {self.region_name} afterward."
+    def bounty_description(self, region_name, dir_name, objective, region_type, seed_value):
+        biome = self.town_biome_context()
+        intro = flavored_text(BOUNTY_INTROS, biome, self.notice_board_context(), seed_value)
+        return f"{intro} Travel to {region_name} to the {dir_name}, {objective}, then return to {self.region_name}."
 
-    def chain_fallback_description(self, region_name, dir_name, lead_template):
-        text = lead_template.format(region=region_name)
-        return f"{text} Return to {self.region_name} afterward."
+    def chain_description(self, landmark_name, region_name, dir_name, lead_template, seed_value):
+        context = {**self.notice_board_context(), "landmark": landmark_name, "region": region_name, "dir_name": dir_name}
+        text = lead_template.format(**context)
+        return_line = flavored_text(CHAIN_RETURN_LINES, self.town_biome_context(), self.notice_board_context(), seed_value)
+        return f"{text} {return_line}"
+
+    def chain_fallback_description(self, region_name, dir_name, lead_template, seed_value):
+        context = {**self.notice_board_context(), "region": region_name, "dir_name": dir_name}
+        text = lead_template.format(**context)
+        return_line = flavored_text(CHAIN_RETURN_LINES, self.town_biome_context(), self.notice_board_context(), seed_value)
+        return f"{text} {return_line}"
 
     def chain_mid_message(self, landmark_name, region_name):
         if landmark_name:
@@ -212,6 +228,42 @@ class QuestTextMixin(GameMixinBase):
         direction = self.quest_direction_name(quest.from_world_pos, quest.to_world_pos)
         region_name = quest.target_region_name or quest.to_town_hint
         return f"{region_name} to the {direction}"
+
+    def quest_destination_summary(self, quest):
+        return f"Go: {self.quest_target_label(quest)}."
+
+    def quest_objective_summary(self, quest):
+        if quest.kind == "delivery":
+            return f"Carry: {quest.item_name}."
+        if quest.kind == "scout":
+            if quest.target_landmark_name:
+                return f"Confirm: {quest.target_landmark_name}."
+            return "Objective: survey the area."
+        if quest.kind == "bounty":
+            return f"Clear: {quest.target_count} local threats."
+        if quest.kind == "chain":
+            if quest.objective_key == "hunt":
+                return f"{self.chain_objective_label(quest.objective_key)}: {quest.target_count} threats."
+            if quest.target_landmark_name:
+                return f"{self.chain_objective_label(quest.objective_key)}: {quest.target_landmark_name}."
+            if quest.item_name:
+                return f"{self.chain_objective_label(quest.objective_key)}: {quest.item_name}."
+            return f"{self.chain_objective_label(quest.objective_key)}: field proof."
+        return f"Reward: {quest.reward_gold}g."
+
+    def quest_return_summary(self, quest):
+        if quest.kind == "delivery":
+            return ""
+        home_name = quest.origin_town_name or f"({quest.from_world_pos[0]}, {quest.from_world_pos[1]})"
+        return f"Return: {home_name}."
+
+    def quest_context_lines(self, quest, include_return=True):
+        lines = [self.quest_destination_summary(quest), self.quest_objective_summary(quest)]
+        if include_return:
+            return_line = self.quest_return_summary(quest)
+            if return_line:
+                lines.append(return_line)
+        return lines
 
     def notice_board_context(self):
         building_names = [building["name"] for building in self.town_building_data()]
@@ -240,8 +292,13 @@ class QuestTextMixin(GameMixinBase):
     def _notice_board_text(self):
         response = self.town_response_line()
         work_summary = self.town_work_summary_line()
+        attitude = self.town_attitude_board_summary()
         if response and work_summary:
-            return f"{response} {work_summary}"
+            return f"{attitude} {response} {work_summary}"
+        if response:
+            return f"{attitude} {response}"
+        if work_summary:
+            return f"{attitude} {work_summary}"
         if response:
             return response
         seed_str = f"{self.world_seed}:{self.world_position[0]}:{self.world_position[1]}"

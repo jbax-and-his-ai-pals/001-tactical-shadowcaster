@@ -4,10 +4,10 @@ import hashlib
 
 from ..constants import COLOR_ACCENT, COLOR_HEAL
 from ..models import Quest
-from .game_quest_text import QuestTextMixin
+from .game_quest_board import QuestBoardMixin
 
 
-class QuestsMixin(QuestTextMixin):
+class QuestsMixin(QuestBoardMixin):
     def chain_objective_kind(self, target_region_name, landmark_name, danger_tier, seed_value):
         if landmark_name:
             if danger_tier >= 3 and seed_value % 4 == 0:
@@ -27,7 +27,7 @@ class QuestsMixin(QuestTextMixin):
         to_pos = (wx + dx * dist, wy + dy * dist)
         dir_name = self._QUEST_DIR_NAMES[(dx, dy)]
         key, name, desc, _ = self._DELIVERY_ITEMS[h % len(self._DELIVERY_ITEMS)]
-        reward = 20 + (h % 6) * 10
+        reward = 20 + (h % 6) * 10 + self.town_quest_reward_bonus((wx, wy))
         region_name = self.quest_preview_region_state(to_pos).get("region_name", f"a settlement to the {dir_name}")
         return Quest(
             id=f"delivery_{wx}_{wy}_{slot}_{cycle}",
@@ -37,7 +37,7 @@ class QuestsMixin(QuestTextMixin):
             to_town_hint=region_name,
             item_key=key,
             item_name=name,
-            description=self.delivery_description(desc, region_name, dir_name),
+            description=self.delivery_description(desc, region_name, dir_name, h),
             reward_gold=reward,
             target_region_name=region_name,
             origin_town_name=self.region_name,
@@ -51,8 +51,8 @@ class QuestsMixin(QuestTextMixin):
         to_pos = (wx + dx * dist, wy + dy * dist)
         dir_name = self._QUEST_DIR_NAMES[(dx, dy)]
         region_name, landmark_name, landmark_kind = self.scout_target_details(to_pos, h)
-        reward = 20 + (h % 5) * 5
-        description = self.scout_description(region_name, dir_name, landmark_name)
+        reward = 20 + (h % 5) * 5 + self.town_quest_reward_bonus((wx, wy))
+        description = self.scout_description(region_name, dir_name, landmark_name, h)
         return Quest(
             id=f"scout_{wx}_{wy}_{slot}_{cycle}",
             kind="scout",
@@ -77,7 +77,7 @@ class QuestsMixin(QuestTextMixin):
         to_pos = (wx + dx * dist, wy + dy * dist)
         region_name, _region_type, objective, danger_tier = self.bounty_target_details(to_pos)
         target = max(4, 3 + danger_tier * 2 + (h % 4))
-        reward = 18 + target * (3 + danger_tier)
+        reward = 18 + target * (3 + danger_tier) + self.town_quest_reward_bonus((wx, wy))
         return Quest(
             id=f"bounty_{wx}_{wy}_{slot}_{cycle}",
             kind="bounty",
@@ -86,7 +86,7 @@ class QuestsMixin(QuestTextMixin):
             to_town_hint=region_name,
             item_key="",
             item_name="",
-            description=f"Travel to {region_name} to the {self.quest_direction_name((wx, wy), to_pos)}, {objective}, then return to {self.region_name}.",
+            description=self.bounty_description(region_name, self.quest_direction_name((wx, wy), to_pos), objective, _region_type, h),
             reward_gold=reward,
             target_count=target,
             target_region_name=region_name,
@@ -102,15 +102,15 @@ class QuestsMixin(QuestTextMixin):
         dir_name = self._QUEST_DIR_NAMES[(dx, dy)]
         region_name, landmark_name, landmark_kind = self.scout_target_details(to_pos, h)
         _name, _region_type, _objective, danger_tier = self.bounty_target_details(to_pos)
-        reward = 25 + (h % 5) * 10
+        reward = 25 + (h % 5) * 10 + self.town_quest_reward_bonus((wx, wy))
         objective_key = self.chain_objective_kind(region_name, landmark_name, danger_tier, h)
         target_count = 0
         if landmark_name:
             lead_template, supply_kind, evidence_name = self._CHAIN_LEADS[h % len(self._CHAIN_LEADS)]
-            description = self.chain_description(landmark_name, region_name, dir_name, lead_template)
+            description = self.chain_description(landmark_name, region_name, dir_name, lead_template, h)
         else:
             lead_template, supply_kind, evidence_name = self._CHAIN_FALLBACK_LEADS[h % len(self._CHAIN_FALLBACK_LEADS)]
-            description = self.chain_fallback_description(region_name, dir_name, lead_template)
+            description = self.chain_fallback_description(region_name, dir_name, lead_template, h)
         if objective_key == "survey":
             description += f" A broad survey of the area will do."
         elif objective_key == "hunt":
@@ -140,9 +140,19 @@ class QuestsMixin(QuestTextMixin):
         wx, wy = self.world_position
         cycle = self.quest_posting_cycle()
         h = int(hashlib.md5(f"board:{self.world_seed}:{wx}:{wy}:{cycle}".encode()).hexdigest(), 16)
-        builders = [self._board_quest_delivery, self._board_quest_scout, self._board_quest_bounty]
-        quests = [self._board_quest_chain(wx, wy, 0)]
-        for slot in range(1, 5):
+        builders = self.board_builders_for_attitude((wx, wy))
+        quest_slots = self.town_quest_slots((wx, wy))
+        quests = []
+        if self.town_attitude_score((wx, wy)) >= 6:
+            quests.append(self._board_quest_priority(wx, wy, 0))
+            start_slot = 1
+        elif self.town_attitude_score((wx, wy)) >= 1:
+            quests.append(self._board_quest_chain(wx, wy, 0))
+            start_slot = 1
+        else:
+            quests.append(self._board_quest_scout(wx, wy, 0))
+            start_slot = 1
+        for slot in range(start_slot, quest_slots):
             idx = (h >> (slot * 3)) % len(builders)
             quests.append(builders[idx](wx, wy, slot))
         return quests
@@ -200,6 +210,7 @@ class QuestsMixin(QuestTextMixin):
             progress_count=self.enemies_defeated,
             stage=template.stage,
             objective_key=template.objective_key,
+            theme_key=template.theme_key,
             target_region_name=template.target_region_name,
             target_landmark_name=template.target_landmark_name,
             target_landmark_kind=template.target_landmark_kind,
@@ -227,19 +238,28 @@ class QuestsMixin(QuestTextMixin):
                 self.preview_world_regions[key] = state
             reward_label = self.chain_reward_label(quest.item_key)
             objective_label = self.chain_objective_label(quest.objective_key).lower()
+            if self.is_priority_quest(quest):
+                theme_label = {
+                    "watch": "Priority watch contract accepted:",
+                    "survey": "Priority survey contract accepted:",
+                    "relief": "Priority relief contract accepted:",
+                }.get(quest.theme_key, "Priority lead accepted:")
+                lead_prefix = theme_label
+            else:
+                lead_prefix = "Lead accepted:"
             if quest.objective_key == "hunt":
                 self.message = (
-                    f"Lead accepted: travel to {self.quest_target_label(quest)}, hunt {quest.target_count} foes, "
+                    f"{lead_prefix} travel to {self.quest_target_label(quest)}, hunt {quest.target_count} foes, "
                     f"recover {quest.item_name}, and return for {quest.reward_gold}g + {reward_label}."
                 )
             elif quest.target_landmark_name:
                 self.message = (
-                    f"Lead accepted: travel to {self.quest_target_label(quest)}, {objective_label} {quest.target_landmark_name}, "
+                    f"{lead_prefix} travel to {self.quest_target_label(quest)}, {objective_label} {quest.target_landmark_name}, "
                     f"recover {quest.item_name}, and return for {quest.reward_gold}g + {reward_label}."
                 )
             else:
                 self.message = (
-                    f"Lead accepted: {objective_label} {self.quest_target_label(quest)}, recover {quest.item_name}, "
+                    f"{lead_prefix} {objective_label} {self.quest_target_label(quest)}, recover {quest.item_name}, "
                     f"and return for {quest.reward_gold}g + {reward_label}."
                 )
         if self.notice_board_open:
@@ -298,7 +318,8 @@ class QuestsMixin(QuestTextMixin):
                 self.ammo += 2
                 supply_note = f"+2 ammo (now {self.ammo})"
             evidence = quest.item_name or "proof"
-            self.message = f"Lead closed on {target_label}; {evidence} delivered. Received {quest.reward_gold}g, {supply_note}. Total: {self.gold}g."
+            lead_label = "Priority lead closed" if self.is_priority_quest(quest) else "Lead closed"
+            self.message = f"{lead_label} on {target_label}; {evidence} delivered. Received {quest.reward_gold}g, {supply_note}. Total: {self.gold}g."
         if town_response:
             self.message = f"{self.message} {town_response}"
         if self.notice_board_open and self.region_type == "town":

@@ -217,9 +217,10 @@ class TownsMixin(GameMixinBase):
             return
         title = ""
         lines = []
+        service_bonus = self.town_service_bonus_tier()
         if self.region_type == "inn":
             title = "Inn — Rest"
-            heal = min(self.max_health - self.health, 3)
+            heal = min(self.max_health - self.health, 3 + service_bonus)
             if heal > 0:
                 self.health += heal
                 lines.append(f"You rest and recover {heal} HP.")
@@ -227,6 +228,8 @@ class TownsMixin(GameMixinBase):
             else:
                 lines.append("You are already at full health.")
                 lines.append("Rest is still welcome.")
+            if service_bonus:
+                lines.append("The innkeeper remembers your help and puts a little extra care into your stay.")
         elif self.region_type == "clinic":
             title = "Clinic — Treatment"
             statuses_cleared = [s for s in ("poison", "burn") if s in self.player_statuses]
@@ -247,10 +250,12 @@ class TownsMixin(GameMixinBase):
                 lines.append("You are already at full health.")
         elif self.region_type == "supply":
             title = "Provisioner — Resupply"
-            self.ammo += 1
-            self.add_item("medkit", "Healing Potion", "consumable", COLOR_HEAL, "vitality", quantity=1, description="Restores health.")
+            ammo_gain = 1 + service_bonus
+            medkit_gain = 1 + (1 if service_bonus >= 2 else 0)
+            self.ammo += ammo_gain
+            self.add_item("medkit", "Healing Potion", "consumable", COLOR_HEAL, "vitality", quantity=medkit_gain, description="Restores health.")
             lines.append("Stocked up for the road.")
-            lines.append(f"+1 ammo (now {self.ammo}), +1 healing potion.")
+            lines.append(f"+{ammo_gain} ammo (now {self.ammo}), +{medkit_gain} healing potion{'s' if medkit_gain != 1 else ''}.")
         elif self.region_type == "shrine":
             title = "Shrine — Blessing"
             statuses_cleared = [s for s in ("poison", "burn") if s in self.player_statuses]
@@ -270,10 +275,12 @@ class TownsMixin(GameMixinBase):
                 lines.append("A stillness settles over you.")
         elif self.region_type == "smith":
             title = "Smithy — Outfitted"
-            self.ammo += 1
-            self.add_item("tonic", "Ward Tonic", "consumable", COLOR_ACCENT, "power", quantity=1, description="Clears statuses and grants ward.")
+            ammo_gain = 1 + service_bonus
+            tonic_gain = 1 + (1 if service_bonus >= 2 else 0)
+            self.ammo += ammo_gain
+            self.add_item("tonic", "Ward Tonic", "consumable", COLOR_ACCENT, "power", quantity=tonic_gain, description="Clears statuses and grants ward.")
             lines.append("The smith sets you up for the trail.")
-            lines.append(f"+1 ammo (now {self.ammo}), +1 ward tonic.")
+            lines.append(f"+{ammo_gain} ammo (now {self.ammo}), +{tonic_gain} ward tonic{'s' if tonic_gain != 1 else ''}.")
         elif self.region_type == "cartographer":
             title = "Survey Office — Routes Mapped"
             revealed = self.reveal_adjacent_world_regions()
@@ -286,14 +293,22 @@ class TownsMixin(GameMixinBase):
                 lines.append("No new routes to chart.")
         elif self.region_type == "tavern":
             title = "Tavern — Road Rumors"
-            revealed = self.reveal_one_adjacent_world_region()
+            revealed = []
+            result = self.reveal_one_adjacent_world_region()
+            if result:
+                revealed.append(result)
+            if service_bonus >= 2:
+                result = self.reveal_one_adjacent_world_region()
+                if result:
+                    revealed.append(result)
             if revealed:
-                _, region_name = revealed
-                lines.append(f"A traveler at the bar tips you off about {region_name}.")
+                names = " and ".join(name for _, name in revealed)
+                lines.append(f"A traveler at the bar tips you off about {names}.")
             else:
                 lines.append("The bar's talk has dried up — every route you know already.")
-            self.gold += 2
-            lines.append(f"+2 gold from a small trade. Gold: {self.gold}.")
+            gold_gain = 2 + service_bonus
+            self.gold += gold_gain
+            lines.append(f"+{gold_gain} gold from a small trade. Gold: {self.gold}.")
         elif self.region_type == "chapel":
             title = "Chapel — Road Blessing"
             statuses_cleared = [s for s in ("poison", "burn") if s in self.player_statuses]
@@ -356,12 +371,13 @@ class TownsMixin(GameMixinBase):
             self.open_provisioner_trade()
             return
         if self.apply_resident_boon(resident):
+            self.message = self.with_town_attitude_dialogue(self.message, resident)
             return
         if resident.dialogue:
             base = random.choice(resident.dialogue)
             response = self.resident_town_response_line(resident)
-            self.message = f"{base} {response}".strip()
+            self.message = self.with_town_attitude_dialogue(f"{base} {response}".strip(), resident)
             return
         name = resident.name or f"the {resident.kind}"
-        self.message = f"{name.capitalize()} nods to you." if resident.name else f"The {resident.kind} nods to you."
-
+        plain = f"{name.capitalize()} nods to you." if resident.name else f"The {resident.kind} nods to you."
+        self.message = self.with_town_attitude_dialogue(plain, resident)

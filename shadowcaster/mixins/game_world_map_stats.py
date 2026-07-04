@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from ..game_typing import GameMixinBase
+from ..world_map_landmark_flavor import landmark_identity as build_landmark_identity
+from ..world_map_landmark_flavor import landmark_site_outlook
+from ..world_map_region_advice import opportunity_lines, site_state_lines
 
 
 class WorldMapStatsMixin(GameMixinBase):
@@ -19,56 +22,13 @@ class WorldMapStatsMixin(GameMixinBase):
         return counts
 
     def landmark_site_outlook(self, counts):
-        if counts["entered"] > 0:
-            return "Open site leads remain here."
-        if counts["located"] > 0:
-            return "Known sites are marked but not yet entered."
-        if counts["cleared"] > 0 and counts["unvisited"] == 0 and counts["located"] == 0 and counts["entered"] == 0:
-            return "All known sites here have been resolved."
-        if counts["unvisited"] > 0:
-            return "This region may still hide undiscovered places."
-        return "No notable site pressure here right now."
+        return landmark_site_outlook(counts)
 
     def landmark_identity(self, coord, state, landmark):
         region_type = state["region_type"]
         region_name = state["region_name"]
         parent_biome = state.get("town_parent_biome") or state.get("parent_biome") or region_type
-        defaults = {
-            "town": ("Settlement", "A place to rest, barter, and gather leads.", "Safe services and new rumors."),
-            "monster_town": ("Monster Town", "A hostile settlement where every street is compromised.", "High danger, uncommon rewards."),
-            "cave": ("Cave Mouth", "A rough descent into cramped underground passages.", "Depth rewards and hidden gear."),
-            "dungeon": ("Dungeon Gate", "A structured delve that rewards preparation.", "Strong bottom-floor cache."),
-            "castle": ("Castle Site", "A fortified site with heavier resistance.", "Tougher fights and sturdier loot."),
-            "ruins": ("Ruin Site", "Broken remains that may still hide supplies or secrets.", "Mixed danger and useful finds."),
-            "inn": ("Inn", "A traveler stop where you can recover before pressing on.", "A free rest on first entry."),
-            "clinic": ("Clinic", "A place to patch wounds and clear lingering afflictions.", "Healing and status relief."),
-            "supply": ("Provisioner", "A stock point for ammunition and field medicine.", "Resupply and barter."),
-            "shrine": ("Forgotten Shrine", "An old roadside altar, still tended by something unseen.", "Full healing and status cleanse."),
-            "cache": ("Hidden Cache", "Someone buried supplies here and never came back.", "Substantial supply haul."),
-            "smith": ("Smithy", "A work site where gear and trail readiness matter.", "Refit and tonic support."),
-            "cartographer": ("Survey Office", "A chart room that turns travel into knowledge.", "Nearby regions revealed."),
-        }
-        label, hook, reward = defaults.get(
-            landmark.kind,
-            (landmark.kind.replace("_", " ").title(), f"A notable site in {region_name}.", "Unknown opportunities."),
-        )
-        biome_flavor = {
-            "forest": "Often hidden among tree cover and winding trails.",
-            "plains": "Usually visible from a distance across open ground.",
-            "farmland": "Tied closely to roads, labor, and nearby settlements.",
-            "desert": "Travel there is exposed, thirsty, and hard to recover from.",
-            "swamp": "Approach is awkward and often shaped by poison or poor footing.",
-            "mountain": "Getting there safely matters almost as much as what lies inside.",
-            "badlands": "The route itself can be harsher than the destination.",
-            "tundra": "Exposure and distance are part of the threat profile.",
-            "volcanic": "Heat and attrition make each push more committal.",
-        }.get(parent_biome)
-        return {
-            "label": label,
-            "hook": hook,
-            "reward_hint": reward,
-            "biome_flavor": biome_flavor,
-        }
+        return build_landmark_identity(region_name, parent_biome, landmark.kind)
 
     def region_world_theme(self, region_type=None, state=None):
         region_type = region_type or (state["region_type"] if state else self.region_type)
@@ -295,6 +255,7 @@ class WorldMapStatsMixin(GameMixinBase):
                     "detail": progress["detail"],
                     "hook": identity["hook"],
                     "reward_hint": identity["reward_hint"],
+                    "travel_note": identity["travel_note"],
                     "biome_flavor": identity["biome_flavor"],
                     "visited": progress["visited"],
                     "entered": progress.get("entered", False),
@@ -303,6 +264,7 @@ class WorldMapStatsMixin(GameMixinBase):
             )
         quest_counts = self.completed_quest_counts(coord)
         prosperity_score = self.town_prosperity_score(coord)
+        attitude_score = self.town_attitude_score(coord)
         active_quest_summary = self.active_quest_region_summary(coord)
         return {
             "coord": coord,
@@ -338,6 +300,33 @@ class WorldMapStatsMixin(GameMixinBase):
             "landmarks_located_only": landmark_counts["located"],
             "landmarks_open": landmark_counts["entered"],
             "site_outlook": self.landmark_site_outlook(landmark_counts),
+            "site_state_lines": site_state_lines(
+                {
+                    "landmarks_total": len(landmarks),
+                    "landmarks_unvisited": landmark_counts["unvisited"],
+                    "landmarks_located_only": landmark_counts["located"],
+                    "landmarks_open": landmark_counts["entered"],
+                    "landmarks_cleared": sum(1 for p in landmark_progress_cache if p["cleared"]),
+                    "landmarks_entered": sum(1 for p in landmark_progress_cache if p.get("entered")),
+                    "landmark_type_counts": self.site_type_counts(landmarks),
+                }
+            ),
+            "opportunity_lines": opportunity_lines(
+                {
+                    "active_quest_targets_here": active_quest_summary["targets_here"],
+                    "active_quest_turnins_here": active_quest_summary["report_here"],
+                    "landmarks_open": landmark_counts["entered"],
+                    "landmarks_located_only": landmark_counts["located"],
+                    "landmarks_unvisited": landmark_counts["unvisited"],
+                    "settlement_size": self.settlement_label(state),
+                    "attitude_score": attitude_score,
+                    "max_depth": state.get("region_max_depth", 1),
+                    "bottom_reward_claimed": state.get("bottom_reward_claimed", False),
+                    "foes_remaining": foes_remaining,
+                    "exploration": self.region_exploration_percent(state),
+                    "danger_tier": state.get("danger_tier", 1),
+                }
+            ),
             "landmark_type_counts": self.site_type_counts(landmarks),
             "landmark_summaries": landmark_summaries,
             "neighbor_summaries": neighbors,
@@ -348,6 +337,8 @@ class WorldMapStatsMixin(GameMixinBase):
             "quest_chain": quest_counts.get("chain", 0),
             "prosperity_score": prosperity_score,
             "prosperity_label": self.town_prosperity_label(coord),
+            "attitude_score": attitude_score,
+            "attitude_label": self.town_attitude_label(coord),
             "active_quest_posted_here": active_quest_summary["posted_here"],
             "active_quest_targets_here": active_quest_summary["targets_here"],
             "active_quest_turnins_here": active_quest_summary["report_here"],

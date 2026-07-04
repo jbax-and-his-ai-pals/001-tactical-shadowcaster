@@ -4,9 +4,58 @@ from ..game_typing import GameMixinBase
 
 
 class TownReactionsMixin(GameMixinBase):
+    def town_attitude_score(self, coord=None):
+        coord = coord or self.world_position
+        return self.town_prosperity_score(coord)
+
+    def town_attitude_label(self, coord=None):
+        score = self.town_attitude_score(coord)
+        if score >= 10:
+            return "Beloved"
+        if score >= 6:
+            return "Trusted"
+        if score >= 3:
+            return "Welcome"
+        if score >= 1:
+            return "Known"
+        return "Wary"
+
+    def town_attitude_board_summary(self, coord=None):
+        label = self.town_attitude_label(coord)
+        return f"Standing here: {label}."
+
+    def town_service_bonus_tier(self, coord=None):
+        score = self.town_attitude_score(coord)
+        if score >= 10:
+            return 2
+        if score >= 6:
+            return 1
+        return 0
+
+    def with_town_attitude_dialogue(self, text, resident=None):
+        if self.region_type != "town" or not text:
+            return text
+        label = self.town_attitude_label()
+        role = getattr(resident, "kind", "")
+        if label == "Beloved":
+            suffix = {
+                "guide": "The guide treats you like one of their own now.",
+                "scout": "The scout speaks to you like a trusted runner.",
+                "vendor": "The vendor grins like you're good business and good company.",
+            }.get(role, "People here are plainly glad to see you.")
+        elif label == "Trusted":
+            suffix = "You get the sense this town trusts your judgment."
+        elif label == "Welcome":
+            suffix = "The town seems comfortable having you around."
+        elif label == "Known":
+            suffix = "At least the locals recognize you now."
+        else:
+            suffix = "You still feel a little unproven here."
+        return f"{text} {suffix}".strip()
+
     def town_response_line(self, coord=None):
         coord = coord or self.world_position
-        score = self.town_prosperity_score(coord)
+        score = self.town_attitude_score(coord)
         if score >= 10:
             return "The town feels genuinely lively now."
         if score >= 6:

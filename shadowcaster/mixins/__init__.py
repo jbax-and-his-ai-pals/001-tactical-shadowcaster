@@ -9,6 +9,7 @@ from .game_input import InputMixin
 from .game_inspect import InspectMixin
 from .game_inventory import InventoryMixin
 from .game_journal_ui import JournalUIMixin
+from .game_journal_stats import JournalStatsMixin
 from .game_log_ui import LogUIMixin
 from .game_menu_ui import MenuUIMixin
 from .game_overlay_clicks import OverlayClickMixin
@@ -48,6 +49,7 @@ __all__ = [
     "InspectMixin",
     "InventoryMixin",
     "JournalUIMixin",
+    "JournalStatsMixin",
     "LogUIMixin",
     "MenuUIMixin",
     "MovementMixin",

@@ -208,8 +208,10 @@ class UIMixin(GameMixinBase):
         row_rects = []
         current_y = quest_area_top_offset
         for quest in self.notice_board_quests:
-            line_count = self.wrap_line_count(quest.description, row_width - 28)
-            row_height = max(86, 66 + line_count * 18)
+            context_lines = len(self.quest_context_lines(quest, include_return=False))
+            desc_lines = self.wrap_line_count(quest.description, row_width - 28)
+            line_count = context_lines + desc_lines
+            row_height = max(102, 72 + line_count * 18)
             row_rects.append(pygame.Rect(left + 18, current_y, row_width, row_height))
             current_y += row_height + row_gap
         top = (SCREEN_HEIGHT - panel_h) // 2

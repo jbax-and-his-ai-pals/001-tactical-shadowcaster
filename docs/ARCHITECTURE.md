@@ -2,6 +2,8 @@
 
 This project is a compact pygame roguelite that now uses a thin `Game` composition class plus a set of focused mixins under `shadowcaster/mixins/`.
 
+For test entry points and current regression coverage, read `docs/TESTING.md`.
+
 ## Boot Flow
 
 1. Run `python shadowcaster_game.py`
@@ -28,6 +30,7 @@ Current gameplay mixins:
 | `shadowcaster/mixins/game_core.py` | app bootstrap, shared state, tuning schema, top-level run/render shell |
 | `shadowcaster/mixins/game_world.py` | world/seed policy, danger rules, region-choice helpers |
 | `shadowcaster/mixins/game_world_travel.py` | arrivals, exits, world transitions, preview region capture |
+| `shadowcaster/mixins/game_town_reactions.py` | lightweight town-attitude/response helpers used by dialogue, boards, services, and map presentation |
 | `shadowcaster/mixins/game_towns.py` | town landmarks, building flavor, resident interactions, service logic; `surface_landmark_kinds()` gate in `enter_landmark` |
 | `shadowcaster/mixins/game_landmark_services.py` | surface-modal landmark reward handlers (`apply_surface_landmark`); fires directly without entering a local region |
 | `shadowcaster/mixins/game_world_state.py` | region snapshots, save/load application, local-region keys, world-state restoration |
@@ -46,6 +49,7 @@ Current gameplay mixins:
 | `shadowcaster/mixins/game_menu_ui.py` | main/pause menu, tuner, inventory/journal/log toggles and layout |
 | `shadowcaster/mixins/game_rewards_ui.py` | reward choice and provisioner choice handling |
 | `shadowcaster/mixins/game_death_ui.py` | death overlay layout and stat-tab content |
+| `shadowcaster/mixins/game_journal_stats.py` | quest completion/prosperity/standing helpers shared by journal and world-map detail |
 | `shadowcaster/mixins/game_journal_ui.py` | journal overlay layout/state, quest selection, journal action gating |
 | `shadowcaster/mixins/game_log_ui.py` | recent-log overlay layout/state |
 | `shadowcaster/mixins/game_autoexplore.py` | frontier scoring, autoexplore targeting, safe route selection |
@@ -56,6 +60,7 @@ Current gameplay mixins:
 | `shadowcaster/mixins/game_inspect.py` | inspect panel text and hover/click info helpers |
 | `shadowcaster/mixins/game_controls.py` | controls modal, controller label presentation |
 | `shadowcaster/mixins/game_quests.py` | notice board quests and quest completion |
+| `shadowcaster/mixins/game_quest_board.py` | board-attitude gating, reward scaling, and trusted-town priority contract generation/themes |
 
 Mixin types are declared in `shadowcaster/game_typing.py` (`GameMixinBase`). All shared `self.*` attributes used across mixins should be declared there so Pylance can resolve them without false positives.
 

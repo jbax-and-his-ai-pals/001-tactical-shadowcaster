@@ -77,13 +77,20 @@ def render_notice_board_overlay(game):
         s_surf = game.small_font.render(status_labels.get(state, state), True, scolor)
         content.blit(s_surf, (row_rect.right - s_surf.get_width() - 14, ry + 10))
 
+        context_color = (168, 194, 220) if selected else (158, 184, 206) if hovered else (144, 166, 190)
+        context_y = ry + 32
+        for line in game.quest_context_lines(quest, include_return=False):
+            context_surf = game.small_font.render(line, True, context_color)
+            content.blit(context_surf, (row_rect.left + 14, context_y))
+            context_y += 17
+
         desc_color = (220, 210, 185) if selected else (225, 230, 238) if hovered else COLOR_TEXT
         desc_lines = wrap_text(game.small_font, quest.description, desc_color, row_rect.width - 28)
         for li, dl in enumerate(desc_lines):
-            content.blit(dl, (row_rect.left + 14, ry + 34 + li * 18))
+            content.blit(dl, (row_rect.left + 14, context_y + li * 18))
 
         reward_label = game.notice_board_reward_label(quest)
-        reward_y = ry + 34 + len(desc_lines) * 18 + 6
+        reward_y = context_y + len(desc_lines) * 18 + 6
         r_surf = game.small_font.render(reward_label, True, (160, 200, 140) if selected else (142, 176, 120) if hovered else (120, 150, 100))
         content.blit(r_surf, (row_rect.left + 14, reward_y))
     viewport.blit(content, (0, -game.notice_board_scroll))

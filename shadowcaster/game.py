@@ -17,6 +17,7 @@ from .mixins import (
     OverlayEventMixin,
     OverlayInputMixin,
     PopulationMixin,
+    QuestTextMixin,
     ResidentBoonsMixin,
     ResidentsMixin,
     ResidentsTownMixin,
@@ -76,6 +77,7 @@ class Game(
     VisibilityMixin,
     CombatMixin,
     InventoryMixin,
+    QuestTextMixin,
     QuestsMixin,
 ):
     DIRECTION_VECTORS = {

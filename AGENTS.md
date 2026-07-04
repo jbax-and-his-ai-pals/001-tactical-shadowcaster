@@ -14,6 +14,9 @@ Build and iterate on a compact pygame tactics roguelite that is growing from dun
 - Roadmap summary: `ROADMAP.md`
 - `ROADMAP.md` is now intentionally sequential: prefer working from the `Near-Term Queue` and current phase rather than cherry-picking later-phase ideas unless the user explicitly reprioritizes
 - Package code lives under `shadowcaster/`
+- In-repo tests live under `shadowcaster/tests/`
+- Simple all-tests runner: `python run_tests.py`
+- Run tests with `python -m unittest discover -s shadowcaster\tests -t .`
 - Global seed config: `shadowcaster/config.py` via `DEFAULT_WORLD_SEED` or env var `SHADOWCASTER_WORLD_SEED`
 - Refactor/file-management helpers live under `utils/` and currently start with `python utils/refactor_tools.py ...`
 
@@ -66,6 +69,7 @@ Use `python -B utils/largest_py_files.py --top 20` for live line counts. The can
 - `shadowcaster/persistence.py`: save/load entry points; re-exports serializers from persistence_serializers
 - `shadowcaster/persistence_serializers.py`: all `*_to_data` / `*_from_data` functions and `SavedMap`
 - `shadowcaster/main.py`: tiny launcher
+- `shadowcaster/tests/`: headless regression tests for smoke, generation, and core systems
 - `shadowcaster_game.py` (repo root): stable entrypoint wrapper
 - `utils/refactor_tools.py`: CLI for file inventory, method listing, extract-methods, sync-imports, wire-mixin, smoke-game
 
@@ -102,6 +106,7 @@ Line counts drift — run `python -B utils/largest_py_files.py shadowcaster/mixi
 | `game_visibility.py` | FOV, seen tiles, exploration progress, terrain feature generation |
 | `game_terrain.py` | terrain candidate selection and vision transparency sync |
 | `game_inventory.py` | inventory and equipment operations |
+| `game_journal_stats.py` | quest completion counts, prosperity/standing math, active-work summaries, journal summary text |
 | `game_inspect.py` | inspect panel text and hover/click info |
 | `game_controls.py` | controls modal and controller labeling |
 | `game_quests.py` | quest board, quest generation, quest completion |
@@ -120,7 +125,7 @@ For a fuller walkthrough, read `docs/ARCHITECTURE.md`.
 - **Every "is an overlay open" gating check is duplicated across many call sites, not centralized.** `tuner_open`/`inventory_open`/`world_map_open`/`has_pending_choice()`/`game_over`/`travel_mode` are combined in ~15 different `if` expressions across keyboard input, controller dpad navigation, controller button handling, touch dispatch, and the various `toggle_X()` guard clauses. Adding a new full-screen overlay means greping for `tuner_open` and adding your new flag everywhere it appears, in all of: the render dispatch chain in `rendering.py`, the keyboard block in `handle_input`, the controller dpad block in `update_controller_overlay_navigation`, the controller button block in `handle_controller_button`, `touch_action_at`, `handle_touch_tap`, and every other `toggle_X()`'s own guard. Missing one spot doesn't crash, it just leaves a silent input leak (e.g. world map openable while inventory is up) — verify by toggling every overlay combination, not just opening yours in isolation.
 
 ## Known Debt
-- No automated test suite exists. Verification for region-generation/connectivity changes has been done via ad-hoc scripts (headless pygame with `SDL_VIDEODRIVER=dummy`, simulate many seeds, flood-fill-check edge exits and doors). Worth setting up `pytest` plus a handful of these checks as real regression tests if this keeps coming up.
+- A small automated suite now exists under `shadowcaster/tests/` and currently covers boot smoke, edge-exit reachability, town/monster-town door connectivity, transparent-blocker FOV behavior, surface-landmark idempotency, auto-move interruption rules, overlay gating, click-path safety around exits/hazards, autoexplore hostile handling, journal selection/map gating, notice-board refresh behavior, local-debug world-map preview seeding, local-region save/load continuity, and persistence for claimed surface landmarks. It is still intentionally lightweight and should keep growing around generation invariants plus overlay/input regressions over time.
 - `regions_town.py` (~555 lines) is the largest remaining non-mixin module. `generate_town` alone is ~420 lines and could be split further if it grows.
 - The top-level `shadowcaster/game_*.py` shims exist for backward compat but add navigation overhead. They can be removed once all import sites are confirmed to use `shadowcaster/mixins/` directly.
 - Rendering and regions split is complete, but `rendering_primitives.py` (~505 lines) could eventually be split into shape-drawing helpers vs. text/layout helpers if it grows.
@@ -128,15 +133,19 @@ For a fuller walkthrough, read `docs/ARCHITECTURE.md`.
 ## Handoff Workflow
 - Read `AGENTS.md` first for runbook, invariants, and current gameplay rules
 - Read `docs/ARCHITECTURE.md` next for the mixin/file responsibility map
+- Read `docs/TESTING.md` for current test coverage and conventions
 - Use `python -B utils/largest_py_files.py --top 20` to find current heavy files
 - Use `python -B utils/refactor_tools.py methods <file> <ClassName>` before any split
 - After a structural change, run `python -B utils/refactor_tools.py smoke-game`
+- Prefer `python run_tests.py` for the quick full-suite check
+- After gameplay or generation changes, run `python -m unittest discover -s shadowcaster\tests -t .`
 
 ## Current Design Constraints
 - Keep files relatively small and focused
 - Preserve a simple run loop with low implementation overhead
 - Favor parameterized variation over large new subsystems
 - Keep the inventory/equipment system light: one consumable list plus weapon/armor slots, no crafting, no stat-sprawl gear tiers beyond the existing catalog tables
+- If adding gathering/cooking/provisioning later, keep it narrow, place-based, and legible rather than turning it into a broad economy tree
 - Prefer discrete named regions and local maps before attempting seamless overworld simulation
 - Do not add coast/ocean-style biomes as free-floating overworld picks without also defining a world-scale water continuity rule (edge orientation, neighboring water/land expectations, or a higher-level water mask)
 - Avoid generic roguelite sprawl that does not deepen the expedition fantasy, such as large crafting trees, loot floods, or many enemy variants with only tiny gameplay differences
@@ -180,6 +189,7 @@ For a fuller walkthrough, read `docs/ARCHITECTURE.md`.
 - Player tools now include `H` medkits and `G` tonics that grant temporary ward; both are `Item` instances in `game.inventory` (category `"consumable"`), not separate counters — `H`/`G` are shortcuts for `use_item("medkit")`/`use_item("tonic")`, and the full inventory (`I`) lists everything including unequipped gear
 - Weapons and armor are `Item` instances too (category `"weapon"`/`"armor"`), bought from the provisioner's barter screen and equipped via the inventory overlay; `Game.effective_melee_damage`/`effective_ranged_damage`/`effective_defense` layer the equipped item's bonus on top of the base progression stats — combat code should read these, not the raw `melee_damage`/`ranged_damage` fields, or equipped gear silently does nothing
 - `Game.WEAPON_CATALOG`/`ARMOR_CATALOG` are the source of truth for buyable gear stats; adding a new piece of gear is one dict entry plus nothing else, since `add_item`/`equip_item`/`use_item`/`inventory_rows` are all data-driven off `Item` fields rather than per-kind branches
+- `Game` must include `QuestTextMixin` in its MRO; `QuestsMixin` depends on helpers such as `quest_posting_cycle()` and several quest-description/label builders from that mixin. If notice-board or quest-board methods suddenly start raising missing-attribute errors, check `shadowcaster/game.py` composition first.
 - Floor loot now also exists as `GroundItem` wrappers around `Item` data. Rendering, inspect text, region snapshots, and save/load all expect `floor_items` to move together; if you add a new item pickup path, update both the current region snapshot and persistence serializers or the pickup will vanish on region transitions/save load
 - The app boots to a main menu and supports multi-save menu actions backed by numbered files under `saves/`, with legacy `savegame.json` compatibility
 - Runs now carry a persisted `world_seed`; setting `DEFAULT_WORLD_SEED` or `SHADOWCASTER_WORLD_SEED` should make world generation repeat exactly across new games and saves, while runtime-only randomness like dialogue choice can still vary
@@ -217,6 +227,11 @@ For a fuller walkthrough, read `docs/ARCHITECTURE.md`.
 - Journal flow is now selection-first rather than click-to-open-map: entries are selected, `Show Map` only enables for selected active quests whose target region is truly discovered (not just preview-generated), and `Abandon` only enables for selected active quests
 - `chain` notice-board quests are now explicit staged leads rather than flavor-only scouts: they progress through travel -> objective -> return, use `Quest.stage` for their journal/map focus, and contribute to town prosperity/world-map quest stats alongside delivery/scout/bounty work. Their current reward variants are `ammo`, `medkit`, `tonic`, and `intel` (route reveal with ammo fallback), all encoded through `Quest.item_key`, while objective variants are `recover`, `survey`, and `hunt`, encoded through `Quest.objective_key`
 - Town response is now lightly surfaced without new UI: quest turn-ins can append a prosperity-flavor line, notice boards can swap from generic notices to settlement-response text after local work is completed, and town residents can fold that same response into ambient dialogue
+- Towns now also have an implicit player-relationship layer derived from completed local work: `town_attitude_score`/`town_attitude_label` currently ride on the same underlying quest-completion score as prosperity, and they now affect resident tone plus notice-board quality/availability. Low-attitude towns post fewer, simpler jobs; friendlier towns unlock more postings, better reward bonuses, and tougher work like bounty/lead chains
+- That same town-attitude layer now also surfaces in the journal/world-map presentation and modestly improves certain town services. At the moment, trusted towns can post more work, pay a little better, speak more warmly, and offer slightly stronger inn/provisioner/smith/tavern service outcomes
+- Trusted towns now also guarantee a distinct priority contract on the notice board. It still uses the `chain` quest flow under the hood, but it is identified by a `priority_...` quest id, shows stronger trusted-hand framing in UI/messages, and offers better reward/distance/danger expectations than ordinary leads
+- Priority contracts now also carry a lightweight `theme_key` (`watch`, `survey`, `relief`) in addition to `objective_key`. Theme selection is town-context-driven inside `game_quest_board.py`, and the theme now affects contract phrasing, labels in the board/journal, and expected style of work rather than leaving all trusted contracts feeling interchangeable
+- `watch`/`survey`/`relief` are currently strongest as framing and future hooks, not as a deep town-defense simulation. If expanding them, prefer concrete benefits such as route clarity, supplies, service improvements, recurring leads, or stronger resident goodwill over abstract local-safety numbers
 
 ## Smoke-Testing Without a Display
 Pygame needs a video driver even headless. Use this pattern for quick verification scripts (no test suite exists yet):
@@ -246,6 +261,7 @@ Adding any of these means: extend the cycle in `create_upgrade_pickup`, add tuni
 - If adding new rewards, be careful about generosity and long-term power creep
 - If adding new visuals, prioritize shape/marker readability in addition to color
 - If expanding world content, prefer stronger region identity and landmark structure before large systemic sprawl
+- The current planning direction is to expand player verbs through narrow world-facing loops such as survey, gathering, delivery, relief, and simple transformation before adding bigger combat or economy systems
 - If choosing between combat-heavy and world-heavy work, prefer features that strengthen route choice, landmarks, settlement growth, recurring residents, rumors, quests, and other expedition-facing hooks
 - Future town work should use transition tiles or doors into dedicated interior maps rather than cramming interiors onto the outdoor map
 - Next roadmap step under consideration: deepening town interactions beyond one-shot service rooms; generation-side groundwork now includes service rooms, door integrity, biome-aware settlement metadata, non-service building flavor, and simple resident routines/patrols

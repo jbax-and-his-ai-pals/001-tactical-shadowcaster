@@ -224,6 +224,7 @@ class MovementMixin(GameMixinBase):
         occupied = {enemy.position for enemy in self.enemies if enemy.position in self.visible_tiles}
         occupied.update(resident.position for resident in self.residents if resident.position in self.visible_tiles)
         occupied.update(landmark.position for landmark in self.landmarks if landmark.position != destination)
+        occupied.update(tile for tile in self.autoexplore_blocked_tiles() if tile != destination)
         path = find_path(
             self.dungeon,
             self.player,

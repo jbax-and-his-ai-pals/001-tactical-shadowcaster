@@ -188,10 +188,13 @@ def render_world_map_overlay(game):
                 pip_y = rect.bottom - 8
                 pip_color = (255, 214, 114) if index < 2 else (255, 154, 90) if index < 4 else (255, 96, 96)
                 pygame.draw.circle(game.screen, pip_color, (pip_x, pip_y), 2)
-            if state.get("landmarks"):
-                landmark_specs = [(landmark.kind, landmark.color) for landmark in state["landmarks"][:2]]
-                for slot_index, (kind, color) in enumerate(landmark_specs):
-                    draw_world_map_site_marker(game.screen, rect, kind, color, slot_index)
+            landmark_specs = world_map_landmark_icon_specs(stats_for_cell) if stats_for_cell else []
+            if landmark_specs:
+                for slot_index, (kind, color, landmark_summary) in enumerate(landmark_specs):
+                    draw_world_map_site_marker(game.screen, rect, kind, color, slot_index, color)
+            elif state.get("landmarks"):
+                for slot_index, landmark in enumerate(state["landmarks"][:2]):
+                    draw_world_map_site_marker(game.screen, rect, landmark.kind, landmark.color, slot_index)
             if is_generated_preview:
                 survey_rect = pygame.Rect(rect.right - 16, rect.bottom - 16, 10, 10)
                 pygame.draw.rect(game.screen, (166, 220, 255), survey_rect, border_radius=3)

@@ -11,6 +11,7 @@
 - Stabilize the current world-region loop and tighten UX polish
 - Make overworld exploration feel more purposeful through landmarks and map feedback
 - Turn towns into a more expressive non-combat hub through interiors, services, and biome-specific identity
+- Grow the player's meaningful verbs through place-based activities such as survey, delivery, recovery, gathering, and light transformation
 - Keep progression readable, rewarding, and resistant to power creep
 - Bias the overworld toward safer biomes near the origin and let harsher regions become more common farther out
 
@@ -25,6 +26,13 @@
 - Character growth should create identity rather than stat clutter; small specialization paths should change how the player approaches regions
 - Settlements should become places the player cares about through recurring residents, better services, town growth, and consequences from completed work
 - Non-combat discoveries should be exciting in their own right so the world does not feel like filler between fights
+
+## Content Strategy
+- Scale the game through authored content atoms plus procedural composition, not through endless generic random variation
+- Favor reusable templates with strong identity: landmark families, town concerns, resident archetypes, quest situations, and biome motifs
+- Let places gain meaning through persistence: remembered discoveries, local consequences, recurring residents, and visible changes in service quality or opportunities
+- Expand player expression by adding verbs before adding bulk: observe, gather, deliver, restore, transform, choose, and report
+- Keep each new system narrow and world-facing; if it does not make a place more memorable or a decision more interesting, it is probably not worth the cost
 
 ## Implemented
 - BSP dungeon generation
@@ -124,11 +132,13 @@ Primary deliverables:
 - Better landmark identity by biome
 - Better world-map and journal progress for notable sites
 - Optional non-combat discoveries such as surveys, caches, shrine boons, shortcuts, and special finds
+- Clearer quest direction and place context so players know why a destination matters before they arrive
 
 Suggested sequence:
 1. Expand landmark metadata and world-map progress display
 2. Add first multi-step place-based quest chain templates
 3. Add non-combat site rewards that feed future route choice
+4. Make surveys and reports matter through map clarity, landmark intel, and better follow-up leads
 
 Exit criteria:
 - The player has concrete reasons to visit specific places besides combat and exits
@@ -149,11 +159,13 @@ Primary deliverables:
 - More building interior variety and dedicated local map pieces
 - Town and city representation upgrades on the overworld/world map
 - Early town-growth or town-state response to player help
+- Early relationship consequences that improve service quality, board quality, and social tone
 
 Suggested sequence:
 1. Deepen resident roles, homes, and authored points of interest
 2. Add a few more interior archetypes with clearer local flavor
-3. Let completed local work improve stock, safety, staffing, or available leads
+3. Let completed local work improve stock, staffing, services, or available leads
+4. Add persistent town specialties such as survey offices, relief depots, farmsteads, shrines, or trade houses
 
 Exit criteria:
 - Returning to a settlement can feel different because of what the player did there
@@ -182,6 +194,32 @@ Suggested sequence:
 Exit criteria:
 - Two runs can feel meaningfully different because the player leaned into different priorities
 - Progression remains compact and readable rather than turning into stat soup
+
+### Phase 3.5 - Expedition Systems
+Goal:
+Add a few tightly scoped non-combat systems that make the world feel more lived in and give towns practical needs.
+
+Why this phase here:
+By this point the player should already care about places; now we can add light verbs that deepen those places without exploding complexity.
+
+Estimated cost:
+`M-L`
+
+Primary deliverables:
+- Farmland and settlement-adjacent gather/harvest loops that connect to quests and small rewards
+- A narrow cooking or provisioning layer using a very small ingredient/output set
+- Cross-town social threads such as letters, relatives, favors, or rumor follow-ups
+- Better consequence tracking for survey and relief style work
+
+Suggested sequence:
+1. Add one very small gather-and-turn-in loop tied to farmland or similar low-danger regions
+2. Add one simple transformation layer such as cooking or packing provisions
+3. Add cross-settlement social quests that make residents feel connected rather than isolated
+4. Let survey and relief completions unlock better information, supplies, or goodwill in specific towns
+
+Exit criteria:
+- The player has at least a few meaningful things to do besides fight, loot, and descend
+- Towns begin to feel connected to surrounding regions through practical needs and stories
 
 ### Phase 4 - Regional Pressure and Encounter Variety
 Goal:
@@ -230,15 +268,19 @@ Exit criteria:
 Ordered candidates for the next several slices:
 
 1. `XS` *(in progress)* Deepen per-kind landmark identity on the world map (distinct icons, clearer site-state display in the right panel)
-2. `M` Add small place-based quest chains
-3. `S` *(partially done — surface reward kinds landed)* Deepen non-combat landmark rewards: flavor text variety per biome, scaled rewards by danger tier
-4. `M` Deepen resident roles, homes, and recurring town hooks
-5. `M` Add more building interior variety and dedicated local map pieces
-6. `S-M` Add early town-growth responses to completed local work
-7. `M` Define lightweight player archetype progression
-8. `S` Expand gear/loadout identity and reward-economy items
-9. `S-M` Add a few high-signal enemy archetypes with stronger biome interplay
-10. `XS-S` Continue controller, touch, and accessibility polish alongside every phase
+2. `M` Expand place-based quest chains with stronger direction hints and better stage variety
+3. `S` *(partially done - surface reward kinds landed)* Deepen non-combat landmark rewards: flavor text variety per biome, scaled rewards by danger tier, stronger follow-up leads
+4. `S-M` Make survey and relief completions materially affect map knowledge, town services, or later quest quality
+5. `M` Deepen resident roles, homes, and recurring town hooks
+6. `M` Add more building interior variety and dedicated local map pieces
+7. `S-M` Add early town-growth responses to completed local work
+8. `S-M` Add one narrow farmland/gather-and-turn-in loop
+9. `S` Add one simple cooking/provisioning loop with tiny scope
+10. `M` Add cross-town social threads and recurring resident connections
+11. `M` Define lightweight player archetype progression
+12. `S` Expand gear/loadout identity and reward-economy items
+13. `S-M` Add a few high-signal enemy archetypes with stronger biome interplay
+14. `XS-S` Continue controller, touch, and accessibility polish alongside every phase
 
 ## Design Notes
 - Keep systems small and composable rather than sprawling
@@ -252,7 +294,9 @@ Ordered candidates for the next several slices:
 - Larger regions are likely viable in moderation, but they should probably arrive alongside render/path/FOV profiling instead of as a blanket size increase everywhere
 - Settlement visuals should scale with importance: small towns can stay one tile, while larger towns and cities should eventually occupy multiple overworld tiles with visible district and house-pattern variation
 - Biome identity should deepen through three layers: palette/markers, traversal/combat behavior, and settlement/social flavor
-- Favor "world expedition" features over generic roguelite bulk such as crafting trees, loot floods, or huge enemy catalogs with tiny differences
+- Favor "world expedition" features over generic roguelite bulk such as large crafting trees, loot floods, or huge enemy catalogs with tiny differences
+- Narrow place-based systems are good; sprawling generic economy systems are not
+- Survey, relief, and social follow-up work should pay off through clearer routes, better services, stronger town attitude, and more interesting opportunities rather than abstract "safety" stats
 - The current cheapest high-value world-loop work is still site-driven: landmarks should tell the player what kind of opportunity remains there before we add larger social/economy systems
 - A reusable engine/content split makes sense eventually, but only after more fantasy systems are proven; the likely seam is engine systems underneath data-driven biome/theme content packs
 - When coasts, rivers, and larger water systems arrive, biome placement should stop being fully independent: coast orientation, river flow, and adjacent-region continuity should come from a higher-level world layout rather than per-region randomness

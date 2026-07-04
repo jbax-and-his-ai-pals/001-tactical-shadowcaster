@@ -2,6 +2,7 @@ import pygame
 
 from .constants import COLOR_BG, COLOR_TEXT
 from .rendering_primitives import wrap_text_lines
+from .rendering_world_map_quest_helpers import world_map_active_quests_for_coord
 
 
 def draw_world_map_chip(screen, font, text, left, top, fill_color, text_color=COLOR_BG):
@@ -31,7 +32,17 @@ def draw_world_map_route(screen, start_rect, end_rect, color):
     pygame.draw.line(screen, COLOR_BG, start_rect.center, end_rect.center, 1)
 
 
-def draw_world_map_site_marker(screen, rect, kind, color, slot_index):
+def landmark_state_visual(landmark):
+    if landmark.get("cleared"):
+        return (110, 210, 150), "Cleared"
+    if landmark.get("entered"):
+        return (255, 210, 90), "Open"
+    if landmark.get("visited"):
+        return (160, 208, 255), "Marked"
+    return (144, 154, 170), "Hidden"
+
+
+def draw_world_map_site_marker(screen, rect, kind, color, slot_index, state_color=None):
     marker_size = max(10, rect.width // 4)
     left = rect.left + 6 + slot_index * (marker_size + 4)
     top = rect.top + 6
@@ -65,11 +76,19 @@ def draw_world_map_site_marker(screen, rect, kind, color, slot_index):
         screen.blit(text, text.get_rect(center=marker_rect.center))
     else:
         pygame.draw.circle(screen, COLOR_BG, marker_rect.center, max(2, marker_size // 4), 1)
+    if state_color:
+        badge = pygame.Rect(marker_rect.right - 6, marker_rect.bottom - 6, 5, 5)
+        pygame.draw.rect(screen, state_color, badge, border_radius=2)
+        pygame.draw.rect(screen, COLOR_BG, badge, 1, border_radius=2)
 
 
 def world_map_landmark_icon_specs(stats):
     if stats["landmark_summaries"]:
-        return [(landmark["kind"], (landmark["kind"], landmark["name"])) for landmark in stats["landmark_summaries"][:2]]
+        specs = []
+        for landmark in stats["landmark_summaries"][:2]:
+            state_color, _state_label = landmark_state_visual(landmark)
+            specs.append((landmark["kind"], state_color, landmark))
+        return specs
     return []
 
 
@@ -104,6 +123,7 @@ def draw_world_map_section(screen, font, title, left, top, width, color):
     line_y = top + label.get_height() // 2 + 1
     pygame.draw.line(screen, color, (left + label.get_width() + 10, line_y), (left + width, line_y), 1)
     return top + label.get_height() + 8
+
 
 def _render_world_map_detail(game, detail_frame, focused_coord, region_stats_map, quest_hint_coords):
     stats = region_stats_map.get(focused_coord)
@@ -170,6 +190,12 @@ def _render_world_map_detail(game, detail_frame, focused_coord, region_stats_map
         )
         lead_y = chip_band_top + 38 + 4
         if chain_quest:
+            for line in game.quest_context_lines(chain_quest):
+                for wrapped in wrap_text_lines(game.small_font, line, inset.width - 4):
+                    line_surf = game.small_font.render(wrapped, True, (220, 206, 166))
+                    game.screen.blit(line_surf, (inset.x, lead_y))
+                    lead_y += 18
+            lead_y += 4
             for wrapped in wrap_text_lines(game.small_font, chain_quest.description, inset.width - 4):
                 line_surf = game.small_font.render(wrapped, True, (204, 184, 140))
                 game.screen.blit(line_surf, (inset.x, lead_y))
@@ -219,6 +245,7 @@ def _render_world_map_detail(game, detail_frame, focused_coord, region_stats_map
     if stats["settlement_size"]:
         overview_lines.append((f"Settlement {stats['settlement_size']} with {stats['settlement_buildings']} structures", COLOR_TEXT))
         overview_lines.append((f"Prosperity {stats['prosperity_label']} ({stats['prosperity_score']})", COLOR_TEXT))
+        overview_lines.append((f"Standing {stats['attitude_label']} ({stats['attitude_score']})", COLOR_TEXT))
     if stats["parent_biome"]:
         overview_lines.append((f"Parent biome {stats['parent_biome'].title()}", COLOR_TEXT))
     text_y = section_y
@@ -231,20 +258,13 @@ def _render_world_map_detail(game, detail_frame, focused_coord, region_stats_map
     section_y = text_y + 8
     section_y = draw_world_map_section(content, game.small_font, "Progress", 0, section_y, inset.width, (232, 240, 248))
     progress_lines = []
+    progress_lines.extend(stats.get("site_state_lines", []))
     if stats["landmarks_total"]:
-        progress_lines.append(
-            f"Site states: hidden {stats['landmarks_unvisited']} / marked {stats['landmarks_located_only']} / open {stats['landmarks_open']} / cleared {stats['landmarks_cleared']}"
-        )
-        progress_lines.append(f"Sites entered {stats['landmarks_entered']} / {stats['landmarks_total']}")
-        progress_lines.append(f"Sites cleared {stats['landmarks_cleared']} / {stats['landmarks_total']}")
-        if stats["landmark_type_counts"]:
-            progress_lines.append("Site mix: " + ", ".join(stats["landmark_type_counts"][:4]))
-    else:
-        progress_lines.append("No major sites marked here yet.")
+        progress_lines.append(f"Cleared {stats['landmarks_cleared']} / {stats['landmarks_total']} sites.")
     if stats["quests_completed"]:
         progress_lines.append(
             f"Contracts completed {stats['quests_completed']} "
-            f"(D {stats['quest_delivery']} / S {stats['quest_scout']} / B {stats['quest_bounty']})"
+            f"(D {stats['quest_delivery']} / S {stats['quest_scout']} / B {stats['quest_bounty']} / C {stats['quest_chain']})"
         )
     if stats["full_clear_reward_claimed"]:
         progress_lines.append("Full-clear reward claimed")
@@ -260,14 +280,37 @@ def _render_world_map_detail(game, detail_frame, focused_coord, region_stats_map
             text_y += 19
 
     section_y = text_y + 8
+    section_y = draw_world_map_section(content, game.small_font, "Opportunity", 0, section_y, inset.width, (232, 240, 248))
+    text_y = section_y
+    for line in stats.get("opportunity_lines", []):
+        for wrapped in wrap_text_lines(game.small_font, line, inset.width - 4):
+            surface = game.small_font.render(wrapped, True, (204, 218, 234))
+            content.blit(surface, (0, text_y))
+            text_y += 19
+
+    section_y = text_y + 8
     if stats["active_quest_lines"]:
         section_y = draw_world_map_section(content, game.small_font, "Active Work", 0, section_y, inset.width, (232, 240, 248))
         text_y = section_y
-        for line in stats["active_quest_lines"]:
-            for wrapped in wrap_text_lines(game.small_font, line, inset.width - 4):
-                surface = game.small_font.render(wrapped, True, COLOR_TEXT)
-                content.blit(surface, (0, text_y))
-                text_y += 19
+        active_quests = world_map_active_quests_for_coord(game, focused_coord)
+        if active_quests:
+            for role, quest in active_quests[:4]:
+                role_color = (255, 210, 116) if "Destination" in role or "Grounds" in role else (148, 230, 162)
+                role_surface = game.small_font.render(role, True, role_color)
+                content.blit(role_surface, (0, text_y))
+                text_y += 18
+                for line in game.quest_context_lines(quest):
+                    for wrapped in wrap_text_lines(game.small_font, line, inset.width - 10):
+                        surface = game.small_font.render(wrapped, True, COLOR_TEXT)
+                        content.blit(surface, (8, text_y))
+                        text_y += 18
+                text_y += 4
+        else:
+            for line in stats["active_quest_lines"]:
+                for wrapped in wrap_text_lines(game.small_font, line, inset.width - 4):
+                    surface = game.small_font.render(wrapped, True, COLOR_TEXT)
+                    content.blit(surface, (0, text_y))
+                    text_y += 19
         section_y = text_y + 8
 
     section_y = draw_world_map_section(content, game.small_font, "Continuity", 0, section_y, inset.width, (232, 240, 248))
@@ -282,21 +325,21 @@ def _render_world_map_detail(game, detail_frame, focused_coord, region_stats_map
     text_y = section_y
     if stats["landmark_summaries"]:
         for landmark in stats["landmark_summaries"]:
+            state_color, state_label = landmark_state_visual(landmark)
+            draw_world_map_site_marker(content, pygame.Rect(0, text_y + 1, 22, 22), landmark["kind"], state_color, 0, state_color)
+            draw_world_map_chip(content, game.small_font, state_label, inset.width - 102, text_y - 2, state_color)
             heading = f"{landmark['name']} [{landmark['label']}]"
-            for wrapped in wrap_text_lines(game.small_font, heading, inset.width - 4):
+            for wrapped in wrap_text_lines(game.small_font, heading, inset.width - 128):
                 surface = game.small_font.render(wrapped, True, (166, 224, 255))
-                content.blit(surface, (0, text_y))
+                content.blit(surface, (28, text_y))
                 text_y += 19
-            status_color = (
-                (110, 210, 150) if landmark["cleared"]
-                else (255, 210, 90) if landmark["entered"]
-                else COLOR_TEXT
-            )
             detail_lines = [
-                (f"{landmark['status']} — {landmark['detail']}", status_color),
+                (f"{landmark['status']} - {landmark['detail']}", state_color),
                 (landmark["hook"], COLOR_TEXT),
                 (landmark["reward_hint"], (220, 196, 110)),
             ]
+            if landmark.get("travel_note"):
+                detail_lines.append((landmark["travel_note"], (194, 206, 220)))
             if landmark.get("biome_flavor"):
                 detail_lines.append((landmark["biome_flavor"], (168, 182, 196)))
             for line, color in detail_lines:
