@@ -52,6 +52,7 @@ class QuestTextMixin(GameMixinBase):
         "survey": "Survey",
         "recover": "Recover",
         "hunt": "Hunt",
+        "clear_landmark": "Clear",
     }
     _PRIORITY_THEME_LABELS = {
         "watch": "Watch Contract",
@@ -188,6 +189,9 @@ class QuestTextMixin(GameMixinBase):
         if quest.stage <= 0:
             if objective == "hunt":
                 return f"Reach {self.quest_target_label(quest)}, then bring down {quest.target_count} foes and return with {evidence}."
+            if objective == "clear_landmark":
+                site = quest.target_landmark_name or "the site"
+                return f"Reach {self.quest_target_label(quest)}, then fully clear {site}."
             return f"Reach {self.quest_target_label(quest)}, then search for {evidence}."
         if quest.stage == 1:
             if objective == "survey":
@@ -195,6 +199,9 @@ class QuestTextMixin(GameMixinBase):
             if objective == "hunt":
                 kills = max(0, self.enemies_defeated - quest.progress_count)
                 return f"Hunt {min(kills, quest.target_count)}/{quest.target_count} foes in {self.quest_target_label(quest)}, then return with {evidence}."
+            if objective == "clear_landmark":
+                site = quest.target_landmark_name or "the site"
+                return f"Clear {site} in {self.quest_target_label(quest)} — enemies must fall."
             target_label = quest.target_landmark_name or "the site"
             return f"Search {target_label} in {self.quest_target_label(quest)} and recover {evidence}."
         home_name = quest.origin_town_name or f"({quest.from_world_pos[0]}, {quest.from_world_pos[1]})"
@@ -277,7 +284,15 @@ class QuestTextMixin(GameMixinBase):
         return f"{region_name} to the {direction}"
 
     def quest_destination_summary(self, quest):
-        return f"Go: {self.quest_target_label(quest)}."
+        dx = quest.to_world_pos[0] - quest.from_world_pos[0]
+        dy = quest.to_world_pos[1] - quest.from_world_pos[1]
+        dist = max(abs(dx), abs(dy))
+        region_name = quest.target_region_name or quest.to_town_hint
+        direction = self.quest_direction_name(quest.from_world_pos, quest.to_world_pos)
+        region_str = f"{region_name}, " if region_name else ""
+        dist_str = f"{dist} region{'s' if dist > 1 else ''} {direction}"
+        coord_str = f" ({quest.to_world_pos[0]},{quest.to_world_pos[1]})"
+        return f"Go: {region_str}{dist_str}{coord_str}."
 
     def quest_objective_summary(self, quest):
         if quest.kind == "delivery":
@@ -291,6 +306,9 @@ class QuestTextMixin(GameMixinBase):
         if quest.kind == "chain":
             if quest.objective_key == "hunt":
                 return f"{self.chain_objective_label(quest.objective_key)}: {quest.target_count} threats."
+            if quest.objective_key == "clear_landmark":
+                site = quest.target_landmark_name or "the site"
+                return f"Clear: {site} — full sweep required."
             if quest.target_landmark_name:
                 return f"{self.chain_objective_label(quest.objective_key)}: {quest.target_landmark_name}."
             if quest.item_name:

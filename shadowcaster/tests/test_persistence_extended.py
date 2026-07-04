@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
+from shadowcaster.game import Game
 from shadowcaster.models import Quest
 from shadowcaster.persistence import load_game, save_game
 from shadowcaster.tests.support import make_game
@@ -80,6 +81,7 @@ class PersistenceExtendedTests(unittest.TestCase):
         restored = _roundtrip(game)
         item = restored.inventory_item("dagger")
         self.assertIsNotNone(item)
+        assert item is not None
         self.assertTrue(item.equipped)
 
     def test_save_load_preserves_active_quests(self):

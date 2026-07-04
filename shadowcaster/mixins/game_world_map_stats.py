@@ -3,7 +3,7 @@ from __future__ import annotations
 from ..game_typing import GameMixinBase
 from ..world_map_landmark_flavor import landmark_identity as build_landmark_identity
 from ..world_map_landmark_flavor import landmark_site_outlook
-from ..world_map_region_advice import opportunity_lines, site_state_lines
+from ..world_map_region_advice import forecast_lines, opportunity_lines, site_state_lines
 
 
 class WorldMapStatsMixin(GameMixinBase):
@@ -322,6 +322,7 @@ class WorldMapStatsMixin(GameMixinBase):
                     "landmark_type_counts": self.site_type_counts(landmarks),
                 }
             ),
+            "forecast_lines": forecast_lines(state["region_type"], state.get("danger_tier", 1)),
             "opportunity_lines": opportunity_lines(
                 {
                     "active_quest_targets_here": active_quest_summary["targets_here"],
@@ -362,6 +363,7 @@ class WorldMapStatsMixin(GameMixinBase):
             "parent_biome": self.settlement_parent_biome(state),
             "scouted": state.get("scouted", False),
             "supply_depth": state.get("supply_depth", 0),
+            "service_preview_lines": self.town_service_preview_lines(coord) if state.get("region_type") == "town" else [],
         }
 
     def region_walkable_count(self, state):

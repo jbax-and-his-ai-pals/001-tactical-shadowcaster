@@ -43,6 +43,7 @@ class Resident:
     name: str = ""
     patrol_points: tuple[tuple[int, int], ...] = field(default_factory=lambda: ())
     patrol_index: int = 0
+    is_growth_resident: bool = False
 
 
 @dataclass

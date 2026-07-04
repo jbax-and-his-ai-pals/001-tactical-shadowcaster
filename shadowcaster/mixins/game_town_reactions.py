@@ -123,8 +123,55 @@ class TownReactionsMixin(GameMixinBase):
         }
         return role_lines.get(resident.kind, response)
 
+    def town_service_preview_lines(self, coord=None):
+        """Return 3-4 concrete lines showing what attitude tier means for services."""
+        coord = coord or self.world_position
+        tier = self.town_service_bonus_tier(coord)
+        label = self.town_attitude_label(coord)
+        lines = []
+
+        # Inn preview
+        inn_hp = 3 + tier
+        tier1_hp = 4
+        tier2_hp = 5
+        inn_note = f"Inn: heals {inn_hp} HP"
+        if tier == 0:
+            inn_note += f" · Trusted → {tier1_hp} HP · Beloved → {tier2_hp} HP"
+        elif tier == 1:
+            inn_note += f" · Beloved → {tier2_hp} HP"
+        lines.append(inn_note)
+
+        # Provisioner/supply preview
+        supply_ammo = 1 + tier
+        supply_medkits = 1 + (1 if tier >= 2 else 0)
+        sup_note = f"Provisioner: {supply_ammo} ammo, {supply_medkits} medkit{'s' if supply_medkits > 1 else ''}"
+        if tier == 0:
+            sup_note += " · Trusted → 2 ammo · Beloved → 2 ammo, 2 medkits"
+        elif tier == 1:
+            sup_note += " · Beloved → 2 ammo, 2 medkits"
+        lines.append(sup_note)
+
+        # Board preview
+        slots = self.town_quest_slots(coord)
+        reward_bonus = self.town_quest_reward_bonus(coord)
+        board_note = f"Board: {slots} quests"
+        if reward_bonus:
+            board_note += f", +{reward_bonus}g each"
+        score = self.town_attitude_score(coord)
+        if score >= 6:
+            board_note += ", priority contracts available"
+        elif score >= 1:
+            board_note += ", chain leads available"
+        lines.append(board_note)
+
+        if tier > 0:
+            lines.append(f"Service tier {tier} active ({label} standing).")
+        else:
+            lines.append("Complete local contracts to unlock better services.")
+        return lines
+
     def load_region_state(self, state, arrival_direction=None):
-        super().load_region_state(state, arrival_direction=arrival_direction)
+        super().load_region_state(state, arrival_direction=arrival_direction)  # type: ignore[misc]
         if state.get("region_type") == "town" and arrival_direction is not None:
             self._check_town_growth()
             if hasattr(self, "sell_harvest_goods"):
@@ -158,17 +205,15 @@ class TownReactionsMixin(GameMixinBase):
 
     def _apply_town_growth(self, tier):
         new_residents = []
-        if tier >= 1 and not any(getattr(r, "_growth", False) for r in self.residents):
+        if tier >= 1 and not any(r.is_growth_resident for r in self.residents):
             kind, color, marker, title, dialogue, behavior = _GROWTH_RESIDENT_TIER1
             pos = self._growth_resident_tile()
-            r = Resident(pos, kind, color, marker, title, dialogue, behavior)
-            r._growth = True
+            r = Resident(pos, kind, color, marker, title, dialogue, behavior, is_growth_resident=True)
             new_residents.append(r)
-        if tier >= 2 and sum(1 for r in self.residents if getattr(r, "_growth", False)) < 2:
+        if tier >= 2 and sum(1 for r in self.residents if r.is_growth_resident) < 2:
             kind, color, marker, title, dialogue, behavior = _GROWTH_RESIDENT_TIER2
             pos = self._growth_resident_tile()
-            r = Resident(pos, kind, color, marker, title, dialogue, behavior)
-            r._growth = True
+            r = Resident(pos, kind, color, marker, title, dialogue, behavior, is_growth_resident=True)
             new_residents.append(r)
         self.residents.extend(new_residents)
         if new_residents:

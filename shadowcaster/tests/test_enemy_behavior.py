@@ -172,7 +172,7 @@ class EnemyBehaviorTests(unittest.TestCase):
         game = _combat_game(3050)
         enemy = _make_enemy((5, 4), health=1)
         game.enemies = [enemy]
-        game.direction = "north"  # player faces north toward (5,4)
+        game.facing = (0, -1)  # player faces north toward (5,4)
         game.attack()
         self.assertEqual(len(game.enemies), 0)
 
@@ -181,7 +181,7 @@ class EnemyBehaviorTests(unittest.TestCase):
         game.health = game.max_health
         enemy = _make_enemy((5, 4), health=1, damage=99)
         game.enemies = [enemy]
-        game.direction = "north"
+        game.facing = (0, -1)
         game.attack()
         # Enemy is dead; now run after_player_turn
         game.after_player_turn(player_acted=True)

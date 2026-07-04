@@ -166,11 +166,19 @@ class QuestsMixin(QuestGenerationMixin, QuestBoardMixin):
             target_key = self.region_key(quest.to_world_pos)
             if target_key in self.world_regions:
                 self.world_regions[target_key]["scouted"] = True
+        # Survey-theme chains (intel item_key) mark the target as scouted too
+        if quest.kind == "chain" and quest.item_key == "intel":
+            target_key = self.region_key(quest.to_world_pos)
+            if target_key in self.world_regions:
+                self.world_regions[target_key]["scouted"] = True
         if quest.kind in ("delivery", "chain") and not self._is_social_quest(quest):
             dest_key = self.region_key(quest.to_world_pos)
             dest = self.world_regions.get(dest_key)
             if dest and dest.get("region_type") == "town":
-                dest["supply_depth"] = dest.get("supply_depth", 0) + 1
+                # Relief-theme chains (medkit/ammo) give double supply depth gain
+                is_relief = quest.kind == "chain" and quest.item_key in ("medkit", "ammo")
+                depth_gain = 2 if is_relief else 1
+                dest["supply_depth"] = dest.get("supply_depth", 0) + depth_gain
 
     def _complete_quest(self, quest):
         quest.status = "complete"
@@ -207,7 +215,15 @@ class QuestsMixin(QuestGenerationMixin, QuestBoardMixin):
         elif quest.kind == "bounty":
             lead = self.reveal_one_adjacent_world_region_from(quest.to_world_pos)
             route_note = f" The cleared ground opens a route to {lead[1]}." if lead else ""
-            self.message = f"Quest complete - contract settled for {quest.target_region_name}. Received {quest.reward_gold}g. Total: {self.gold}g.{route_note}"
+            target_state = self.world_regions.get(self.region_key(quest.to_world_pos), {})
+            full_clear = target_state.get("enemies_remaining", -1) == 0 and target_state.get("enemies_spawned", 0) > 0
+            if full_clear:
+                bonus = 15
+                self.gold += bonus
+                clear_note = f" Full-clear bonus: +{bonus}g."
+            else:
+                clear_note = ""
+            self.message = f"Quest complete - contract settled for {quest.target_region_name}. Received {quest.reward_gold}g.{clear_note} Total: {self.gold}g.{route_note}"
         elif quest.kind == "chain":
             target_label = quest.target_landmark_name or quest.target_region_name or "the site"
             if quest.item_key == "medkit":
@@ -217,10 +233,11 @@ class QuestsMixin(QuestGenerationMixin, QuestBoardMixin):
                 self.add_item("tonic", "Cleansing Tonic", "consumable", COLOR_ACCENT, "ward", quantity=1, description="Cleanses effects and grants ward.")
                 supply_note = "+1 tonic"
             elif quest.item_key == "intel":
-                revealed = self.reveal_one_adjacent_world_region()
+                revealed = self.reveal_adjacent_world_regions_from(quest.to_world_pos)
                 if revealed:
-                    _coord, region_name = revealed
-                    supply_note = f"route intel on {region_name}"
+                    names = ", ".join(n for _, n in revealed[:3])
+                    extra = f" and {len(revealed) - 3} more" if len(revealed) > 3 else ""
+                    supply_note = f"survey intel — routes added: {names}{extra}"
                 else:
                     self.ammo += 1
                     supply_note = f"fallback +1 ammo (now {self.ammo})"
@@ -234,6 +251,21 @@ class QuestsMixin(QuestGenerationMixin, QuestBoardMixin):
             self.message = f"{self.message} {town_response}"
         if self.notice_board_open and self.region_type == "town":
             self.refresh_notice_board(keep_selection=True)
+
+    def _chain_landmark_cleared(self, quest):
+        """True when the quest's named landmark in the target region has been cleared."""
+        if self.world_position != quest.to_world_pos:
+            return False
+        target_key = self.region_key(quest.to_world_pos)
+        state = self.world_regions.get(target_key)
+        if state is None:
+            return False
+        for lm in state.get("landmarks", []):
+            if lm.name == quest.target_landmark_name:
+                prog = self.landmark_progress(quest.to_world_pos, lm)
+                return prog.get("cleared", False)
+        # No named landmark found — fall back to region full-clear
+        return state.get("enemies_remaining", 1) == 0
 
     def _is_social_quest(self, quest):
         return quest.kind == "delivery" and quest.id.startswith("social_")
@@ -276,11 +308,15 @@ class QuestsMixin(QuestGenerationMixin, QuestBoardMixin):
                         self.message = f"You reach {quest.target_region_name}. Hunt {quest.target_count} foes, then secure {quest.item_name or 'proof'}."
                     elif quest.objective_key == "survey":
                         self.message = f"You reach {quest.target_region_name}. Survey the area for {quest.item_name or 'proof'}."
+                    elif quest.objective_key == "clear_landmark":
+                        site = quest.target_landmark_name or "the site"
+                        self.message = f"You reach {quest.target_region_name}. Clear {site} — every enemy must fall."
                     else:
                         self.message = f"You reach {quest.target_region_name}. Search {target_label} for {quest.item_name or 'proof'}."
                 elif quest.stage == 1 and (
                     (quest.objective_key == "hunt" and self.enemies_defeated - quest.progress_count >= quest.target_count)
-                    or (quest.objective_key != "hunt" and self.scout_objective_met(quest))
+                    or (quest.objective_key == "clear_landmark" and self._chain_landmark_cleared(quest))
+                    or (quest.objective_key not in ("hunt", "clear_landmark") and self.scout_objective_met(quest))
                 ):
                     quest.stage = 2
                     revealed = self.reveal_one_adjacent_world_region()

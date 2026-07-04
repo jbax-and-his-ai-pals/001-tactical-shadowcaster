@@ -92,10 +92,12 @@ def _biome_flavor(region_type: str, kind: str) -> str:
 class LandmarkServicesMixin(GameMixinBase):
 
     def _world_danger_bonus(self) -> int:
-        """0/1/2 based on Chebyshev distance from world origin."""
+        """0–3: world distance tier + 1 when region danger_tier >= 3."""
         wx, wy = self.world_position
         dist = max(abs(wx), abs(wy))
-        return min(2, dist // 2)
+        dist_tier = min(2, dist // 2)
+        danger_bump = 1 if self.danger_value() >= 3 else 0
+        return min(3, dist_tier + danger_bump)
 
     def apply_surface_landmark(self, landmark):
         if landmark.key in self.claimed_surface_landmark_keys:
@@ -116,12 +118,16 @@ class LandmarkServicesMixin(GameMixinBase):
             if revealed:
                 _, name = revealed
                 lines.append(f"One route marked: {name}.")
-                # Follow-up lead at bonus 1+: reveal one more
                 if bonus >= 1:
                     extra = self.reveal_one_adjacent_world_region()
                     if extra:
                         _, extra_name = extra
                         lines.append(f"A second inscription: {extra_name}.")
+                if bonus >= 3:
+                    third = self.reveal_one_adjacent_world_region()
+                    if third:
+                        _, third_name = third
+                        lines.append(f"A faint third mark — worn but readable: {third_name}.")
             else:
                 lines.append("The markings describe only roads you already know.")
                 ammo_gain = 1 + bonus
@@ -133,11 +139,15 @@ class LandmarkServicesMixin(GameMixinBase):
             gold_gain = random.randint(2 + bonus, 4 + bonus * 2)
             self.gold += gold_gain
             medkits = 1 + (1 if bonus >= 2 else 0)
+            tonics = 1 if bonus >= 3 else 0
             self.add_item("medkit", "Healing Potion", "consumable", COLOR_HEAL, "vitality",
                           quantity=medkits, description="Restores health.")
+            if tonics:
+                self.add_item("tonic", "Ward Tonic", "consumable", COLOR_ACCENT, "power",
+                              quantity=tonics, description="Clears statuses and grants ward.")
             lines.append("Burial goods left undisturbed — mostly. You take only what the dead no longer need.")
-            lines.append(f"+{gold_gain} gold, +{medkits} healing potion{'s' if medkits > 1 else ''}.")
-            # Follow-up: distant barrows are near old roads — reveal a route at bonus 1+
+            tonic_note = f", +{tonics} tonic" if tonics else ""
+            lines.append(f"+{gold_gain} gold, +{medkits} healing potion{'s' if medkits > 1 else ''}{tonic_note}.")
             if bonus >= 1:
                 lead = self.reveal_one_adjacent_world_region()
                 if lead:
@@ -150,6 +160,11 @@ class LandmarkServicesMixin(GameMixinBase):
             self.add_status(self.player_statuses, "ward", ward_turns)
             lines.append("Stepping inside the ring, a low hum settles into your bones.")
             lines.append(f"Ward for {ward_turns} turns.")
+            if bonus >= 2:
+                lead = self.reveal_one_adjacent_world_region()
+                if lead:
+                    _, lead_name = lead
+                    lines.append(f"The alignment of the stones points toward {lead_name}.")
 
         elif kind == "oasis":
             title = "Oasis — Water and Shade"
@@ -227,7 +242,7 @@ class LandmarkServicesMixin(GameMixinBase):
             title = "Necropolis — Looted Tombs"
             gold_gain = random.randint(3 + bonus, 6 + bonus * 2)
             self.gold += gold_gain
-            medkits = 2
+            medkits = 2 + (1 if bonus >= 3 else 0)
             tonics = 1 + (1 if bonus >= 2 else 0)
             self.add_item("medkit", "Healing Potion", "consumable", COLOR_HEAL, "vitality",
                           quantity=medkits, description="Restores health.")
@@ -235,6 +250,11 @@ class LandmarkServicesMixin(GameMixinBase):
                           quantity=tonics, description="Clears statuses and grants ward.")
             lines.append("Generations of forgotten wealth. You cannot carry it all.")
             lines.append(f"+{gold_gain} gold, +{medkits} healing potions, +{tonics} ward tonic{'s' if tonics > 1 else ''}.")
+            if bonus >= 2:
+                lead = self.reveal_one_adjacent_world_region()
+                if lead:
+                    _, lead_name = lead
+                    lines.append(f"Tomb markings reference another place: {lead_name}.")
 
         elif kind == "geyser":
             title = "Geyser — Scalding Find"
@@ -245,6 +265,11 @@ class LandmarkServicesMixin(GameMixinBase):
                           quantity=tonics, description="Clears statuses and grants ward.")
             lines.append("A kit left by a previous traveler near the vent — still dry.")
             lines.append(f"+{ammo_gain} ammo, +{tonics} ward tonic{'s' if tonics > 1 else ''}.")
+            if bonus >= 1:
+                lead = self.reveal_one_adjacent_world_region()
+                if lead:
+                    _, lead_name = lead
+                    lines.append(f"Trail marks scratched into a nearby rock point toward {lead_name}.")
 
         elif kind == "standing_stone":
             title = "Standing Stone — Old Directions"
@@ -271,6 +296,11 @@ class LandmarkServicesMixin(GameMixinBase):
                           quantity=medkits, description="Restores health.")
             lines.append("Someone left in a hurry. Their loss.")
             lines.append(f"+{ammo_gain} ammo, +{medkits} healing potion{'s' if medkits > 1 else ''}.")
+            if bonus >= 1:
+                lead = self.reveal_one_adjacent_world_region()
+                if lead:
+                    _, lead_name = lead
+                    lines.append(f"A map scrap in the supplies shows a route toward {lead_name}.")
 
         if not title:
             return

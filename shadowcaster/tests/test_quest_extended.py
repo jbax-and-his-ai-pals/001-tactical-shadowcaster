@@ -6,15 +6,28 @@ from shadowcaster.models import Quest
 from shadowcaster.tests.support import make_game
 
 
-def _make_quest(**kwargs):
-    defaults = dict(
-        id="q1", kind="delivery",
-        from_world_pos=(0, 0), to_world_pos=(1, 0),
-        to_town_hint="East", item_key="parcel", item_name="Parcel",
-        description="Test quest.", reward_gold=5, status="active",
+def _make_quest(**kwargs) -> Quest:
+    return Quest(
+        id=kwargs.get("id", "q1"),
+        kind=kwargs.get("kind", "delivery"),
+        from_world_pos=kwargs.get("from_world_pos", (0, 0)),
+        to_world_pos=kwargs.get("to_world_pos", (1, 0)),
+        to_town_hint=kwargs.get("to_town_hint", "East"),
+        item_key=kwargs.get("item_key", "parcel"),
+        item_name=kwargs.get("item_name", "Parcel"),
+        description=kwargs.get("description", "Test quest."),
+        reward_gold=kwargs.get("reward_gold", 5),
+        status=kwargs.get("status", "active"),
+        target_count=kwargs.get("target_count", 0),
+        progress_count=kwargs.get("progress_count", 0),
+        stage=kwargs.get("stage", 0),
+        objective_key=kwargs.get("objective_key", ""),
+        theme_key=kwargs.get("theme_key", ""),
+        target_region_name=kwargs.get("target_region_name", ""),
+        target_landmark_name=kwargs.get("target_landmark_name", ""),
+        target_landmark_kind=kwargs.get("target_landmark_kind", ""),
+        origin_town_name=kwargs.get("origin_town_name", ""),
     )
-    defaults.update(kwargs)
-    return Quest(**defaults)
 
 
 def _complete_quest(game, quest):

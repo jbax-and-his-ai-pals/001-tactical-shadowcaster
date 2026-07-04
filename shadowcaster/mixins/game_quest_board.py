@@ -48,6 +48,12 @@ class QuestBoardMixin(GameMixinBase):
             base += 12 if track[1] >= 2 else 5
         return base
 
+    def scouted_target_bonus(self, to_pos):
+        """Extra gold when the target region has been properly scouted."""
+        key = self.region_key(to_pos)
+        state = self.world_regions.get(key) or self.preview_world_regions.get(key, {})
+        return 10 if state.get("scouted") else 0
+
     def town_quest_slots(self, coord):
         score = self.town_attitude_score(coord)
         if score >= 6:

@@ -110,52 +110,90 @@ class PopulationMixin(GameMixinBase):
             )
         self.enemies_spawned = len(self.enemies)
 
-    def enemy_profile_for_spawn(self, index, enemy_count):
-        threat = self.danger_value()
-        # Priority order is deliberate, first match wins:
-        # 1. early-overworld profiles keep the opening calmer
-        # 2. biome-signature enemies claim index 0 once a region is ready for them
-        # 3. brute claims the last index on floor 3+
-        # 4. stalker is the default filler
-        if threat <= 1 and self.is_overworld_region() and index == 0:
-            if self.region_type == "forest":
+    def _signature_enemy(self, threat):
+        """Index-0 biome signature enemy, or None to use filler."""
+        rt = self.region_type
+        if threat <= 1 and self.is_overworld_region():
+            if rt == "forest":
                 return {"kind": "pouncer", "color": (255, 156, 96), "damage": 1, "marker": "beast", "health": 2}
-            if self.region_type == "farmland":
-                return {"kind": "stalker", "color": COLOR_ENEMY, "damage": 1, "marker": "enemy", "health": 2}
-            if self.region_type == "swamp":
+            if rt == "swamp":
                 return {"kind": "bogling", "color": (138, 188, 112), "damage": 1, "marker": "beast", "health": 2}
-            if self.region_type in {"mountain", "tundra"}:
+            if rt in {"mountain", "tundra"}:
                 return {"kind": "sentinel", "color": (188, 196, 210), "damage": 1, "marker": "settler", "health": 4}
-            return {"kind": "stalker", "color": COLOR_ENEMY, "damage": 1, "marker": "enemy", "health": 3}
-        if self.region_type == "forest" and index == 0 and threat >= 2:
+            return None
+        if rt == "forest" and threat >= 2:
             return {"kind": "pouncer", "color": (255, 156, 96), "damage": 1, "marker": "beast", "health": 2}
-        if self.region_type in ("mountain", "tundra", "ruins", "castle") and index == 0 and threat >= 2:
+        if rt in ("mountain", "tundra", "ruins", "castle") and threat >= 2:
             return {"kind": "sentinel", "color": (188, 196, 210), "damage": 1, "marker": "settler", "health": 4}
-        if self.region_type in ("plains", "desert", "farmland", "badlands") and index == 0 and threat >= 2:
+        if rt in ("plains", "desert", "farmland", "badlands") and threat >= 2:
             return {"kind": "archer", "color": (255, 210, 110), "damage": 1, "marker": "archer", "health": 3, "attack_range": 6, "preferred_range": 3}
-        if self.region_type == "swamp" and index == 0:
+        if rt == "swamp":
             if threat >= 4:
                 return {"kind": "shaman", "color": (180, 110, 255), "damage": 1, "marker": "shaman", "health": 2, "effect": "poison", "attack_range": 4, "preferred_range": 2}
             return {"kind": "bogling", "color": (138, 188, 112), "damage": 1, "marker": "beast", "health": 2}
-        if self.region_type in ("cave", "maze", "volcanic") and index == 0:
+        if rt in ("cave", "maze", "volcanic"):
             if threat >= 3:
-                effect = "burn" if self.region_type == "volcanic" else "poison"
+                effect = "burn" if rt == "volcanic" else "poison"
                 return {"kind": "shaman", "color": (180, 110, 255), "damage": 1, "marker": "shaman", "health": 2, "effect": effect, "attack_range": 4, "preferred_range": 2}
             return {"kind": "bogling", "color": (138, 188, 112), "damage": 1, "marker": "beast", "health": 2}
-        # Lurker: fast ambusher — 2 moves per turn, fragile, high damage
-        if self.region_type in ("dungeon", "cave", "ruins") and threat >= 3 and index == 0:
+        if rt in ("dungeon", "cave", "ruins") and threat >= 3:
             return {"kind": "lurker", "color": (160, 100, 220), "damage": 2, "marker": "enemy", "health": 2, "moves_per_turn": 2}
-        # Warden: high-HP blocker — must be cleared to safely pass
-        if self.region_type in ("castle", "dungeon") and threat >= 4 and index == enemy_count - 1:
-            return {"kind": "warden", "color": (140, 150, 160), "damage": 1, "marker": "enemy", "health": 7}
-        # Hexer: ranged debuffer — backs off when player is close
-        if self.region_type in ("desert", "volcanic", "badlands") and threat >= 3 and index == 0:
-            effect = "burn" if self.region_type == "volcanic" else "poison"
+        if rt in ("desert", "volcanic", "badlands") and threat >= 3:
+            effect = "burn" if rt == "volcanic" else "poison"
             return {"kind": "hexer", "color": (220, 160, 80), "damage": 1, "marker": "shaman", "health": 2,
                     "effect": effect, "attack_range": 5, "preferred_range": 4}
-        if threat >= 3 and index == enemy_count - 1:
+        return None
+
+    def _biome_filler_pool(self, threat):
+        """Candidate profiles for non-signature filler slots, weighted by biome."""
+        rt = self.region_type
+        stalker = {"kind": "stalker", "color": COLOR_ENEMY, "damage": 1, "marker": "enemy", "health": 3}
+        pouncer = {"kind": "pouncer", "color": (255, 156, 96), "damage": 1, "marker": "beast", "health": 2}
+        bogling = {"kind": "bogling", "color": (138, 188, 112), "damage": 1, "marker": "beast", "health": 2}
+        sentinel = {"kind": "sentinel", "color": (188, 196, 210), "damage": 1, "marker": "settler", "health": 4}
+        archer = {"kind": "archer", "color": (255, 210, 110), "damage": 1, "marker": "archer", "health": 3, "attack_range": 6, "preferred_range": 3}
+        lurker = {"kind": "lurker", "color": (160, 100, 220), "damage": 2, "marker": "enemy", "health": 2, "moves_per_turn": 2}
+        effect_sw = "poison"
+        shaman_sw = {"kind": "shaman", "color": (180, 110, 255), "damage": 1, "marker": "shaman", "health": 2, "effect": effect_sw, "attack_range": 4, "preferred_range": 2}
+        if rt == "forest":
+            return [pouncer, pouncer, stalker] if threat <= 2 else [pouncer, stalker]
+        if rt == "swamp":
+            return [bogling, bogling, stalker] if threat < 4 else [bogling, shaman_sw, stalker]
+        if rt in ("cave", "maze"):
+            return [bogling, stalker] if threat < 3 else [bogling, lurker, stalker]
+        if rt == "volcanic":
+            effect_v = "burn"
+            shaman_v = {**shaman_sw, "effect": effect_v}
+            return [bogling, stalker] if threat < 3 else [shaman_v, bogling, stalker]
+        if rt in ("plains", "farmland"):
+            return [archer, stalker] if threat >= 2 else [stalker]
+        if rt in ("desert", "badlands"):
+            return [archer, stalker] if threat < 3 else [archer, stalker]
+        if rt in ("mountain", "tundra"):
+            return [sentinel, stalker] if threat >= 2 else [stalker]
+        if rt in ("ruins", "castle"):
+            return [sentinel, lurker, stalker] if threat >= 3 else [sentinel, stalker]
+        if rt == "dungeon":
+            return [lurker, stalker] if threat >= 3 else [stalker]
+        return [stalker]
+
+    def enemy_profile_for_spawn(self, index, enemy_count):
+        threat = self.danger_value()
+        rt = self.region_type
+        # Warden bookend: last slot in castle/dungeon at high threat
+        if rt in ("castle", "dungeon") and threat >= 4 and index == enemy_count - 1 and enemy_count > 1:
+            return {"kind": "warden", "color": (140, 150, 160), "damage": 1, "marker": "enemy", "health": 7}
+        # Brute bookend: last slot when threat is high enough and no warden
+        if threat >= 3 and index == enemy_count - 1 and enemy_count > 1:
             return {"kind": "brute", "color": COLOR_ENEMY_BRUTE, "damage": 2, "marker": "enemy", "health": 5}
-        return {"kind": "stalker", "color": COLOR_ENEMY, "damage": 1, "marker": "enemy", "health": 3}
+        # Signature enemy claims index 0
+        if index == 0:
+            sig = self._signature_enemy(threat)
+            if sig:
+                return sig
+        # Biome-specific filler for remaining slots
+        pool = self._biome_filler_pool(threat)
+        return pool[index % len(pool)]
 
     def scatter_enemies(self):
         for enemy, position in zip(self.enemies, self.enemy_spawn_positions()):

@@ -48,7 +48,8 @@ class SocialQuestsMixin(GameMixinBase):
             (coord, state)
             for key, state in self.world_regions.items()
             if state.get("region_type") == "town"
-            for coord in [tuple(map(int, key.split(",")))]
+            for _parts in [key.split(",")]
+            for coord in [(int(_parts[0]), int(_parts[1]))]
             if coord != self.world_position
         ]
         if not known_towns:

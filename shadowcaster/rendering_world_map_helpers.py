@@ -201,7 +201,30 @@ def _render_world_map_detail(game, detail_frame, focused_coord, region_stats_map
             content.blit(surface, (0, text_y))
             text_y += 19
 
+    service_preview = stats.get("service_preview_lines", [])
+    if service_preview:
+        text_y += 4
+        section_y = draw_world_map_section(content, game.small_font, "Services", 0, text_y, inset.width, (232, 240, 248))
+        text_y = section_y
+        for line in service_preview:
+            for wrapped in wrap_text_lines(game.small_font, line, inset.width - 4):
+                col = (220, 196, 110) if "tier" in line.lower() or "complete" in line.lower() else (204, 218, 234)
+                surface = game.small_font.render(wrapped, True, col)
+                content.blit(surface, (0, text_y))
+                text_y += 19
+
     section_y = text_y + 8
+    forecast = stats.get("forecast_lines", [])
+    if forecast:
+        section_y = draw_world_map_section(content, game.small_font, "Forecast", 0, section_y, inset.width, (232, 240, 248))
+        text_y = section_y
+        for line in forecast:
+            for wrapped in wrap_text_lines(game.small_font, line, inset.width - 4):
+                surface = game.small_font.render(wrapped, True, (210, 220, 200))
+                content.blit(surface, (0, text_y))
+                text_y += 19
+        section_y = text_y + 8
+
     section_y = draw_world_map_section(content, game.small_font, "Progress", 0, section_y, inset.width, (232, 240, 248))
     progress_lines = []
     progress_lines.extend(stats.get("site_state_lines", []))
@@ -267,8 +290,28 @@ def _render_world_map_detail(game, detail_frame, focused_coord, region_stats_map
         text_y += 19
 
     section_y = text_y + 8
-    section_y = draw_world_map_section(content, game.small_font, "Notable Sites", 0, section_y, inset.width, (232, 240, 248))
+    lm_open = stats.get("landmarks_open", 0)
+    lm_marked = stats.get("landmarks_located_only", 0)
+    lm_cleared = stats.get("landmarks_cleared", 0)
+    lm_hidden = stats.get("landmarks_unvisited", 0)
+    lm_parts = []
+    if lm_open:
+        lm_parts.append(f"{lm_open} open")
+    if lm_marked:
+        lm_parts.append(f"{lm_marked} marked")
+    if lm_hidden:
+        lm_parts.append(f"{lm_hidden} hidden")
+    if lm_cleared:
+        lm_parts.append(f"{lm_cleared} cleared")
+    sites_heading = "Notable Sites" + (f" — {', '.join(lm_parts)}" if lm_parts else "")
+    section_y = draw_world_map_section(content, game.small_font, sites_heading, 0, section_y, inset.width, (232, 240, 248))
     text_y = section_y
+    _SITE_ACTION = {
+        "Hidden": "Visit the region to locate this site.",
+        "Marked": "Enter the site to begin the encounter.",
+        "Open": "Explore fully to claim the reward.",
+        "Cleared": "Reward claimed — nothing further required.",
+    }
     if stats["landmark_summaries"]:
         for landmark in stats["landmark_summaries"]:
             state_color, state_label = landmark_state_visual(landmark)
@@ -279,15 +322,14 @@ def _render_world_map_detail(game, detail_frame, focused_coord, region_stats_map
                 surface = game.small_font.render(wrapped, True, (166, 224, 255))
                 content.blit(surface, (28, text_y))
                 text_y += 19
+            action_hint = _SITE_ACTION.get(state_label, "")
             detail_lines = [
-                (f"{landmark['status']} - {landmark['detail']}", state_color),
+                (action_hint, state_color),
                 (landmark["hook"], COLOR_TEXT),
                 (landmark["reward_hint"], (220, 196, 110)),
             ]
             if landmark.get("travel_note"):
                 detail_lines.append((landmark["travel_note"], (194, 206, 220)))
-            if landmark.get("biome_flavor"):
-                detail_lines.append((landmark["biome_flavor"], (168, 182, 196)))
             for line, color in detail_lines:
                 for wrapped in wrap_text_lines(game.small_font, line, inset.width - 10):
                     surface = game.small_font.render(wrapped, True, color)

@@ -125,7 +125,7 @@ class GameCoreMixin(GameMixinBase):
         self.notice_board_index = 0
         self.notice_board_scroll = 0
         self.tuning = self.default_tuning()
-        self.exploration_reward_pending = None
+        self.exploration_reward_pending: int | None = None
         self.town_choice_pending = None
         self.exploration_choice_index = 0
         self.completion_modal_text = ""
@@ -239,7 +239,7 @@ class GameCoreMixin(GameMixinBase):
         self.add_starting_items()
         self.player_statuses = {}
         self.player_status_sources = {}
-        self.facing = (1, 0)
+        self.facing: tuple[int, int] = (1, 0)
         self.attack_flash = None
         self.shot_flash = []
         self.game_over = False
@@ -280,7 +280,7 @@ class GameCoreMixin(GameMixinBase):
         self.tuner_index = 0
         self.tuner_return_mode = None
         self.tuner_tab = 0
-        self.exploration_reward_pending = None
+        self.exploration_reward_pending: int | None = None
         self.delve_reward_pending = False
         self.town_choice_pending = None
         self.exploration_choice_index = 0
@@ -301,7 +301,7 @@ class GameCoreMixin(GameMixinBase):
         self.world_regions = {}
         self.preview_world_regions = {}
         self.local_regions = {}
-        self.current_local_region = None
+        self.current_local_region: str | None = None
         self.service_type = None
         self.service_claimed = False
         self.interaction_claims = set()

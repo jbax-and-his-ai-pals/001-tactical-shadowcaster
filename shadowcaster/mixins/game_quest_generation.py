@@ -10,6 +10,8 @@ class QuestGenerationMixin(GameMixinBase):
 
     def chain_objective_kind(self, target_region_name, landmark_name, danger_tier, seed_value):
         if landmark_name:
+            if danger_tier >= 4 and seed_value % 5 == 0:
+                return "clear_landmark"
             if danger_tier >= 3 and seed_value % 4 == 0:
                 return "hunt"
             if seed_value % 3 == 0:
@@ -81,7 +83,7 @@ class QuestGenerationMixin(GameMixinBase):
         to_pos = (wx + dx * dist, wy + dy * dist)
         region_name, _region_type, objective, danger_tier = self.bounty_target_details(to_pos)
         target = max(4, 3 + danger_tier * 2 + (h % 4))
-        reward = 18 + target * (3 + danger_tier) + self.town_quest_reward_bonus((wx, wy))
+        reward = 18 + target * (3 + danger_tier) + self.town_quest_reward_bonus((wx, wy)) + self.scouted_target_bonus(to_pos)
         return Quest(
             id=f"bounty_{wx}_{wy}_{slot}_{cycle}",
             kind="bounty",
@@ -106,7 +108,7 @@ class QuestGenerationMixin(GameMixinBase):
         dir_name = self._QUEST_DIR_NAMES[(dx, dy)]
         region_name, landmark_name, landmark_kind = self.scout_target_details(to_pos, h)
         _name, _region_type, _objective, danger_tier = self.bounty_target_details(to_pos)
-        reward = 25 + (h % 5) * 10 + self.town_quest_reward_bonus((wx, wy))
+        reward = 25 + (h % 5) * 10 + self.town_quest_reward_bonus((wx, wy)) + self.scouted_target_bonus(to_pos)
         objective_key = self.chain_objective_kind(region_name, landmark_name, danger_tier, h)
         target_count = 0
         if landmark_name:
@@ -120,6 +122,10 @@ class QuestGenerationMixin(GameMixinBase):
         elif objective_key == "hunt":
             target_count = max(2, min(5, 1 + danger_tier + (h % 2)))
             description += f" Thin out {target_count} local threats before you head back."
+        elif objective_key == "clear_landmark":
+            site = landmark_name or "the site"
+            description += f" Full clearance of {site} is required — leave no resistance standing."
+            reward = int(reward * 1.4)
         return Quest(
             id=f"chain_{wx}_{wy}_{slot}_{cycle}",
             kind="chain",

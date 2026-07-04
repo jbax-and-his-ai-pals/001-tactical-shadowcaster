@@ -239,8 +239,8 @@ Weakest: progression identity, expedition verbs, cross-town social threads, enem
 - [x] Enemy roster: pouncer, boggling, sentinel, shaman, brute
 - [x] Hybrid danger scaling by world distance + player strength at first entry
 - [x] **2-3 new high-signal enemy archetypes** with clear tactical roles (e.g., blocker, ambusher, support)
-- [ ] **Stronger biome-combat interplay** — enemy type pools should vary more meaningfully by biome
-- [ ] **Risk/reward clarity** — regions should communicate expected danger vs. expected reward before entry
+- [x] **Stronger biome-combat interplay** — enemy type pools should vary more meaningfully by biome
+- [x] **Risk/reward clarity** — regions should communicate expected danger vs. expected reward before entry
 
 **Exit criteria:**
 - Regions feel different because they ask different questions of the player
@@ -269,11 +269,11 @@ Weakest: progression identity, expedition verbs, cross-town social threads, enem
 ## Near-Term Queue
 Ordered candidates for the next several slices:
 
-1. `XS` **[Phase 1]** Deepen per-kind landmark identity on the world map — distinct icons, clearer site-state display in right panel
-2. `M` **[Phase 1]** Expand place-based quest chains — stronger direction hints, better stage variety, bounty full-completion loop
-3. `S` **[Phase 1]** *(surface reward kinds landed)* Deepen non-combat landmark rewards: flavor text variety per biome, scaled rewards by danger tier, stronger follow-up leads
-4. `S-M` **[Phase 1/2]** Survey and relief completions materially affect map knowledge, town services, or later quest quality
-5. `S` **[Phase 2]** Town attitude bonus tier feeds visibly into service quality (inn heal, supply depth, board quality)
+1. ~~`XS` **[Phase 1]** Deepen per-kind landmark identity on the world map — distinct icons, clearer site-state display in right panel~~ ✓
+2. ~~`M` **[Phase 1]** Expand place-based quest chains — stronger direction hints, better stage variety, bounty full-completion loop~~ ✓
+3. ~~`S` **[Phase 1]** *(surface reward kinds landed)* Deepen non-combat landmark rewards: flavor text variety per biome, scaled rewards by danger tier, stronger follow-up leads~~ ✓
+4. ~~`S-M` **[Phase 1/2]** Survey and relief completions materially affect map knowledge, town services, or later quest quality~~ ✓
+5. ~~`S` **[Phase 2]** Town attitude bonus tier feeds visibly into service quality (inn heal, supply depth, board quality)~~ ✓
 6. `M` **[Phase 2]** Deepen resident roles: named concerns, authored local context, recurring hooks
 7. `M` **[Phase 2]** Add more building interior variety and dedicated local map pieces
 8. `S-M` **[Phase 2]** Early town-growth response to completed local work

@@ -89,6 +89,7 @@ class InventoryTests(unittest.TestCase):
         game.equip_item("warhammer")
         dagger = game.inventory_item("dagger")
         hammer = game.inventory_item("warhammer")
+        assert dagger is not None and hammer is not None
         self.assertFalse(dagger.equipped)
         self.assertTrue(hammer.equipped)
 

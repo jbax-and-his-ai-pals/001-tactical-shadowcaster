@@ -114,7 +114,7 @@ class FloorGenerationMixin(GameMixinBase):
         self.stairs = stairs if self.region_is_multilevel() and self.region_depth < self.region_max_depth else None
         self.player = self.entrance
         self.floor_explorable_tiles: set[tuple[int, int]] = flood_reachable_tiles(self.dungeon, self.player)
-        self.facing = (1, 0)
+        self.facing: tuple[int, int] = (1, 0)
         self.attack_flash = None
         self.shot_flash = []
         self.seen_tiles = set()

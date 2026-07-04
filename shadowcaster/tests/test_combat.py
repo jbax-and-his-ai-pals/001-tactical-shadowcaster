@@ -142,9 +142,7 @@ class CombatTests(unittest.TestCase):
         game = make_game(130)
         game.start_new_game()
         game.player_statuses["ward"] = 3
-        enemy = Enemy(position=game.player, kind="shaman", color=(255, 0, 0))
-        enemy.on_hit_effect = "poison"
-        enemy.on_hit_duration = 3
+        enemy = Enemy(position=game.player, kind="shaman", color=(255, 0, 0), on_hit_effect="poison")
         enemy.damage = 2
         enemy_messages = []
         game.apply_enemy_hit_effect(enemy, enemy_messages)
