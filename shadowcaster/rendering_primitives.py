@@ -46,6 +46,18 @@ def draw_tabs(screen, font, labels, active_index, left, top, width):
         screen.blit(text, text.get_rect(center=rect.center))
 
 
+def draw_scrollbar(surface, x, y, track_h, scroll, content_h, visible_h, width=6):
+    if content_h <= visible_h:
+        return
+    pygame.draw.rect(surface, (28, 35, 52, 140), pygame.Rect(x, y, width, track_h), border_radius=3)
+    ratio = visible_h / max(content_h, 1)
+    thumb_h = max(20, int(track_h * ratio))
+    max_scroll = max(1, content_h - visible_h)
+    thumb_y = y + int((track_h - thumb_h) * scroll / max_scroll)
+    thumb_y = max(y, min(y + track_h - thumb_h, thumb_y))
+    pygame.draw.rect(surface, (90, 115, 158, 220), pygame.Rect(x, thumb_y, width, thumb_h), border_radius=3)
+
+
 def wrap_text_lines(font, text, max_width):
     words = text.split()
     if not words:

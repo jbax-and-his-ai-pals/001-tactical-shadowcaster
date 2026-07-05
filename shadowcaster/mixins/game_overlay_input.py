@@ -115,13 +115,18 @@ class OverlayInputMixin(GameMixinBase):
         self.hovered_world_tile = self.world_from_screen(*self.mouse_screen_pos)
 
     def return_to_parent_menu(self):
-        self.reset_menu_state(self.menu_return_mode)
+        target = self.menu_return_mode
+        self.reset_menu_state(target)
+        if target == "settings":
+            self.menu_return_mode = getattr(self, "_settings_parent", "pause")
 
     def reopen_menu_if_needed(self, mode):
         if mode == "main":
             self.open_main_menu()
         elif mode == "pause":
             self.open_pause_menu()
+        elif mode == "settings":
+            self.open_settings_menu(getattr(self, "_settings_parent", "pause"))
 
     def adjust_choice_index(self, delta):
         option_count = len(self.current_choice_options())

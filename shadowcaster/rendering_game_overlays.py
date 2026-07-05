@@ -130,10 +130,8 @@ def render_inventory_overlay(game):
 
     title = game.font.render("Inventory", True, (248, 244, 224))
     gold_text = game.small_font.render(f"Gold: {game.gold}", True, (240, 210, 100))
-    subtitle = game.small_font.render("Use a consumable, or equip/unequip a weapon, armor, or trinket", True, (206, 220, 236))
-    game.screen.blit(title, title.get_rect(center=(SCREEN_WIDTH // 2, 82)))
-    game.screen.blit(gold_text, gold_text.get_rect(center=(SCREEN_WIDTH // 2, 106)))
-    game.screen.blit(subtitle, subtitle.get_rect(center=(SCREEN_WIDTH // 2, 124)))
+    game.screen.blit(title, title.get_rect(center=(SCREEN_WIDTH // 2, 90)))
+    game.screen.blit(gold_text, gold_text.get_rect(center=(SCREEN_WIDTH // 2, 116)))
 
     rows = game.inventory_rows()
     panel_width = 720
@@ -167,12 +165,27 @@ def render_inventory_overlay(game):
         panel.blit(detail, (panel_width - detail.get_width() - 22, y))
         y += 34
 
+    rects = game.inventory_action_button_rects()
+    rows = game.inventory_rows()
+    sel_row = rows[game.inventory_index] if rows and game.inventory_index < len(rows) else None
+    can_use = sel_row and sel_row["action"] == "use"
+    can_equip = sel_row and sel_row["action"] == "equip"
+    for btn_key, btn_label, enabled in [("use", "Use", can_use), ("equip", "Equip / Unequip", can_equip)]:
+        r = rects[btn_key]
+        bx, by = r.left - left, r.top - top
+        br = pygame.Rect(bx, by, r.width, r.height)
+        fill = (38, 56, 38, 240) if enabled else (28, 32, 38, 160)
+        border = (120, 200, 120, 255) if enabled else (60, 72, 88, 180)
+        txt_color = (200, 240, 200) if enabled else (80, 90, 100)
+        pygame.draw.rect(panel, fill, br, border_radius=8)
+        pygame.draw.rect(panel, border, br, 2, border_radius=8)
+        lbl = game.small_font.render(btn_label, True, txt_color)
+        panel.blit(lbl, lbl.get_rect(center=br.center))
     help_text = [
-        "Up/down selects an item",
-        "Enter or Space uses a consumable, or equips/unequips gear",
-        "I or Esc closes the inventory; controller users can open it from pause",
+        "↑↓ selects · Enter / Space acts directly",
+        "I or Esc closes  ·  controller: open from pause menu",
     ]
-    help_y = panel_height - 84
+    help_y = panel_height - 56
     for line in help_text:
         surface = game.small_font.render(line, True, COLOR_TEXT)
         panel.blit(surface, (18, help_y))

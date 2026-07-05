@@ -8,8 +8,8 @@ from ..game_typing import GameMixinBase
 
 class LogUIMixin(GameMixinBase):
     def log_button_rect(self):
-        journal_rect = self.journal_button_rect()
-        return pygame.Rect(journal_rect.right + 8, journal_rect.top, journal_rect.width, journal_rect.height)
+        panel_x, top, btn_w, btn_h, gap = self._side_panel_button_row()
+        return pygame.Rect(panel_x + 2 * (btn_w + gap), top, btn_w, btn_h)
 
     def log_layout(self):
         panel_w, panel_h = 700, 520

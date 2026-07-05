@@ -183,6 +183,7 @@ class TownsMixin(GameMixinBase):
         if landmark.kind in self.surface_landmark_kinds():
             self.apply_surface_landmark(landmark)
             return
+        self.player = landmark.position
         self.store_current_region()
         if self.in_local_region():
             context_base = self.local_region_base_key()

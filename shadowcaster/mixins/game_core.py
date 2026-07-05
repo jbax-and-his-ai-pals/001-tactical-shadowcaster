@@ -58,7 +58,7 @@ class GameCoreMixin(GameMixinBase):
         self.source_lit_tiles: set = set()
         self._message = ""
         self.message_log = []
-        self.max_message_log = 50
+        self.max_message_log = 200
         self.message_log_scroll = 0
         self.mouse_screen_pos = (0, 0)
         self.hovered_world_tile = None

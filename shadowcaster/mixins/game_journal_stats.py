@@ -252,6 +252,9 @@ class JournalStatsMixin(GameMixinBase):
             level = getattr(self, "player_level", 1)
             title = self.player_title() if hasattr(self, "player_title") else "Wanderer"
             lines = [f"Level {level} — {title}"]
+        elif self.journal_tab == 3:
+            town_count = sum(1 for s in self.world_regions.values() if s.get("region_type") == "town")
+            lines = [f"{town_count} town{'s' if town_count != 1 else ''} visited"]
         elif self.journal_tab == 0:
             lines = [f"{counts['active']} active"]
         else:
@@ -260,8 +263,26 @@ class JournalStatsMixin(GameMixinBase):
                 f"Towns helped {counts['towns_helped']}  -  D {counts['delivery']} / S {counts['scout']} / B {counts['bounty']} / C {counts['chain']}",
                 f"Role: {track_label}",
             ]
-        if self.region_type == "town" and self.journal_tab != 2:
+        if self.region_type == "town" and self.journal_tab not in (2, 3):
             lines.append(
                 f"Town standing {self.town_attitude_label()}  -  Prosperity {self.town_prosperity_label(self.world_position)}"
             )
         return lines
+
+    def town_reputation_rows(self):
+        rows = []
+        for key, state in self.world_regions.items():
+            if state.get("region_type") != "town":
+                continue
+            try:
+                px, py = key.split(",")
+                coord = (int(px), int(py))
+            except (ValueError, AttributeError):
+                continue
+            name = state.get("region_name", key)
+            label = self.town_attitude_label(coord)
+            prosperity = self.town_prosperity_label(coord)
+            score = self.town_attitude_score(coord)
+            rows.append({"name": name, "label": label, "prosperity": prosperity, "score": score})
+        rows.sort(key=lambda r: r["score"], reverse=True)
+        return rows

@@ -34,22 +34,24 @@ class ControlsMixin(GameMixinBase):
 
     def controls_content_rect(self):
         layout = self.controls_layout()
+        footer_h = layout["footer_h"]
         return {
             "left": 22,
             "top": 68,
             "width": layout["box_width"] - 44,
-            "height": layout["box_height"] - 88,
+            "height": layout["box_height"] - 68 - footer_h - 8,
         }
 
     def controls_layout(self):
         box_width = 700
-        box_height = 410
+        box_height = 560
         left = (SCREEN_WIDTH - box_width) // 2
-        top = 210
-        back_width = 220
-        back_height = 52
-        back_left = (SCREEN_WIDTH - back_width) // 2
-        back_top = top + box_height + 18
+        top = 80
+        footer_h = 40
+        back_width = 140
+        back_height = 28
+        back_left = left + box_width - back_width - 16
+        back_top = top + box_height - footer_h + (footer_h - back_height) // 2
         return {
             "box_width": box_width,
             "box_height": box_height,
@@ -59,6 +61,7 @@ class ControlsMixin(GameMixinBase):
             "back_height": back_height,
             "back_left": back_left,
             "back_top": back_top,
+            "footer_h": footer_h,
         }
 
     def active_controller_name(self):

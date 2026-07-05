@@ -38,6 +38,8 @@ class OverlayEventMixin(GameMixinBase):
                 self.handle_menu_click(*event.pos)
             elif self.menu_mode == "controls" and event.type == pygame.MOUSEWHEEL:
                 self.scroll_controls(-event.y * 36)
+            elif self.menu_mode == "load" and event.type == pygame.MOUSEWHEEL:
+                self.menu_scroll = max(0, min(max(0, len(self.save_entries) - self.load_layout()["max_visible"]), self.menu_scroll - event.y))
             return True
         if overlay == "tuner":
             if event.type == pygame.KEYDOWN:
@@ -165,9 +167,11 @@ class OverlayEventMixin(GameMixinBase):
             return True
         if self.menu_mode:
             if event.key == pygame.K_ESCAPE:
-                if self.menu_mode == "pause":
+                if self.menu_mode == "main":
+                    self.running = False
+                elif self.menu_mode == "pause":
                     self.close_menu()
-                elif self.menu_mode in {"load", "controls"}:
+                elif self.menu_mode in {"load", "controls", "settings", "confirm_main_menu", "confirm_exit_game"}:
                     self.return_to_parent_menu()
             elif self.menu_mode == "controls" and event.key in (pygame.K_UP, pygame.K_w):
                 self.scroll_controls(-36)
@@ -181,6 +185,10 @@ class OverlayEventMixin(GameMixinBase):
                 self.shift_controls_tab(-1)
             elif self.menu_mode == "controls" and event.key in (pygame.K_RIGHT, pygame.K_d, pygame.K_e):
                 self.shift_controls_tab(1)
+            elif self.menu_mode == "settings" and event.key in (pygame.K_LEFT, pygame.K_a):
+                self.settings_adjust(-1)
+            elif self.menu_mode == "settings" and event.key in (pygame.K_RIGHT, pygame.K_d):
+                self.settings_adjust(1)
             elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
                 self.activate_menu_option()
             return True

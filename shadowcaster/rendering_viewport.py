@@ -246,10 +246,21 @@ def render_side_panel(screen, game, map_pixel_width):
     screen.blit(inspect_box, (panel_x, y))
     y += inspect_box_height + 12
 
+    inv_rect = game.inventory_button_rect()
     journal_rect = game.journal_button_rect()
     log_rect = game.log_button_rect()
+    inv_selected = inv_rect.collidepoint(*game.mouse_screen_pos) or game.inventory_open
     journal_selected = journal_rect.collidepoint(*game.mouse_screen_pos) or game.journal_open
     log_selected = log_rect.collidepoint(*game.mouse_screen_pos) or game.log_open
+    inv_box = pygame.Surface((inv_rect.width, inv_rect.height), pygame.SRCALPHA)
+    inv_box.fill((32, 38, 54, 224) if inv_selected else (24, 30, 42, 196))
+    pygame.draw.rect(inv_box, (255, 222, 134) if inv_selected else (120, 150, 182), inv_box.get_rect(), 2, border_radius=10)
+    inv_title = game.small_font.render("Inventory", True, (245, 248, 252))
+    inv_count = sum(i.quantity if i.category == "consumable" else 1 for i in game.inventory)
+    inv_detail = game.small_font.render(f"{inv_count} item{'s' if inv_count != 1 else ''}", True, COLOR_TEXT)
+    inv_box.blit(inv_title, (12, 7))
+    inv_box.blit(inv_detail, (12, 22))
+    screen.blit(inv_box, inv_rect.topleft)
     journal_box = pygame.Surface((journal_rect.width, journal_rect.height), pygame.SRCALPHA)
     journal_box.fill((32, 38, 54, 224) if journal_selected else (24, 30, 42, 196))
     pygame.draw.rect(journal_box, (255, 222, 134) if journal_selected else (120, 150, 182), journal_box.get_rect(), 2, border_radius=10)

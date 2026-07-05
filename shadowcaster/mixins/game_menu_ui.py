@@ -11,13 +11,18 @@ class MenuUIMixin(GameMixinBase):
 
     def menu_options(self):
         if self.menu_mode == "main":
-            return ["New Game", "Load Game", "Controls", "Exit"]
+            return ["New Game", "Load Game", "Settings", "Exit"]
         if self.menu_mode == "controls":
             return ["Back"]
         if self.menu_mode == "load":
-            options = [entry["label"] for entry in self.save_entries]
-            return options + ["Back"]
-        return ["Resume", "Inventory", "Journal", "Recent Log", "Save Game", "Load Game", "Controls", "Tuner", "New Game", "Exit"]
+            return [entry["label"] for entry in self.save_entries] + ["Back"]
+        if self.menu_mode == "settings":
+            return self.settings_option_labels() + ["Back"]
+        if self.menu_mode == "confirm_main_menu":
+            return ["Yes — Save & Return", "No — Return Without Saving", "Cancel"]
+        if self.menu_mode == "confirm_exit_game":
+            return ["Yes — Save & Quit", "No — Quit Without Saving", "Cancel"]
+        return ["Resume", "Save Game", "Load Game", "Settings", "Main Menu", "Exit Game"]
 
     def open_menu_mode(self, mode, *, return_mode=None, stop_auto=True, close_world_map=False, clear_inspect=True, reset_controls_tab=False):
         self.menu_mode = mode
@@ -44,10 +49,70 @@ class MenuUIMixin(GameMixinBase):
     def open_load_menu(self, return_mode):
         self.save_entries = list_saves()
         self.open_menu_mode("load", return_mode=return_mode)
-        self.menu_message = "Choose a save to load." if self.save_entries else "No saves found."
+
+    def load_layout(self):
+        box_width = 580
+        box_height = 460
+        left = (SCREEN_WIDTH - box_width) // 2
+        top = 160
+        footer_h = 40
+        row_h = 52
+        content_top = 14
+        content_left = 14
+        content_w = box_width - 28
+        content_visible_h = box_height - content_top - footer_h - 10
+        btn_h = 28
+        btn_y = top + box_height - footer_h + (footer_h - btn_h) // 2
+        back_width = 80
+        back_left = left + box_width - back_width - 14
+        load_btn_width = 130
+        load_btn_left = back_left - load_btn_width - 10
+        return {
+            "box_width": box_width, "box_height": box_height,
+            "left": left, "top": top, "footer_h": footer_h,
+            "row_h": row_h, "content_top": content_top,
+            "content_left": content_left, "content_w": content_w,
+            "content_visible_h": content_visible_h,
+            "back_width": back_width, "back_height": btn_h,
+            "back_left": back_left, "back_top": btn_y,
+            "load_btn_left": load_btn_left, "load_btn_width": load_btn_width,
+            "load_btn_height": btn_h, "load_btn_top": btn_y,
+            "max_visible": content_visible_h // row_h,
+        }
+
+    def load_scroll_clamp(self):
+        layout = self.load_layout()
+        max_scroll = max(0, len(self.save_entries) - layout["max_visible"])
+        sel = self.menu_index if self.menu_index < len(self.save_entries) else len(self.save_entries) - 1
+        if sel >= 0:
+            if sel < self.menu_scroll:
+                self.menu_scroll = sel
+            elif sel >= self.menu_scroll + layout["max_visible"]:
+                self.menu_scroll = sel - layout["max_visible"] + 1
+        self.menu_scroll = max(0, min(max_scroll, self.menu_scroll))
 
     def open_controls_menu(self, return_mode):
         self.open_menu_mode("controls", return_mode=return_mode, reset_controls_tab=True)
+
+    def open_settings_menu(self, return_mode):
+        self._settings_parent = return_mode
+        self.open_menu_mode("settings", return_mode=return_mode)
+
+    def settings_option_labels(self):
+        return ["Controls", f"Log Length: {self.max_message_log}"]
+
+    def settings_adjust(self, delta):
+        options = self.settings_option_labels()
+        if not options or self.menu_index >= len(options):
+            return
+        label = options[self.menu_index]
+        if label.startswith("Log Length"):
+            choices = [50, 100, 200, 500]
+            current = self.max_message_log
+            idx = choices.index(current) if current in choices else 0
+            self.max_message_log = choices[(idx + delta) % len(choices)]
+            self.message_log = self.message_log[-self.max_message_log:]
+            self.message = f"Log length set to {self.max_message_log}."
 
     def activate_menu_option(self):
         option = self.menu_options()[self.menu_index]
@@ -61,6 +126,34 @@ class MenuUIMixin(GameMixinBase):
             if option == "Back":
                 self.return_to_parent_menu()
             return
+        if self.menu_mode == "confirm_main_menu":
+            if option == "Yes — Save & Return":
+                self.save_run()
+                self.close_menu()
+                self.open_main_menu()
+            elif option == "No — Return Without Saving":
+                self.close_menu()
+                self.open_main_menu()
+            else:
+                self.return_to_parent_menu()
+            return
+        if self.menu_mode == "confirm_exit_game":
+            if option == "Yes — Save & Quit":
+                self.save_run()
+                self.running = False
+            elif option == "No — Quit Without Saving":
+                self.running = False
+            else:
+                self.return_to_parent_menu()
+            return
+        if self.menu_mode == "settings":
+            if option == "Back":
+                self.return_to_parent_menu()
+            elif option == "Controls":
+                self.open_controls_menu("settings")
+            else:
+                self.settings_adjust(1)
+            return
         if option == "New Game":
             self.start_new_game()
         elif option == "Load Game":
@@ -70,23 +163,31 @@ class MenuUIMixin(GameMixinBase):
                 self.open_load_menu(self.menu_mode)
         elif option == "Controls":
             self.open_controls_menu(self.menu_mode)
-        elif option == "Inventory":
-            self.close_menu()
-            self.toggle_inventory()
-        elif option == "Journal":
-            self.close_menu()
-            self.toggle_journal()
-        elif option == "Recent Log":
-            self.close_menu()
-            self.toggle_log()
+        elif option == "Settings":
+            self.open_settings_menu(self.menu_mode)
         elif option == "Tuner":
             self.toggle_tuner()
         elif option == "Save Game":
             self.save_run()
         elif option == "Resume":
             self.close_menu()
+        elif option == "Main Menu":
+            self.open_menu_mode("confirm_main_menu", return_mode="pause", stop_auto=False, clear_inspect=False)
         elif option == "Exit":
             self.running = False
+        elif option == "Exit Game":
+            self.open_menu_mode("confirm_exit_game", return_mode="pause", stop_auto=False, clear_inspect=False)
+
+    def inventory_action_button_rects(self):
+        panel_width = 720
+        panel_height = 500
+        left = (SCREEN_WIDTH - panel_width) // 2
+        top = 136
+        btn_y = top + panel_height - 100
+        btn_h = 36
+        use_rect = pygame.Rect(left + 20, btn_y, 150, btn_h)
+        equip_rect = pygame.Rect(left + 20 + 150 + 12, btn_y, 190, btn_h)
+        return {"use": use_rect, "equip": equip_rect}
 
     def visible_menu_options(self):
         options = self.menu_options()
@@ -102,9 +203,9 @@ class MenuUIMixin(GameMixinBase):
 
     def menu_layout(self):
         visible_options, scroll = self.visible_menu_options()
-        box_width = 340 if self.menu_mode == "main" else 360 if self.menu_mode == "pause" else 320
-        box_height = 56 if self.menu_mode in {"main", "pause"} else 48
-        gap = 14 if self.menu_mode in {"main", "pause"} else 10
+        box_width = 340 if self.menu_mode == "main" else 400 if self.menu_mode in {"settings", "confirm_main_menu", "confirm_exit_game"} else 360 if self.menu_mode == "pause" else 320
+        box_height = 56 if self.menu_mode in {"main", "pause", "settings"} else 48
+        gap = 14 if self.menu_mode in {"main", "pause", "settings"} else 10
         total_height = len(visible_options) * box_height + max(0, len(visible_options) - 1) * gap
         if self.menu_mode == "pause":
             top_limit = 72
@@ -266,7 +367,7 @@ class MenuUIMixin(GameMixinBase):
         rows = self.inventory_rows()
         panel_width = 720
         left = (SCREEN_WIDTH - panel_width) // 2
-        top = 120
+        top = 136
         y = 20
         for index in range(len(rows)):
             row_rect = pygame.Rect(left + 12, top + y - 4, panel_width - 24, 30)
@@ -286,6 +387,17 @@ class MenuUIMixin(GameMixinBase):
             layout = self.controls_layout()
             if pygame.Rect(layout["back_left"], layout["back_top"], layout["back_width"], layout["back_height"]).collidepoint(screen_x, screen_y):
                 return 0
+            return None
+        if self.menu_mode == "load":
+            layout = self.load_layout()
+            if pygame.Rect(layout["back_left"], layout["back_top"], layout["back_width"], layout["back_height"]).collidepoint(screen_x, screen_y):
+                return len(self.save_entries)  # "Back" index in menu_options
+            content_top_abs = layout["top"] + layout["content_top"]
+            if content_top_abs <= screen_y < content_top_abs + layout["content_visible_h"]:
+                row_i = (screen_y - content_top_abs) // layout["row_h"]
+                save_idx = self.menu_scroll + row_i
+                if 0 <= save_idx < len(self.save_entries):
+                    return save_idx
             return None
         layout = self.menu_layout()
         box_width = layout["box_width"]

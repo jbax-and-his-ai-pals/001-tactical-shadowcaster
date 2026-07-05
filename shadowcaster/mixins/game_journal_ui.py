@@ -48,23 +48,32 @@ class JournalUIMixin(JournalStatsMixin, GameMixinBase):
         self.message = f"You abandon the {quest.kind} quest."
 
     def quest_tabs(self):
-        return ["Active", "Completed", "Character"]
+        return ["Active", "Completed", "Character", "Towns"]
 
     def current_journal_entries(self):
         if self.journal_tab == 0:
             return [quest for quest in self.active_quests if quest.status == "active"]
         if self.journal_tab == 1:
             return list(reversed(self.completed_quests()))
-        return []  # Character tab renders its own content
+        return []  # Character and Towns tabs render their own content
 
-    def journal_button_rect(self):
+    def _side_panel_button_row(self):
         map_width = VIEW_WIDTH * TILE_SIZE
         panel_x = map_width + 14
         panel_width = SCREEN_WIDTH - panel_x - 14
         top = 498
-        button_gap = 8
-        button_width = (panel_width - button_gap) // 2
-        return pygame.Rect(panel_x, top, button_width, 42)
+        btn_h = 42
+        gap = 6
+        btn_w = (panel_width - 2 * gap) // 3
+        return panel_x, top, btn_w, btn_h, gap
+
+    def inventory_button_rect(self):
+        panel_x, top, btn_w, btn_h, gap = self._side_panel_button_row()
+        return pygame.Rect(panel_x, top, btn_w, btn_h)
+
+    def journal_button_rect(self):
+        panel_x, top, btn_w, btn_h, gap = self._side_panel_button_row()
+        return pygame.Rect(panel_x + btn_w + gap, top, btn_w, btn_h)
 
     def journal_layout(self):
         panel_w, panel_h = 700, 540

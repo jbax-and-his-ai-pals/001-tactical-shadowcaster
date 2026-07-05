@@ -113,6 +113,9 @@ class InputMixin(GameMixinBase):
             else:
                 self.perform_action(action)
             return
+        if self.inventory_button_rect().collidepoint(screen_x, screen_y):
+            self.toggle_inventory()
+            return
         if self.journal_button_rect().collidepoint(screen_x, screen_y):
             self.toggle_journal()
             return
@@ -199,6 +202,9 @@ class InputMixin(GameMixinBase):
         self.hovered_world_tile = self.world_from_screen(screen_x, screen_y)
 
     def handle_map_click(self, screen_x, screen_y):
+        if self.inventory_button_rect().collidepoint(screen_x, screen_y):
+            self.toggle_inventory()
+            return
         if self.journal_button_rect().collidepoint(screen_x, screen_y):
             self.toggle_journal()
             return

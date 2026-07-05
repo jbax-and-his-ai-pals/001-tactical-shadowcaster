@@ -187,6 +187,28 @@ def render_journal_overlay(game):
                 content.blit(surf, (row_rect.left + 12, line_y))
                 line_y += 18
             y += row_height + 8
+    elif not entries and game.journal_tab == 3:
+        town_rows = game.town_reputation_rows()
+        if not town_rows:
+            hint = game.small_font.render("Visit towns to see your reputation here.", True, COLOR_TEXT)
+            content.blit(hint, (14, 16))
+        else:
+            y = 8
+            row_w = viewport_rect.width - 16
+            for tr in town_rows:
+                score = tr["score"]
+                standing_color = (160, 220, 160) if score >= 6 else (220, 200, 130) if score >= 3 else (200, 160, 140)
+                row_rect = pygame.Rect(8, y, row_w, 48)
+                pygame.draw.rect(content, (26, 34, 50, 200), row_rect, border_radius=8)
+                pygame.draw.rect(content, (*standing_color[:3], 120), row_rect, 1, border_radius=8)
+                name_surf = game.small_font.render(tr["name"], True, (230, 240, 250))
+                content.blit(name_surf, (row_rect.left + 12, row_rect.top + 8))
+                detail = game.small_font.render(
+                    f"Standing: {tr['label']}  ·  Prosperity: {tr['prosperity']}",
+                    True, standing_color,
+                )
+                content.blit(detail, (row_rect.left + 12, row_rect.top + 26))
+                y += 56
     elif not entries:
         empty_lines = ["No quests in this tab yet.", "Visit a town board to pick up new work."]
         y = 16

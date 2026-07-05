@@ -47,7 +47,27 @@ class OverlayClickMixin(GameMixinBase):
         self.apply_current_choice()
         return True
 
+    def handle_load_click(self, screen_x, screen_y):
+        layout = self.load_layout()
+        if pygame.Rect(layout["back_left"], layout["back_top"], layout["back_width"], layout["back_height"]).collidepoint(screen_x, screen_y):
+            self.return_to_parent_menu()
+            return True
+        if pygame.Rect(layout["load_btn_left"], layout["load_btn_top"], layout["load_btn_width"], layout["load_btn_height"]).collidepoint(screen_x, screen_y):
+            if self.save_entries and self.menu_index < len(self.save_entries):
+                self.load_run(self.save_entries[self.menu_index]["path"])
+            return True
+        content_top_abs = layout["top"] + layout["content_top"]
+        if content_top_abs <= screen_y < content_top_abs + layout["content_visible_h"]:
+            row_i = (screen_y - content_top_abs) // layout["row_h"]
+            save_idx = self.menu_scroll + row_i
+            if 0 <= save_idx < len(self.save_entries):
+                self.menu_index = save_idx
+                return True
+        return False
+
     def handle_menu_click(self, screen_x, screen_y):
+        if self.menu_mode == "load":
+            return self.handle_load_click(screen_x, screen_y)
         if self.menu_mode == "controls":
             layout = self.controls_layout()
             tab_index = self.tab_index_from_screen(screen_x, screen_y, self.controls_tabs(), layout["left"] + 22, layout["top"] + 18, layout["box_width"] - 44)
@@ -73,6 +93,18 @@ class OverlayClickMixin(GameMixinBase):
             self.accept_board_quest(self.notice_board_index)
 
     def handle_inventory_click(self, screen_x, screen_y, dismiss_on_miss=False):
+        rects = self.inventory_action_button_rects()
+        rows = self.inventory_rows()
+        if rects["use"].collidepoint(screen_x, screen_y):
+            sel = rows[self.inventory_index] if rows and self.inventory_index < len(rows) else None
+            if sel and sel["action"] == "use":
+                self.inventory_activate_selected()
+            return True
+        if rects["equip"].collidepoint(screen_x, screen_y):
+            sel = rows[self.inventory_index] if rows and self.inventory_index < len(rows) else None
+            if sel and sel["action"] == "equip":
+                self.inventory_activate_selected()
+            return True
         choice = self.inventory_choice_from_screen(screen_x, screen_y)
         if choice is None:
             if dismiss_on_miss:
@@ -80,7 +112,6 @@ class OverlayClickMixin(GameMixinBase):
                 return True
             return False
         self.inventory_index = choice
-        self.inventory_activate_selected()
         return True
 
     def handle_journal_click(self, screen_x, screen_y, dismiss_on_miss=False):
