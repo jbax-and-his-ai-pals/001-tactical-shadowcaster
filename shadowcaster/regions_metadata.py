@@ -69,6 +69,10 @@ def random_region_name(region_type):
             ["Blight", "Grim", "Howling", "Rotted", "Ash", "Blood", "Crooked"],
             ["Borough", "Hamlet", "Row", "Hearth", "Square", "Stead", "Market"],
         ),
+        "stronghold": (
+            ["Iron", "Black", "Silent", "Siege", "War", "Broken", "Storm"],
+            ["Stronghold", "Citadel", "Bastion", "Redoubt", "Fortress", "Keep", "Hold"],
+        ),
         "ossuary": (
             ["The", "Sunken", "Bone", "Forgotten", "Ancient"],
             ["Ossuary", "Charnel Hall", "Charnel Vault", "Bone Repository", "Reliquary"],
@@ -118,6 +122,7 @@ def region_summary(region_type, floor):
         "maze": "Tight turns, deliberate scouting, and disorienting navigation.",
         "town": "Peaceful streets, townsfolk, and room to recover bearings.",
         "monster_town": "A settlement gone wrong, full of hostile residents and beasts.",
+        "stronghold": "A fortress at the city's heart, held by its most dangerous defenders.",
         "ossuary": "A silent bone-house deep in the wilds, older than any map.",
         "mirrorwood": "A wood where the light behaves strangely and the paths double back.",
         "inn": "A quiet room and a chance to rest.",
@@ -149,6 +154,7 @@ def palette_for_region(region_type):
         "maze": RegionPalette((84, 112, 86), (40, 54, 42), (34, 68, 36), (18, 26, 18), (18, 30, 20), (154, 210, 156), (236, 250, 236)),
         "town": RegionPalette((160, 126, 88), (82, 78, 70), (88, 68, 48), (34, 30, 28), (38, 28, 22), (198, 160, 112), (252, 242, 220)),
         "monster_town": RegionPalette((120, 54, 54), (54, 40, 40), (62, 26, 26), (24, 18, 18), (34, 14, 18), (210, 92, 112), (255, 232, 236)),
+        "stronghold": RegionPalette((100, 96, 120), (48, 44, 62), (54, 50, 72), (20, 18, 26), (20, 18, 30), (160, 148, 210), (240, 236, 255)),
         "ossuary": RegionPalette((130, 118, 110), (64, 56, 52), (72, 60, 50), (26, 22, 20), (28, 20, 18), (200, 176, 152), (252, 240, 228)),
         "mirrorwood": RegionPalette((140, 180, 160), (64, 96, 80), (72, 116, 96), (22, 36, 28), (20, 36, 28), (200, 236, 212), (240, 252, 244)),
         "inn": RegionPalette((132, 102, 70), (70, 58, 46), (76, 58, 40), (28, 24, 20), (34, 26, 20), (208, 170, 120), (255, 244, 222)),

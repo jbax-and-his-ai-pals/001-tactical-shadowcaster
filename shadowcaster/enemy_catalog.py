@@ -20,6 +20,8 @@ Each entry is keyed by a slug and defines:
 """
 from __future__ import annotations
 
+import random
+
 _E = (160, 160, 170)   # generic enemy grey
 _B = (255, 156, 96)    # beast orange
 _G = (138, 188, 112)   # bogling green
@@ -105,12 +107,19 @@ ENEMY_CATALOG: dict[str, dict] = {
 
     # ── Mountain / Tundra ────────────────────────────────────────────────────
     "sentinel":     _e("sentinel",    _S,  "settler", 4, 1, ["mountain","tundra","ruins","castle"], 1, weight=2),
+    "cliff_hound":  _e("cliff hound", _B,  "beast",   3, 1, ["mountain"],          1, 3, behavior="charger", weight=2),
     "ice_shard":    _e("ice shard",   (180,220,255),"beast", 2, 1, ["tundra"],     1, 2,
                        attack_range=4, preferred_range=3, behavior="kiter"),
+    "frost_wraith": _e("frost wraith",(140,190,240),"enemy", 3, 2, ["tundra"],     2, 4, behavior="ambusher",
+                       moves_per_turn=2, on_hit_effect="stun"),
     "stone_golem":  _e("stone golem", (130,130,140),"enemy", 7, 2, ["mountain"],   2, 4,
                        behavior="tank", traits=["reflects_damage"]),
+    "ridge_shaman": _e("ridge shaman",(160,170,200),"shaman",3, 1, ["mountain"],   2, 4,
+                       attack_range=4, preferred_range=3, behavior="kiter", on_hit_effect="stun"),
     "frost_shaman": _e("frost shaman",(160,210,255),"shaman",3, 1, ["tundra"],     3, 4,
                        attack_range=4, preferred_range=3, behavior="kiter", on_hit_effect="stun"),
+    "ice_golem":    _e("ice golem",   (160,210,240),"enemy", 8, 2, ["tundra"],     3, 5,
+                       behavior="tank", on_hit_effect="stun", traits=["reflects_damage"]),
     "avalanche_caller":_e("avalanche caller",(200,210,220),"shaman",3,1,["mountain"],3,5,
                        attack_range=5, preferred_range=4, behavior="kiter",
                        traits=["calls_reinforcements"]),
@@ -120,13 +129,20 @@ ENEMY_CATALOG: dict[str, dict] = {
                        behavior="tank", traits=["shields_ally", "regen"]),
 
     # ── Cave / Dungeon / Maze ────────────────────────────────────────────────
+    "trap_springer":_e("trap springer",_B, "beast",   2, 1, ["dungeon","cave"],    1, 2, behavior="charger", weight=2),
     "lurker":       _e("lurker",      (160,100,220),"enemy", 2, 2, ["cave","dungeon","maze","ruins"], 2,
                        behavior="ambusher", moves_per_turn=2, weight=2),
     "nest_guard":   _e("nest guard",  _G,  "beast",   4, 1, ["cave","dungeon"],    2, 4,
                        behavior="swarmer", traits=["pack_bonus"]),
+    "cave_shaman":  _e("cave shaman", _M,  "shaman",  3, 1, ["cave"],              2, 4,
+                       attack_range=4, preferred_range=3, behavior="kiter", on_hit_effect="poison"),
     "crystal_shaman":_e("crystal shaman",(160,220,255),"shaman",3,1,["cave"],      3, 4,
                        attack_range=4, preferred_range=3, behavior="kiter", on_hit_effect="stun"),
     "cave_brute":   _e("cave brute",  _R,  "enemy",   6, 2, ["cave","dungeon"],    3, 5, behavior="tank"),
+    "bone_golem":   _e("bone golem",  (180,170,160),"enemy", 7, 1, ["dungeon","ruins"], 3, 5,
+                       behavior="tank", traits=["regen"]),
+    "maze_specter": _e("maze specter",(120,80,200),"enemy",  3, 2, ["maze"],       3, 5,
+                       behavior="ambusher", moves_per_turn=2, on_hit_effect="stun"),
     "dungeon_warden":_e("dungeon warden",_BK,"enemy",  7, 1, ["dungeon"],          4, None,
                        traits=["shields_ally"]),
     "lair_sentinel":_e("lair sentinel",_S, "enemy",   5, 2, ["cave"],              4, None,
@@ -135,8 +151,13 @@ ENEMY_CATALOG: dict[str, dict] = {
     # ── Badlands / Volcanic ──────────────────────────────────────────────────
     "ash_crawler":  _e("ash crawler", (160,140,120),"beast", 2, 1, ["volcanic","badlands"], 1, 2,
                        behavior="charger", weight=2),
+    "scorched_raider":_e("scorched raider",_C,"settler",3, 1, ["badlands"],        1, 3, behavior="charger", weight=2),
     "ember_sprite": _e("ember sprite",(255,120,60),"beast",  2, 1, ["volcanic"],   1, 2,
                        on_hit_effect="burn", weight=2),
+    "cinder_hound": _e("cinder hound",_B,  "beast",   4, 2, ["volcanic"],         2, 4,
+                       behavior="charger", on_hit_effect="burn"),
+    "dust_wraith":  _e("dust wraith", (160,150,130),"enemy", 3, 2, ["badlands"],   2, 4,
+                       behavior="ambusher", moves_per_turn=2),
     "slag_brute":   _e("slag brute",  _R,  "enemy",   6, 2, ["volcanic","badlands"],3, 5,
                        behavior="tank", on_hit_effect="burn"),
     "magma_titan":  _e("magma titan", (200,80,50), "enemy", 10, 2, ["volcanic"],   5, None,
@@ -145,8 +166,13 @@ ENEMY_CATALOG: dict[str, dict] = {
                        behavior="tank", traits=["shields_ally"]),
 
     # ── Castle / Ruins ───────────────────────────────────────────────────────
+    "grave_crawler":_e("grave crawler",_G, "beast",   2, 1, ["ruins"],             1, 2, behavior="charger", weight=2),
     "armored_lurker":_e("armored lurker",(140,130,120),"enemy",4,2,["castle","ruins"],3,4,
                        behavior="ambusher", moves_per_turn=2),
+    "crossbowman":  _e("crossbowman", _A,  "archer",  3, 1, ["castle"],            2, 4,
+                       attack_range=6, preferred_range=4, behavior="kiter"),
+    "herald":       _e("herald",      _S,  "settler", 4, 1, ["castle"],            2, 4,
+                       traits=["shields_ally"]),
     "ruins_shaman": _e("ruins shaman", _M, "shaman",  3, 1, ["ruins"],             3, 4,
                        attack_range=4, preferred_range=3, behavior="kiter", on_hit_effect="poison"),
     "knight":       _e("knight",      (200,200,220),"settler",5, 2, ["castle"],     3, 5,
@@ -158,6 +184,10 @@ ENEMY_CATALOG: dict[str, dict] = {
                        on_hit_effect="poison", traits=["regen", "calls_reinforcements"]),
 
     # ── Monster Town ─────────────────────────────────────────────────────────
+    "goblin":       _e("goblin",      _G,  "beast",   2, 1, ["monster_town"],      1, 3,
+                       behavior="swarmer", traits=["pack_bonus"], weight=3),
+    "troll":        _e("troll",       (100,160,100),"enemy", 5, 2, ["monster_town"],2, 4,
+                       behavior="tank", traits=["regen"]),
     "orc_shaman":   _e("orc shaman",  _M,  "shaman",  3, 1, ["monster_town"],      2, 4,
                        attack_range=4, preferred_range=3, behavior="kiter", on_hit_effect="poison"),
     "siege_brute":  _e("siege brute", _R,  "enemy",   6, 2, ["monster_town"],      3, 5, behavior="tank"),
@@ -194,6 +224,7 @@ ENEMY_CATALOG: dict[str, dict] = {
 _BIOME_ALIASES = {
     "ossuary": "ruins",
     "mirrorwood": "forest",
+    "stronghold": "castle",
 }
 
 

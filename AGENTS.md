@@ -76,42 +76,64 @@ Use `python -B utils/largest_py_files.py --top 20` for live line counts. The can
 ## Mixin Map
 
 Line counts drift — run `python -B utils/largest_py_files.py shadowcaster/mixins --top 25` for current sizes.
+Full responsibility details → `docs/ARCHITECTURE.md` § Composition Map.
 
 | Mixin file | Responsibility |
 |---|---|
 | `game_core.py` | bootstrap, shared runtime state, tuning defaults, top-level run/render shell |
-| `game_world.py` | world generation, floor construction, exits, transitions, danger rules |
-| `game_towns.py` | town landmarks, building flavor, resident interactions, service logic; `surface_landmark_kinds()` gate in `enter_landmark` |
-| `game_landmark_services.py` | surface-modal landmark reward handlers; `apply_surface_landmark` fires directly from `enter_landmark` for non-enterable site kinds |
-| `game_town_reactions.py` | lightweight settlement-response text keyed off completed local work and prosperity |
+| `game_world.py` | world/seed policy, danger rules, biome affinity, region-choice helpers |
+| `game_world_geography.py` | rivers, coast, named zones, city with market/civic/temple/stronghold districts |
+| `game_world_travel.py` | arrivals, exits, world transitions, Level 5 gate, preview region capture |
 | `game_world_state.py` | region snapshots, local-region keys, save/load application |
 | `game_world_map_stats.py` | world-map region stats and settlement display |
-| `game_world_map_ui.py` | world-map layout, preview generation, debug-map behavior |
+| `game_world_map_ui.py` | world-map layout, hover, debug-map behavior |
 | `game_world_map_preview.py` | preview region generation and caching |
-| `game_world_travel.py` | world-map selection, travel routing, connected-region logic |
-| `game_overlay_events.py` | overlay open/close events, controller overlay navigation |
-| `game_overlay_input.py` | menus, overlays, dialogs, world-map overlay input |
-| `game_overlay_clicks.py` | mouse click dispatch for overlays and world map |
-| `game_input.py` | gameplay input, action dispatch, touch/map clicks, controller movement |
-| `game_population.py` | enemy spawning, resident spawning, ambient resident movement |
-| `game_movement.py` | movement resolution, stair travel, click-pathing, continuous movement |
-| `game_combat.py` | combat resolution, status ticks, enemy turn logic |
-| `game_ui.py` | general UI helpers, menus/toggles, reward/death/provisioner helpers |
-| `game_menu_ui.py` | menu layout, menu activation, visible option filtering |
-| `game_rewards_ui.py` | reward and provisioner choice system |
+| `game_world_map_settlements.py` | settlement size, subtitle text, town palette for map display |
+| `game_towns.py` | town landmarks, building flavor, service entry, `surface_landmark_kinds()` gate |
+| `game_towns_services.py` | town service application (inn, smith, cartographer, apothecary, bathhouse, armory) |
+| `game_towns_reveal.py` | cartographer/resident map reveal logic |
+| `game_town_reactions.py` | settlement-response text; with-attitude-dialogue prefixing |
+| `game_landmark_services.py` | surface-modal landmark reward handlers (`apply_surface_landmark`) |
+| `game_rare_npcs.py` | wandering merchants and lorekeepers: seeded once per world |
+| `game_floor_generation.py` | floor construction, pickup/feature placement, XP checks on entry |
+| `game_overlay_events.py` | overlay event routing, keyboard/mouse handling per overlay type |
+| `game_overlay_controller.py` | controller D-pad/button handling for all overlay types |
+| `game_overlay_input.py` | analog stick navigation, non-event overlay state |
+| `game_overlay_clicks.py` | mouse/touch click dispatch for overlays, world map, levelup cards |
+| `game_input.py` | gameplay input, action dispatch, touch tap routing |
+| `game_population.py` | enemy spawn: biome pool, signature/bookend selection |
+| `game_residents.py` | resident lookup helpers and movement routines |
+| `game_residents_town.py` | resident roster spawning, biome-flavored roles, patrol assignment |
+| `game_resident_boons.py` | once-per-town resident boon interactions |
+| `game_movement.py` | movement resolution, stair/portal travel, click-pathing, continuous movement |
+| `game_combat.py` | combat resolution, status ticks, melee/ranged attack dispatch |
+| `game_combat_ai.py` | per-enemy AI: movement, attack, flanking, reinforcement calls |
+| `game_abilities.py` | Level 4 ability pool; passive hooks for kill/hit/region-enter/light/cache |
+| `game_xp.py` | XP tracking, level thresholds L1–L5, level-up trigger, `player_title()` |
+| `game_respawn.py` | death flow: gold loss, region reset, respawn at homepoint/shrine/origin |
+| `game_stats.py` | derived stat properties: `light_radius`, `melee_range`, `effective_*_damage` |
+| `game_trade.py` | trade overlay state: stock generation, buy/sell, attitude-scaled depth |
+| `game_harvest.py` | farmland harvest nodes: spec, eligibility, generation, turn-in |
+| `game_social_quests.py` | cross-town social quests: letters, favors, relatives, rumor follow-ups |
+| `game_quests.py` | quest board refresh, board quest assignment, quest completion |
+| `game_quest_board.py` | board-attitude gating, reward scaling, priority contract generation/themes |
+| `game_quest_generation.py` | procedural quest construction per kind |
+| `game_quest_text.py` | quest description text, journal entry lines, chain stage text |
+| `game_ui.py` | general UI helpers, touch dock, shared overlay utilities, sighting messages |
+| `game_menu_ui.py` | main/pause menu, inventory/journal/log toggles and layout, inventory rows |
+| `game_tuning.py` | tuner overlay: schema, value adjustment, layout |
+| `game_rewards_ui.py` | reward choice and provisioner choice handling |
 | `game_death_ui.py` | death overlay layout and stat tab content |
-| `game_journal_ui.py` | journal overlay layout/state, quest selection/actions |
+| `game_journal_stats.py` | quest counts, prosperity/standing math, character tab rows, journal summary |
+| `game_journal_ui.py` | journal overlay layout/state, quest selection/actions, three-tab nav |
 | `game_log_ui.py` | recent-log overlay layout/state |
 | `game_autoexplore.py` | autoexplore targeting, frontier scoring, path selection |
 | `game_visibility.py` | FOV, seen tiles, exploration progress, terrain feature generation |
 | `game_terrain.py` | terrain candidate selection and vision transparency sync |
-| `game_inventory.py` | inventory and equipment operations |
-| `game_journal_stats.py` | quest completion counts, prosperity/standing math, active-work summaries, journal summary text |
+| `game_inventory.py` | inventory and equipment data operations, floor item generation |
+| `game_inventory_use.py` | item use dispatch: medkit, tonic, consumable effects, equip/unequip |
 | `game_inspect.py` | inspect panel text and hover/click info |
 | `game_controls.py` | controls modal and controller labeling |
-| `game_quests.py` | quest board, quest generation, quest completion |
-| `game_residents.py` | resident boons, adjacent-resident interaction, resident routines |
-| `game_floor_generation.py` | floor item/pickup placement, feature placement, floor endpoints |
 
 For a fuller walkthrough, read `docs/ARCHITECTURE.md`.
 
@@ -125,10 +147,10 @@ For a fuller walkthrough, read `docs/ARCHITECTURE.md`.
 - **Every "is an overlay open" gating check is duplicated across many call sites, not centralized.** `tuner_open`/`inventory_open`/`world_map_open`/`has_pending_choice()`/`game_over`/`travel_mode` are combined in ~15 different `if` expressions across keyboard input, controller dpad navigation, controller button handling, touch dispatch, and the various `toggle_X()` guard clauses. Adding a new full-screen overlay means greping for `tuner_open` and adding your new flag everywhere it appears, in all of: the render dispatch chain in `rendering.py`, the keyboard block in `handle_input`, the controller dpad block in `update_controller_overlay_navigation`, the controller button block in `handle_controller_button`, `touch_action_at`, `handle_touch_tap`, and every other `toggle_X()`'s own guard. Missing one spot doesn't crash, it just leaves a silent input leak (e.g. world map openable while inventory is up) — verify by toggling every overlay combination, not just opening yours in isolation.
 
 ## Known Debt
-- A small automated suite now exists under `shadowcaster/tests/` and currently covers boot smoke, edge-exit reachability, town/monster-town door connectivity, transparent-blocker FOV behavior, surface-landmark idempotency, auto-move interruption rules, overlay gating, click-path safety around exits/hazards, autoexplore hostile handling, journal selection/map gating, notice-board refresh behavior, local-debug world-map preview seeding, local-region save/load continuity, and persistence for claimed surface landmarks. It is still intentionally lightweight and should keep growing around generation invariants plus overlay/input regressions over time.
-- `regions_town.py` (~555 lines) is the largest remaining non-mixin module. `generate_town` alone is ~420 lines and could be split further if it grows.
+- A small automated suite now exists under `shadowcaster/tests/` and currently covers boot smoke, edge-exit reachability, town/monster-town door connectivity, transparent-blocker FOV behavior, surface-landmark idempotency, auto-move interruption rules, overlay gating, click-path safety around exits/hazards, autoexplore hostile handling, journal selection/map gating, notice-board refresh behavior, local-debug world-map preview seeding, local-region save/load continuity, and persistence for claimed surface landmarks. It is still intentionally lightweight and should keep growing, especially around leveling/ability state round-tripping and the new overlay input surfaces.
+- `game_rewards_ui.py` (~400 lines) is the largest mixin, at the size limit. Monitor before adding to it.
 - The top-level `shadowcaster/game_*.py` shims exist for backward compat but add navigation overhead. They can be removed once all import sites are confirmed to use `shadowcaster/mixins/` directly.
-- Rendering and regions split is complete, but `rendering_primitives.py` (~505 lines) could eventually be split into shape-drawing helpers vs. text/layout helpers if it grows.
+- `rendering_primitives.py` is moderately large; it could eventually be split into shape-drawing vs. text/layout helpers if it grows past 400 lines.
 
 ## Handoff Workflow
 - Read `AGENTS.md` first for runbook, invariants, and current gameplay rules
@@ -192,6 +214,12 @@ For a fuller walkthrough, read `docs/ARCHITECTURE.md`.
 - `Game` must include `QuestTextMixin` in its MRO; `QuestsMixin` depends on helpers such as `quest_posting_cycle()` and several quest-description/label builders from that mixin. If notice-board or quest-board methods suddenly start raising missing-attribute errors, check `shadowcaster/game.py` composition first.
 - Floor loot now also exists as `GroundItem` wrappers around `Item` data. Rendering, inspect text, region snapshots, and save/load all expect `floor_items` to move together; if you add a new item pickup path, update both the current region snapshot and persistence serializers or the pickup will vanish on region transitions/save load
 - The app boots to a main menu and supports multi-save menu actions backed by numbered files under `saves/`, with legacy `savegame.json` compatibility
+- The leveling system runs L1–L5 (`player_level`, `player_xp` in world state). XP is earned from first-time discoveries, quest milestones, and world-distance milestones — not from kills or revisits. Level-up triggers a modal; Level 4 forces ability selection from `ABILITY_POOL` before dismiss is allowed. Level 5 gates legendary sites (ossuary/mirrorwood) and the city stronghold. See `game_xp.py` for thresholds and sources.
+- `active_ability` (string key into `ABILITY_POOL`) is persisted in world state; passive ability hooks fire from `game_combat.py` (on_hit_received), `game_population.py` (on_kill), `game_floor_generation.py` (on_region_enter), `game_stats.py` (light_bonus), and `game_inventory.py` (cache_double_chance)
+- The trade overlay (`game_trade.py`, `rendering_trade.py`) is a separate two-column UI accessed via trader NPCs; it has its own keyboard, controller, and touch paths
+- Trinkets are equippable accessories (category "trinket") that unlock at Level 2; only one can be equipped at a time; they are never sold by traders (enforced via `NEVER_SOLD` in `item_catalog.py`)
+- The journal has three tabs: Active quests (0), Completed quests (1), and Character (2); the Character tab shows level/title, XP progress, active ability, and dominant track via `character_journal_rows()` in `game_journal_stats.py`
+- The city has a 4th district (stronghold) added to `_CITY_DISTRICT_OFFSETS` in `game_world_geography.py`; it routes to a 3-floor castle-class region with danger offset 3 and is blocked below Level 5
 - Runs now carry a persisted `world_seed`; setting `DEFAULT_WORLD_SEED` or `SHADOWCASTER_WORLD_SEED` should make world generation repeat exactly across new games and saves, while runtime-only randomness like dialogue choice can still vary
 - Regions now have randomized type-appropriate names and a top banner label
 - Delves are now entered through overworld landmarks instead of the old 3-choice destination picker
@@ -210,7 +238,7 @@ For a fuller walkthrough, read `docs/ARCHITECTURE.md`.
 - Overworld biome roster now also includes farmland, badlands, tundra, and volcanic; their current identity is still intentionally lightweight and mostly driven by layout, palette, terrain markers, and enemy mix
 - Current special enemies include early archers and shamans in appropriate regions
 - The early-game threat curve is intentionally softer now: first-floor overworld regions spawn fewer enemies, and shamans are delayed or nerfed compared with older builds
-- Enemy variety now includes lighter biome-flavored variants such as pouncers, boglings, and sentinels in addition to stalkers, archers, shamans, and brutes
+- Enemy variety now includes 81 authored types across all biomes with 9 behavioral archetypes (pursuer, kiter, charger, tank, flanker, ambusher, swarmer, and variants) plus traits (pack_bonus, regen, berserks, calls_reinforcements, shields_ally, reflects_damage); named elite enemies are gated at Level 2+
 - Region danger is now persisted per region: overworld areas snapshot a hybrid of distance-from-origin and player strength on first discovery, and local delves inherit/escalate from their parent region instead of relying only on raw global floor
 - Exploration progress should count only tiles reachable from the player start, and completion should use meaningful reachable frontier logic rather than raw "some visible tile exists somewhere" logic
 - Connected region types can link at their edges into a persistent world grid; stairs still provide vertical/floor progression inside local delves
@@ -266,5 +294,5 @@ Adding any of these means: extend the cycle in `create_upgrade_pickup`, add tuni
 - Future town work should use transition tiles or doors into dedicated interior maps rather than cramming interiors onto the outdoor map
 - Next roadmap step under consideration: deepening town interactions beyond one-shot service rooms; generation-side groundwork now includes service rooms, door integrity, biome-aware settlement metadata, non-service building flavor, and simple resident routines/patrols
 - Input work is now far enough along that regressions often show up in overlays first; if a modal changes, verify keyboard, mouse, controller, and touch all still have a viable path through it
-- Landmark variety was expanded in the last session: overworld regions now generate 11 surface-modal site kinds (waystone, barrow, stone_circle, oasis, hot_spring, watchtower, grove, necropolis, geyser, standing_stone, camp) in addition to the 6 enterable kinds (cave, dungeon, castle, ruins, town, monster_town). Surface kinds fire a reward modal immediately on step-on without generating a local interior, tracked via `claimed_surface_landmark_keys` in the region snapshot. Biome landmark pools now vary significantly per biome.
-- The current near-term roadmap slice is Phase 1: with landmark variety landed, the next natural step is multi-step place-based quest chains, or deepening landmark identity/world-map site progress display
+- Landmark variety: overworld regions generate 11 surface-modal site kinds (waystone, barrow, stone_circle, oasis, hot_spring, watchtower, grove, necropolis, geyser, standing_stone, camp) plus 6 enterable kinds (cave, dungeon, castle, ruins, town, monster_town). Surface kinds fire a reward modal on step-on, tracked via `claimed_surface_landmark_keys`. Biome landmark pools vary per biome.
+- Phases 0–7 are complete. Phase 8 is unplanned; next natural candidates are more landmark types/quest situations, biome first-visit flavor text, or additional item variety. Prefer features that strengthen expedition identity over systemic sprawl.

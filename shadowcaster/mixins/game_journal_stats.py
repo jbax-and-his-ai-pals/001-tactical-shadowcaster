@@ -213,16 +213,54 @@ class JournalStatsMixin(GameMixinBase):
                   ("Pathfinder", 1): "Pathfinder", ("Pathfinder", 2): "Master Pathfinder"}
         return labels.get((name, tier), name)
 
+    def character_journal_rows(self) -> list[dict]:
+        """Return display rows for the Character tab."""
+        from .game_xp import XP_THRESHOLDS, LEVEL_UNLOCKS
+        from .game_abilities import ABILITY_POOL
+        rows = []
+        level = getattr(self, "player_level", 1)
+        title = self.player_title() if hasattr(self, "player_title") else "Wanderer"
+        xp = getattr(self, "player_xp", 0)
+        if level >= 5:
+            xp_line = "Max level reached."
+        else:
+            threshold = XP_THRESHOLDS.get(level + 1, 0)
+            xp_line = f"XP: {xp} / {threshold}  ({threshold - xp} to next level)"
+        rows.append({"header": f"Level {level} — {title}", "detail": xp_line, "color": (220, 208, 132)})
+        unlock = LEVEL_UNLOCKS.get(level, "")
+        if unlock:
+            rows.append({"header": "Current unlock", "detail": unlock, "color": (180, 202, 224)})
+        ability_key = getattr(self, "active_ability", "")
+        if ability_key and ability_key in ABILITY_POOL:
+            spec = ABILITY_POOL[ability_key]
+            rows.append({"header": f"Ability: {spec['name']}", "detail": spec["description"], "color": (196, 160, 255)})
+        elif level >= 4:
+            rows.append({"header": "Ability: None chosen", "detail": "No ability active.", "color": (140, 140, 160)})
+        track = self.dominant_track()
+        if track:
+            label = self.track_tier_label(track[0], track[1])
+            rows.append({"header": f"Role: {label}", "detail": f"Lead track: {track[0]}.", "color": (160, 210, 180)})
+        else:
+            rows.append({"header": "Role: Unnamed", "detail": "Complete quests and explore to earn a role.", "color": (140, 148, 156)})
+        return rows
+
     def current_journal_summary_lines(self):
         counts = self.quest_summary_counts()
         track = self.dominant_track()
         track_label = self.track_tier_label(track[0], track[1]) if track else "Unnamed"
-        lines = [f"{counts['active']} active"] if self.journal_tab == 0 else [
-            f"{counts['completed']} completed",
-            f"Towns helped {counts['towns_helped']}  -  D {counts['delivery']} / S {counts['scout']} / B {counts['bounty']} / C {counts['chain']}",
-            f"Role: {track_label}",
-        ]
-        if self.region_type == "town":
+        if self.journal_tab == 2:
+            level = getattr(self, "player_level", 1)
+            title = self.player_title() if hasattr(self, "player_title") else "Wanderer"
+            lines = [f"Level {level} — {title}"]
+        elif self.journal_tab == 0:
+            lines = [f"{counts['active']} active"]
+        else:
+            lines = [
+                f"{counts['completed']} completed",
+                f"Towns helped {counts['towns_helped']}  -  D {counts['delivery']} / S {counts['scout']} / B {counts['bounty']} / C {counts['chain']}",
+                f"Role: {track_label}",
+            ]
+        if self.region_type == "town" and self.journal_tab != 2:
             lines.append(
                 f"Town standing {self.town_attitude_label()}  -  Prosperity {self.town_prosperity_label(self.world_position)}"
             )

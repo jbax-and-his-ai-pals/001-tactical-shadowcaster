@@ -180,7 +180,7 @@ class InputMixin(GameMixinBase):
             self.handle_game_over_click(screen_x, screen_y, dismiss_on_miss=True)
             return
         if active_overlay == "levelup":
-            self.dismiss_levelup()
+            self.handle_levelup_click(screen_x, screen_y)
             return
         self.handle_touch_map_tap(screen_x, screen_y)
 

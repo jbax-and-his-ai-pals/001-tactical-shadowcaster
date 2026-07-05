@@ -170,7 +170,24 @@ def render_journal_overlay(game):
     content.fill((0, 0, 0, 0))
 
     entries = game.current_journal_entries()
-    if not entries:
+    if not entries and game.journal_tab == 2:
+        char_rows = game.character_journal_rows()
+        y = 12
+        row_w = viewport_rect.width - 16
+        for row in char_rows:
+            header_surf = game.small_font.render(row["header"], True, row["color"])
+            detail_surfaces = wrap_text(game.small_font, row["detail"], COLOR_TEXT, row_w - 28)
+            row_height = 20 + len(detail_surfaces) * 18 + 14
+            row_rect = pygame.Rect(8, y, row_w, row_height)
+            pygame.draw.rect(content, (26, 34, 50, 200), row_rect, border_radius=10)
+            pygame.draw.rect(content, (*row["color"][:3], 160), row_rect, 1, border_radius=10)
+            content.blit(header_surf, (row_rect.left + 12, row_rect.top + 8))
+            line_y = row_rect.top + 28
+            for surf in detail_surfaces:
+                content.blit(surf, (row_rect.left + 12, line_y))
+                line_y += 18
+            y += row_height + 8
+    elif not entries:
         empty_lines = ["No quests in this tab yet.", "Visit a town board to pick up new work."]
         y = 16
         for line in empty_lines:

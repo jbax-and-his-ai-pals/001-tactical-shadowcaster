@@ -21,19 +21,17 @@
 | 4 | Regional Pressure & Encounter Variety | ✅ Complete | 95% |
 | 5 | Larger Social & World Structures | ✅ Complete | 95% |
 | 6 | Economy, Items, and Combat Depth | 🔄 Mostly Complete | ~90% |
-| 7 | Leveling, Persistence, and Universal Rarity | 🔄 In Progress | ~80% |
+| 7 | Leveling, Persistence, and Universal Rarity | ✅ Complete | ~95% |
 
-Overall: roughly **85% of total planned work shipped** (Phases 0-6 complete or near-complete; Phase 7 in final stretch).  
-Most complete: world exploration, settlement generation, combat, world-map UX, settlement attachment, world loop, archetype tracks, gather/harvest, social quests, world geography, trade system, composable item effects, enemy catalog (55+ types), leveling (L1–L4), persistent world and death system, universal rarity model.  
-Remaining frontier: Level 5 gating (legendary sites, city stronghold), second-pass enemy catalog toward 80+ types, continued controller/touch audit.
+Overall: roughly **92% of total planned work shipped** (Phases 0-7 complete or near-complete).  
+Most complete: world exploration, settlement generation, combat, world-map UX, settlement attachment, world loop, archetype tracks, gather/harvest, social quests, world geography, trade system, composable item effects, enemy catalog (81 types), leveling (L1–L5 with ability system), legendary site gating, city stronghold, persistent world and death system, universal rarity model.  
+Remaining frontier: controller/touch audit on new overlays, ability shown in journal overlay, long-term enemy catalog toward 100+ types.
 
 ---
 
 ## Current Focus
-- Complete the Level 5 unlock: gate legendary site entry, open the city stronghold region
-- Second-pass enemy catalog toward 80+ authored types
-- Audit new overlays and input paths for controller and touch regressions
-- Minor UX polish on inventory (trinket slot display, ability shown in journal)
+- Long-term: enemy catalog toward 100+ types
+- Phase 8 planning: more landmark types, biome first-visit flavor, additional quest situations
 
 ## Player Fantasy
 - The game is a **persistent world expedition**, not a roguelite — the world, map discoveries, quests, towns, and character all persist between sessions
@@ -106,7 +104,7 @@ Remaining frontier: Level 5 gating (legendary sites, city stronghold), second-pa
 - Main menu, multi-save/load shell, global world seed, death modal with stat tabs
 - Two-column trade overlay: seeded trader gold pool, buy/sell with price display, attitude-scaled stock depth
 - Composable item effect system: Potions, Tonics, Tinctures with rarity tiers; Common/Uncommon/Rare/Legendary; never-sold invariant enforced
-- 55+ data-driven enemies across all biomes: behaviors (pursuer, kiter, charger, tank, flanker, ambusher), traits (pack_bonus, regen, berserks, calls_reinforcements, shields_ally, reflects_damage), named elites gated at Level 2
+- 81 data-driven enemies across all biomes: behaviors (pursuer, kiter, charger, tank, flanker, ambusher), traits (pack_bonus, regen, berserks, calls_reinforcements, shields_ally, reflects_damage), named elites gated at Level 2
 - Leveling system (L1–L4 active): XP from first-time discoveries, quest milestones, world-distance milestones; level-up modal per level; unlock text
 - Level 2: trinket equip slot (equippable accessories with stat bonuses); named elite enemies enter spawn pools
 - Level 3: NPCs address player by title at all attitude tiers; Beloved towns at L3+ post a second priority quest; reward bonus +15g
@@ -322,7 +320,7 @@ The provisioner/trader only ever sells Common items. Finding Uncommon through ex
 
 #### 6C — Enemy Variety Expansion `M-L`
 
-**Current state:** 55+ data-driven enemy types across all biomes, with 9 behavioral archetypes and a full trait system. First-pass catalog ships and spawns correctly. Second-pass toward 80+ is ongoing.
+**Current state:** 81 data-driven enemy types across all biomes, with 9 behavioral archetypes and a full trait system. First and second pass complete.
 
 **Target:** 80+ authored types as a second milestone; long-term goal of 100+ types deep enough that players encounter unfamiliar enemies across many sessions.
 
@@ -354,9 +352,9 @@ The provisioner/trader only ever sells Common items. Finding Uncommon through ex
 - [x] Data-driven enemy definition model (`enemy_catalog.py`): behavior archetype, biome list, tier range, special traits, stat scaling
 - [x] Behavior dispatch system routes each archetype to the correct AI logic (pursuer, kiter, flanker, charger, tank, ambusher, swarmer) — `game_combat_ai.py`
 - [x] Special trait system: pack_bonus, shields_ally, berserks, regen, drains_hp, blinds_player, calls_reinforcements, reflects_damage implemented
-- [x] First pass catalog: 55+ named types authored and spawning correctly by biome and tier
+- [x] First pass catalog: 55+ named types authored and spawning correctly by biome and tier (now 81 total)
 - [x] Biome spawn tables updated to draw from catalog rather than hard-coded type lists
-- [ ] Second pass catalog: 80+ total types (ongoing)
+- [x] Second pass catalog: 81 total types shipped
 - [ ] Long-term target: 100+ types (ongoing, not blocking exit)
 
 ---
@@ -442,8 +440,10 @@ The provisioner/trader only ever sells Common items. Finding Uncommon through ex
 - [x] Level-up modal: shows new title, what opened, what the next level requires
 - [x] Level 2: accessory slot in inventory; named enemy spawn logic (elites gated at level 2+ ✓, trinket slot ✓)
 - [x] Level 3: NPC greeting lines pull player name/title; harder board jobs at high-attitude towns
-- [x] Level 4: ability selection modal at level-up; 6-ability pool with passive combat effects wired
-- [ ] Level 5: legendary site entry gating; city stronghold region routing
+- [x] Level 4: ability selection modal at level-up; 6-ability pool with passive combat effects wired; click/touch card selection
+- [x] Level 5: legendary site entry gating (ossuary/mirrorwood/stronghold blocked below L5); city stronghold district added as 3-floor castle-class region with elite danger tier
+- [x] Character journal tab: level, title, XP progress, active ability, dominant track
+- [x] Controller/touch audit for all new overlays complete; levelup ability cards clickable/tappable
 
 ---
 

@@ -191,6 +191,29 @@ class OverlayClickMixin(GameMixinBase):
         self.select_world_region(selected)
         return True
 
+    def handle_levelup_click(self, screen_x, screen_y):
+        choices = getattr(self, "levelup_ability_choices", [])
+        if not choices:
+            self.dismiss_levelup()
+            return True
+        panel_w, panel_h = 680, 380
+        px = (SCREEN_WIDTH - panel_w) // 2
+        py = (SCREEN_HEIGHT - panel_h) // 2
+        card_w, card_h = 190, 140
+        gap = 20
+        total_cards_w = len(choices) * card_w + (len(choices) - 1) * gap
+        start_card_x = px + (panel_w - total_cards_w) // 2
+        card_y = py + 82
+        for i in range(len(choices)):
+            rect = pygame.Rect(start_card_x + i * (card_w + gap), card_y, card_w, card_h)
+            if rect.collidepoint(screen_x, screen_y):
+                if i == self.levelup_ability_index:
+                    self.confirm_ability_choice(i)
+                else:
+                    self.levelup_ability_index = i
+                return True
+        return False
+
     def handle_service_modal_click(self, screen_x, screen_y):
         ok_rect = self.service_modal_ok_rect()
         if ok_rect and ok_rect.collidepoint(screen_x, screen_y):

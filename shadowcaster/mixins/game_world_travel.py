@@ -40,7 +40,7 @@ class WorldTravelMixin(GameMixinBase):
         return (1, 1)
 
     def region_uses_interior_world_exits(self, region_type=None):
-        return (region_type or self.region_type) in {"dungeon", "cave", "monster_town", "ruins", "castle", "maze"}
+        return (region_type or self.region_type) in {"dungeon", "cave", "monster_town", "ruins", "castle", "maze", "stronghold"}
 
     def reveal_adjacent_world_regions(self):
         return self.reveal_adjacent_world_regions_from(self.world_position)
@@ -192,16 +192,45 @@ class WorldTravelMixin(GameMixinBase):
         self.seen_tiles = set()
         self.store_current_region()
 
+    def _level5_gate_message(self, target_coord) -> str | None:
+        """Return a gate message if the player can't enter the target coord, or None if allowed."""
+        level = getattr(self, "player_level", 1)
+        if level >= 5:
+            return None
+        city = getattr(self, "world_city", {})
+        district_type = city.get("districts", {}).get(target_coord)
+        if district_type == "stronghold":
+            return "The stronghold gates are sealed. Only a Master-rank traveler may enter."
+        target_key = self.region_key(target_coord)
+        known_type = (
+            self.world_regions.get(target_key, {}).get("region_type")
+            or self.preview_world_regions.get(target_key, {}).get("region_type")
+        )
+        if known_type in ("ossuary", "mirrorwood"):
+            label = "Ossuary" if known_type == "ossuary" else "Mirrorwood"
+            return f"The {label} resists your presence. Reach Master rank before you enter."
+        return None
+
     def transition_to_world_region(self, direction):
         target_coord = self.move_coord(self.world_position, direction)
         if self.is_ocean_coord(target_coord):
             sea_name = self.world_coast.get("name", "the sea")
             self.message = f"{sea_name.capitalize()} lies beyond — the waters are impassable."
             return
+        gate_msg = self._level5_gate_message(target_coord)
+        if gate_msg:
+            self.message = gate_msg
+            return
         self.store_current_region()
         target_key = self.region_key(target_coord)
         if target_key not in self.world_regions:
             self.generate_world_region(target_coord)
+        # Re-check after generation (region type now known)
+        gate_msg = self._level5_gate_message(target_coord)
+        if gate_msg:
+            self.load_region_state(self.world_regions[self.region_key(self.world_position)])
+            self.message = gate_msg
+            return
         self.world_position = target_coord
         self.load_region_state(self.world_regions[target_key], arrival_direction=self.opposite_direction(direction))
         self.message = f"You cross into {self.region_name}."

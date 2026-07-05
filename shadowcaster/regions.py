@@ -242,6 +242,8 @@ def generate_region(floor, width, height, region_type=None, name=None, context=N
         return Region(generate_ruins(width, height), region_type, name, palette)
     if region_type == "mirrorwood":
         return Region(generate_forest(width, height), region_type, name, palette)
+    if region_type == "stronghold":
+        return Region(generate_castle(width, height), region_type, name, palette)
     if region_type in INTERIOR_REGION_TYPES:
         return Region(generate_interior(width, height, region_type), region_type, name, palette)
     return Region(Dungeon(width, height), region_type, name, palette)

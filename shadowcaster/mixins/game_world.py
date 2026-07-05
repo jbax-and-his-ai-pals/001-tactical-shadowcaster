@@ -34,10 +34,10 @@ class WorldMixin(GameMixinBase):
         return self.overworld_region_types()
 
     def multilevel_region_types(self):
-        return {"dungeon", "cave", "monster_town", "ruins"}
+        return {"dungeon", "cave", "monster_town", "ruins", "stronghold"}
 
     def landmark_region_types(self):
-        return {"dungeon", "cave", "castle", "town", "ruins", "monster_town"}
+        return {"dungeon", "cave", "castle", "town", "ruins", "monster_town", "stronghold"}
 
     def exploration_rewards_enabled(self, region_type=None):
         return (region_type or self.region_type) not in INTERIOR_REGION_TYPES
@@ -166,6 +166,7 @@ class WorldMixin(GameMixinBase):
             "cave": (2, 4),
             "monster_town": (2, 3),
             "ruins": (2, 4),
+            "stronghold": (3, 3),
         }
         minimum, maximum = depth_ranges.get(region_type, (1, 1))
         return random.randint(minimum, maximum)
@@ -199,6 +200,7 @@ class WorldMixin(GameMixinBase):
             "maze": 2,
             "ossuary": 2,
             "mirrorwood": 1,
+            "stronghold": 3,
         }.get(region_type, 0)
 
     def assign_region_danger(self, coord=None, region_type=None, parent_tier=None, depth=1):
@@ -278,6 +280,11 @@ class WorldMixin(GameMixinBase):
             district_type = city.get("districts", {}).get(coord)
             if district_type:
                 city_name = city.get("name", "the city")
+                if district_type == "stronghold":
+                    district_name = f"{city_name} — Stronghold"
+                    return RegionChoice(region_type="stronghold", name=district_name,
+                                        summary=f"The fortified heart of {city_name}. Perilous.",
+                                        context={"city_name": city_name, "district_type": district_type})
                 district_name = f"{city_name} — {district_type.title()} Quarter"
                 return RegionChoice(region_type="town", name=district_name, summary=f"A district of {city_name}.",
                                     context={"city_name": city_name, "district_type": district_type})

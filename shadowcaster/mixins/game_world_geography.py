@@ -120,8 +120,8 @@ class WorldGeographyMixin(GameMixinBase):
         "Ironhaven", "Duskport", "Ashford", "Greymark", "Stormgate",
         "Coldwater", "Thornwall", "Embervale", "Saltholm", "Ravenspire",
     ]
-    _CITY_DISTRICT_OFFSETS: list[tuple[int, int]] = [(1, 0), (0, -1), (-1, 0)]
-    _CITY_DISTRICT_TYPES = ["market", "civic", "temple"]
+    _CITY_DISTRICT_OFFSETS: list[tuple[int, int]] = [(1, 0), (0, -1), (-1, 0), (0, 1)]
+    _CITY_DISTRICT_TYPES = ["market", "civic", "temple", "stronghold"]
 
     def generate_world_city(self) -> dict:
         with self.seed_scope("world_city"):

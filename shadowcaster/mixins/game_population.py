@@ -126,13 +126,14 @@ class PopulationMixin(GameMixinBase):
             "mountain": {1: "sentinel",   3: "stone_golem",  5: "mountain_warden"},
             "tundra":   {1: "sentinel",   3: "frost_shaman", 5: "glacier_brute"},
             "cave":     {1: "bogling",    3: "lurker",       5: "lair_sentinel"},
-            "dungeon":  {1: "lurker",     3: "cave_brute",   5: "dungeon_warden"},
-            "maze":     {1: "bogling",    3: "lurker",       5: "dungeon_warden"},
-            "volcanic": {1: "ember_sprite",3:"hexer",        5: "magma_titan"},
-            "badlands": {1: "archer",     3: "hexer",        5: "ash_warden"},
-            "ruins":    {1: "stalker",    3: "armored_lurker",5:"lich"},
-            "castle":   {1: "sentinel",   3: "knight",       5: "castle_warden"},
-            "monster_town":{2:"bogling",  3:"orc_shaman",    5:"war_chief"},
+            "dungeon":  {1: "trap_springer",3: "cave_brute",   5: "dungeon_warden"},
+            "maze":     {1: "bogling",    3: "maze_specter", 5: "dungeon_warden"},
+            "volcanic": {1: "ember_sprite",3:"cinder_hound", 5: "magma_titan"},
+            "badlands": {1: "scorched_raider",3:"dust_wraith",5:"ash_warden"},
+            "ruins":    {1: "grave_crawler",3:"armored_lurker",5:"lich"},
+            "castle":   {1: "herald",     3: "knight",       5: "castle_warden"},
+            "monster_town":{1:"goblin",   3:"orc_shaman",    5:"war_chief"},
+            "stronghold":  {3:"knight",   4:"castle_warden", 5:"castle_warden"},
         }
         tiers = _sigs.get(rt, {})
         if not tiers:

@@ -1,7 +1,7 @@
 import pygame
 
 from .constants import COLOR_ACCENT, COLOR_TEXT, SCREEN_HEIGHT, SCREEN_WIDTH
-from .rendering_primitives import wrap_text
+from .rendering_primitives import wrap_text, wrap_text_lines
 
 
 def render_levelup_overlay(game):
@@ -44,10 +44,10 @@ def render_levelup_overlay(game):
             pygame.draw.rect(card_surf, border_color, card_surf.get_rect(), 2, border_radius=10)
             name_surf = game.small_font.render(spec.get("name", key), True, (255, 230, 140) if selected else (200, 190, 140))
             card_surf.blit(name_surf, name_surf.get_rect(center=(card_w // 2, 20)))
-            for di, dline in enumerate(wrap_text(spec.get("description", ""), game.small_font, card_w - 16)):
+            for di, dline in enumerate(wrap_text_lines(game.small_font, spec.get("description", ""), card_w - 16)):
                 ds = game.small_font.render(dline, True, (220, 215, 200) if selected else COLOR_TEXT)
                 card_surf.blit(ds, (8, 44 + di * 22))
-            for fi, fline in enumerate(wrap_text(spec.get("flavor", ""), game.small_font, card_w - 16)):
+            for fi, fline in enumerate(wrap_text_lines(game.small_font, spec.get("flavor", ""), card_w - 16)):
                 fs = game.small_font.render(fline, True, (160, 150, 110) if selected else (120, 115, 90))
                 card_surf.blit(fs, (8, card_h - 36 + fi * 18))
             panel.blit(card_surf, (card_x, card_y))
@@ -77,7 +77,7 @@ def render_levelup_overlay(game):
     panel.blit(lvl_surf, lvl_surf.get_rect(center=(panel_w // 2, 70)))
 
     y_text = 104
-    for line in wrap_text(unlock, game.small_font, panel_w - 64):
+    for line in wrap_text_lines(game.small_font, unlock, panel_w - 64):
         surf = game.small_font.render(line, True, COLOR_TEXT)
         panel.blit(surf, surf.get_rect(center=(panel_w // 2, y_text)))
         y_text += 26

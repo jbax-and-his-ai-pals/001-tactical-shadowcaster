@@ -48,12 +48,14 @@ class JournalUIMixin(JournalStatsMixin, GameMixinBase):
         self.message = f"You abandon the {quest.kind} quest."
 
     def quest_tabs(self):
-        return ["Active", "Completed"]
+        return ["Active", "Completed", "Character"]
 
     def current_journal_entries(self):
         if self.journal_tab == 0:
             return [quest for quest in self.active_quests if quest.status == "active"]
-        return list(reversed(self.completed_quests()))
+        if self.journal_tab == 1:
+            return list(reversed(self.completed_quests()))
+        return []  # Character tab renders its own content
 
     def journal_button_rect(self):
         map_width = VIEW_WIDTH * TILE_SIZE

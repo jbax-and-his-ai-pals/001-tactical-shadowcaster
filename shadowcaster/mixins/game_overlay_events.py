@@ -121,6 +121,12 @@ class OverlayEventMixin(GameMixinBase):
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 self.handle_game_over_click(*event.pos)
             return True
+        if overlay == "levelup":
+            if event.type == pygame.KEYDOWN:
+                self.handle_overlay_keydown(event)
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                self.handle_levelup_click(*event.pos)
+            return True
         return False
 
     def handle_overlay_keydown(self, event):

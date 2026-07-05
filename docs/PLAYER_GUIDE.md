@@ -2,7 +2,7 @@
 
 The game is a world-expedition roguelite. You explore a procedurally generated world, discover named places, decide whether they're worth the risk, and return with something meaningful. The world remembers what you've done.
 
-This guide covers everything needed to play effectively: controls, the world loop, upgrades, gear, enemies, and the four progression tracks.
+This guide covers everything needed to play effectively: controls, the world loop, upgrades, gear, enemies, the four progression tracks, and the leveling system.
 
 ---
 
@@ -209,20 +209,41 @@ Armor defense is applied before damage on every hit: `damage taken = max(1, inco
 
 ## Enemies
 
-Enemies spawn based on region type and danger tier. At the end of a group, a stronger bookend may appear.
+Enemies spawn based on region type and danger tier. Each biome has its own pool; the first enemy in a group is usually a signature type for that biome, and the last may be a stronger bookend. The full enemy roster has 80+ types — you will encounter unfamiliar enemies well into a long run.
 
-| Enemy | Marker | Notes |
-|-------|--------|-------|
-| **Stalker** | Enemy | Standard pursuer; A* pathfinding to player. Baseline threat. |
-| **Pouncer** | Beast | Low HP, fast. Forest signature. Dies quickly but moves before you can react if you're not watching flanks. |
-| **Bogling** | Beast | Cave/swamp signature. Tough for early danger tiers; packs hit hard. |
-| **Sentinel** | Settler | High HP (4). Mountain/tundra/ruins/castle. Slow but absorbs many hits. |
-| **Archer** | Archer | Ranged attacker (range 6, prefers distance 3). Plains/desert/farmland. Kites backward; close the distance before engaging. |
-| **Shaman** | Shaman | Ranged, applies **poison** or **burn** (by biome). Range 4, prefers distance 2. Swamp, cave, volcanic. Kill first — status effects compound over turns. |
-| **Hexer** | Shaman | Ranged status applier (range 5, prefers distance 4). Desert/volcanic/badlands at threat 3+. Longer range than shaman; dangerous from across the room. |
-| **Lurker** | Enemy | Moves **2 tiles per turn**. Cave/maze at threat 3+. The most dangerous melee enemy in the game because it closes distance instantly. |
-| **Brute** | Enemy | High HP (5), +2 damage. Bookend at threat 3+ in most regions. Respect the damage — don't tank hits from a brute without armor. |
-| **Warden** | Enemy | High HP (7). Bookend in castle/dungeon at threat 4+. The strongest enemy; plan your resources before the final room. |
+### Common Archetypes
+
+| Archetype | Behavior | Notes |
+|-----------|---------|-------|
+| **Pursuer** | A* pathfinding directly to player | Baseline. Most generic enemies. |
+| **Charger** | Moves toward player aggressively | Often lower HP; dangerous in packs. |
+| **Kiter** | Maintains range, attacks from distance | Always prioritize over melee enemies. |
+| **Ambusher** | Moves 2 tiles per turn | Can close a full room in one turn — never assume distance is safe. |
+| **Tank** | High HP, sometimes reflects damage | Don't trade hits; use terrain to control the fight. |
+| **Swarmer** | Pack bonus when allies are nearby | Each kill weakens the pack; focus fire. |
+
+### Signature Enemies by Biome (partial)
+
+| Enemy | Biome | Notes |
+|-------|-------|-------|
+| **Pouncer** | Forest | Low HP charger. Forest entry signature. |
+| **Bogling** | Swamp/Cave | Tough early beast; packs compound. |
+| **Raider** | Plains/Farmland | Charging settler. Common early threat. |
+| **Dust Crawler** | Desert | Fast charger at tier 1. |
+| **Lurker** | Cave/Dungeon/Maze | 2 tiles per turn. Closes a room instantly. |
+| **Frost Wraith** | Tundra | Ambusher with stun. Extremely dangerous. |
+| **Ember Sprite** | Volcanic | Applies burn on hit. Kill before it reaches you. |
+| **Knight** | Castle/Stronghold | Charging settler with berserks trait. |
+| **Goblin** | Monster Town | Swarming beast; pack bonus. |
+| **Lich** | Ruins | Ranged, poison, regen, calls reinforcements. Hardest ruins enemy. |
+
+### Named Elites (Level 2+)
+
+At **Level 2 (Seasoned)** named elite enemies begin appearing in the world at tier 4+ regions. These have proper names, much higher HP, and multiple combined traits. Killing a named elite awards bonus XP. Named elites are rare — encountering one should change your plan for that floor.
+
+### Bookend Enemies
+
+The last enemy in a group is replaced by a bookend at danger tier 3+: a **Brute** at tier 3, or the biome's named warden type at tier 4+. In castle and dungeon regions, the Castle Warden or Dungeon Warden appears. Plan for the bookend before entering the last room.
 
 ### Terrain Effects
 
@@ -270,6 +291,60 @@ Tracks are not chosen upfront. They emerge from what you do during a run. Your d
 
 ---
 
+## Leveling
+
+Your character has a level from 1 to 5. Levels are earned through **first-time discoveries** — not from kills or revisits.
+
+### XP Sources
+
+| Source | Notes |
+|--------|-------|
+| First visit to each distinct biome type | Exploring the full roster |
+| First bottom floor of each delve family | One-time per family (dungeon, cave, ruins, castle, stronghold) |
+| Quest milestones | First chain quest, first cross-town social quest, etc. |
+| World distance milestones | First region at distance 5, 8, 10 from origin |
+| Attitude milestones | First town reaching each attitude tier |
+| Rare discoveries | First named elite killed, first legendary item found, first rare region entered |
+
+### Level Unlocks
+
+| Level | Title | What Opens |
+|-------|-------|-----------|
+| 1 | Wanderer | Starting state. All core mechanics available. |
+| 2 | Seasoned | **Trinket slot** unlocked in inventory. Named elite enemies begin appearing in the world. |
+| 3 | Experienced | NPCs across the world greet you by title. Beloved towns post a second priority job on the board with a +15g bonus. |
+| 4 | Veteran | **Ability selection** at level-up — choose one passive combat ability from three random options. |
+| 5 | Master | **Legendary sites** (Ossuary, Mirrorwood) become enterable. The named city's **stronghold** district opens. |
+
+### Trinkets (Level 2)
+
+Trinkets are equippable accessories with passive stat bonuses. They appear in floor caches and as quest rewards — they are never sold by traders. Equip one from the Inventory overlay (`I`). Only one trinket can be equipped at a time. Look for **Uncommon** and **Rare** trinkets in deeper regions.
+
+### Abilities (Level 4)
+
+At Level 4, after the level-up screen, you are presented with three ability cards. You must choose one — the overlay cannot be dismissed until a choice is made. The six possible abilities are:
+
+| Ability | Effect |
+|---------|--------|
+| **Bloodthirst** | Killing an enemy restores 1 HP. |
+| **Bulwark** | Taking melee damage grants 1 turn of ward (prevents the next hit). |
+| **Tactician** | Entering a new region grants +1 attack for 5 turns. |
+| **Scavenger** | Hidden caches have a 25% chance to contain double items. |
+| **Ranger** | Permanently increases your field of view by 1. |
+| **Iron Nerve** | No single hit can deal more than 3 damage. |
+
+Use ← → (or D-pad) to browse the three options. Press Enter or A to confirm.
+
+### Legendary Sites (Level 5)
+
+**Ossuary** and **Mirrorwood** are legendary region types that appear far from the origin (distance 8+, very low weight). They are blocked until Level 5. The named city's **Stronghold** district is also gated at Level 5 — it is a 3-floor castle-class region with the highest danger tier in the game.
+
+### Viewing Your Progress
+
+Open the journal (`J`) and switch to the **Character** tab (third tab) to see your current level, XP progress toward the next level, active ability, and dominant progression track.
+
+---
+
 ## Reward Modals
 
 Two events trigger a reward choice:
@@ -291,3 +366,6 @@ Two events trigger a reward choice:
 - **Lurkers move twice per turn** — do not assume a lurker is far enough away. It can close the full room length in one turn.
 - **The Spear's range bonus stacks** — a Spear + two Reach pickups gives melee range 4. That covers most rooms and lets you attack around corners.
 - **Full clears on first floors** — the first floor of a dungeon or cave is the easiest to fully explore. Doing so scores track points and generates a cache chance that scales with your Delver or Pathfinder tier.
+- **Visit new biome types deliberately** — each first visit to a distinct biome awards XP. Check the Character tab (`J` → third tab) to see your current XP and what you're close to unlocking.
+- **Iron Nerve pairs with risky regions** — if you expect to take several hits from a dangerous enemy (frost wraith, named elite), Iron Nerve's 3-damage cap is stronger than any armor. Bulwark shines when enemies have high damage and predictable attack timing.
+- **Legendary sites need preparation** — Ossuary and Mirrorwood only open at Level 5 and have danger tiers equivalent to deep dungeons. Don't rush them. The Stronghold is the hardest content in the game — treat it as an endgame run target.
