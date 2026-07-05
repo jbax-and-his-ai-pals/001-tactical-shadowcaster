@@ -299,6 +299,10 @@ class GameCoreMixin(GameMixinBase):
         self.touch_ui_active = False
         self.world_position = (0, 0)
         self.world_regions = {}
+        self.world_rivers: list[list[tuple[int, int]]] = self.generate_world_rivers()
+        self.world_zones: list[dict] = self.generate_world_zones()
+        self.world_coast: dict = self.generate_world_coast()
+        self.world_city: dict = self.generate_world_city()
         self.preview_world_regions = {}
         self.local_regions = {}
         self.current_local_region: str | None = None

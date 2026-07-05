@@ -167,6 +167,9 @@ class InputMixin(GameMixinBase):
         if active_overlay == "log":
             self.handle_log_click(screen_x, screen_y, dismiss_on_miss=True)
             return
+        if active_overlay == "notice_board":
+            self.handle_notice_board_click(screen_x, screen_y)
+            return
         if active_overlay == "world_map":
             self.handle_world_map_click(screen_x, screen_y, dismiss_on_miss=True)
             return

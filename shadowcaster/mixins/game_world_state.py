@@ -201,6 +201,10 @@ class WorldStateMixin(GameMixinBase):
         self.tuner_return_mode = None
         self.world_position = data["world_position"]
         self.world_regions = data["world_regions"]
+        self.world_rivers = self.generate_world_rivers()
+        self.world_zones = self.generate_world_zones()
+        self.world_coast = self.generate_world_coast()
+        self.world_city = self.generate_world_city()
         self.local_regions = data.get("local_regions", {})
         self.current_local_region = data.get("current_local_region")
         self.service_type = data.get("service_type")

@@ -34,6 +34,7 @@ from .game_towns_reveal import TownsRevealMixin
 from .game_ui import UIMixin
 from .game_visibility import VisibilityMixin
 from .game_world import WorldMixin
+from .game_world_geography import WorldGeographyMixin
 from .game_world_travel import WorldTravelMixin
 from .game_world_map_preview import WorldMapPreviewMixin
 from .game_world_map_settlements import WorldMapSettlementMixin
@@ -77,6 +78,7 @@ __all__ = [
     "TownsRevealMixin",
     "UIMixin",
     "VisibilityMixin",
+    "WorldGeographyMixin",
     "WorldMixin",
     "WorldTravelMixin",
     "WorldMapPreviewMixin",

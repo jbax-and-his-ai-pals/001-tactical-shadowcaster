@@ -193,8 +193,12 @@ class WorldTravelMixin(GameMixinBase):
         self.store_current_region()
 
     def transition_to_world_region(self, direction):
-        self.store_current_region()
         target_coord = self.move_coord(self.world_position, direction)
+        if self.is_ocean_coord(target_coord):
+            sea_name = self.world_coast.get("name", "the sea")
+            self.message = f"{sea_name.capitalize()} lies beyond — the waters are impassable."
+            return
+        self.store_current_region()
         target_key = self.region_key(target_coord)
         if target_key not in self.world_regions:
             self.generate_world_region(target_coord)

@@ -136,6 +136,10 @@ def render_world_map_overlay(game):
             pygame.draw.rect(game.screen, (210, 220, 236), preview_rect, 1, border_radius=6)
             preview_label = game.small_font.render("...", True, (214, 224, 236))
             game.screen.blit(preview_label, preview_label.get_rect(center=rect.center))
+    river_coords = game.world_river_coord_set
+    city = getattr(game, "world_city", {})
+    city_hub = city.get("hub")
+    city_districts = city.get("districts", {})
     for coord in real_coords:
         state = regions[coord]
         rect = region_rects[coord]
@@ -157,12 +161,20 @@ def render_world_map_overlay(game):
         else:
             pygame.draw.rect(game.screen, palette.wall, rect, border_radius=8)
             pygame.draw.rect(game.screen, palette.floor, inner, border_radius=6)
+        if coord in river_coords and not is_hint:
+            rband_h = max(5, inner.height // 4)
+            rband = pygame.Rect(inner.x, inner.centery - rband_h // 2, inner.width, rband_h)
+            pygame.draw.rect(game.screen, (48, 96, 180), rband, border_radius=3)
         if stats_for_cell and not is_hint:
             theme_band = pygame.Rect(inner.x + 2, inner.y + 2, max(10, inner.width - 4), max(4, rect.height // 10))
             pygame.draw.rect(game.screen, stats_for_cell["theme_color"], theme_band, border_radius=4)
         selected = coord == game.selected_world_region
         hovered = coord == game.hovered_world_region
         is_neighbor = coord in focused_neighbors
+        if not is_hint and coord == city_hub:
+            pygame.draw.rect(game.screen, (220, 190, 60), rect.inflate(4, 4), 3, border_radius=10)
+        elif not is_hint and coord in city_districts:
+            pygame.draw.rect(game.screen, (160, 120, 60), rect.inflate(2, 2), 2, border_radius=9)
         border = (255, 232, 126) if coord == game.world_position else (180, 148, 80) if is_hint else palette.banner_border
         pygame.draw.rect(game.screen, border, rect, 3, border_radius=8)
         if state.get("edge_exits") and not is_hint:
@@ -218,6 +230,24 @@ def render_world_map_overlay(game):
             pygame.draw.rect(game.screen, (168, 230, 255), rect.inflate(6, 6), 1, border_radius=10)
         elif is_neighbor:
             pygame.draw.rect(game.screen, (94, 138, 178), rect.inflate(4, 4), 1, border_radius=10)
+    # Zone name labels — dim text centered on each zone anchor tile if visible
+    for zone in game.world_zones:
+        anchor_rect = region_rects.get(zone["center"])
+        if anchor_rect is None:
+            continue
+        r, g, b = zone["color"]
+        label_surf = game.small_font.render(zone["name"], True, (r // 2, g // 2, b // 2))
+        label_rect = label_surf.get_rect(center=(anchor_rect.centerx, anchor_rect.bottom + 10))
+        if content_rect.colliderect(label_rect):
+            game.screen.blit(label_surf, label_rect)
+    # City hub label — gold text above hub tile
+    if city_hub:
+        hub_rect = region_rects.get(city_hub)
+        if hub_rect and content_rect.colliderect(hub_rect):
+            city_label = game.small_font.render(city.get("name", ""), True, (200, 170, 60))
+            city_label_rect = city_label.get_rect(center=(hub_rect.centerx, hub_rect.top - 8))
+            if content_rect.colliderect(city_label_rect):
+                game.screen.blit(city_label, city_label_rect)
     game.screen.set_clip(map_clip)
     _render_world_map_detail(game, detail_frame, focused_coord, region_stats_map, quest_hint_coords)
 

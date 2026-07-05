@@ -364,6 +364,12 @@ class WorldMapStatsMixin(GameMixinBase):
             "scouted": state.get("scouted", False),
             "supply_depth": state.get("supply_depth", 0),
             "service_preview_lines": self.town_service_preview_lines(coord) if state.get("region_type") == "town" else [],
+            "coast_proximity": self.coast_proximity(coord),
+            "zone_name": next((z["name"] for z in self.world_zones if abs(z["center"][0] - coord[0]) + abs(z["center"][1] - coord[1]) <= 3), None),
+            "is_city_hub": coord == getattr(self, "world_city", {}).get("hub"),
+            "is_city_district": coord in getattr(self, "world_city", {}).get("districts", {}),
+            "city_name": getattr(self, "world_city", {}).get("name") if (coord == getattr(self, "world_city", {}).get("hub") or coord in getattr(self, "world_city", {}).get("districts", {})) else None,
+            "city_district_type": getattr(self, "world_city", {}).get("districts", {}).get(coord),
         }
 
     def region_walkable_count(self, state):

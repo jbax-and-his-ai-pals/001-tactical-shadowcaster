@@ -267,25 +267,59 @@ def generate_volcanic(width, height):
 
 def generate_castle(width, height):
     region = RegionMap(width, height, fill=1)
-    keep = region.carve_rect(width // 2 - 7, height // 2 - 5, 15, 11)
-    wings = [
-        region.carve_rect(width // 2 - 4, 3, 9, 7),
-        region.carve_rect(width // 2 - 4, height - 10, 9, 7),
-        region.carve_rect(3, height // 2 - 3, 8, 7),
-        region.carve_rect(width - 11, height // 2 - 3, 8, 7),
+    cx, cy = width // 2, height // 2
+    tm = 2   # tower margin from edge
+    ts = 5   # tower size
+
+    # Corner towers (curtain-wall outposts)
+    towers = [
+        region.carve_rect(tm, tm, ts, ts),
+        region.carve_rect(width - tm - ts, tm, ts, ts),
+        region.carve_rect(tm, height - tm - ts, ts, ts),
+        region.carve_rect(width - tm - ts, height - tm - ts, ts, ts),
     ]
-    for room in wings:
+
+    # North watchtower
+    north_post = region.carve_rect(cx - 3, tm, 7, 5)
+
+    # South gatehouse + exit breach
+    gate = region.carve_rect(cx - 2, height - tm - 5, 5, 4)
+    for gx in range(cx - 1, cx + 2):
+        region.tiles[gx][height - tm] = 0
+        region.tiles[gx][height - 1] = 0
+
+    # Central throne hall (keep core)
+    keep_w, keep_h = 13, 9
+    keep = region.carve_rect(cx - keep_w // 2, cy - keep_h // 2, keep_w, keep_h)
+
+    # East garrison barracks
+    garrison = region.carve_rect(
+        min(width - 13, cx + keep_w // 2 + 2), cy - 3, 9, 7
+    )
+
+    # West armory / chapel
+    armory = region.carve_rect(
+        max(3, cx - keep_w // 2 - 10), cy - 3, 8, 6
+    )
+
+    # Wide corridors create open courtyard space between rooms
+    for tower in towers:
+        carve_path(region, keep.center, tower.center, width=2)
+    for room in (north_post, gate, garrison, armory):
         carve_path(region, keep.center, room.center, width=2)
-    for room in [keep, *wings]:
-        for _ in range(random.randint(1, 3)):
-            edge = random.choice(["top", "bottom", "left", "right"])
-            if edge in ("top", "bottom"):
-                bx = random.randint(room.x + 1, room.x + room.w - 2)
-                by = room.y if edge == "top" else room.y + room.h - 1
-            else:
-                bx = room.x if edge == "left" else room.x + room.w - 1
-                by = random.randint(room.y + 1, room.y + room.h - 2)
-            region.tiles[bx][by] = 0
+
+    # Arrow-loop breaches in the curtain wall face
+    for _ in range(5 + width // 10):
+        side = random.randint(0, 3)
+        if side == 0:
+            region.tiles[random.randint(ts + tm + 1, width - ts - tm - 2)][1] = 0
+        elif side == 1:
+            region.tiles[random.randint(ts + tm + 1, width - ts - tm - 2)][height - 2] = 0
+        elif side == 2:
+            region.tiles[1][random.randint(ts + tm + 1, height - ts - tm - 2)] = 0
+        else:
+            region.tiles[width - 2][random.randint(ts + tm + 1, height - ts - tm - 2)] = 0
+
     return region
 
 

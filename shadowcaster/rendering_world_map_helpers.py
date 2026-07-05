@@ -194,6 +194,11 @@ def _render_world_map_detail(game, detail_frame, focused_coord, region_stats_map
         overview_lines.append((f"Standing {stats['attitude_label']} ({stats['attitude_score']})", COLOR_TEXT))
     if stats["parent_biome"]:
         overview_lines.append((f"Parent biome {stats['parent_biome'].title()}", COLOR_TEXT))
+    if stats.get("zone_name"):
+        overview_lines.append((f"Zone: {stats['zone_name'].title()}", (148, 190, 148)))
+    if stats.get("coast_proximity", 0.0) >= 0.75:
+        sea_name = getattr(game, "world_coast", {}).get("name", "the sea")
+        overview_lines.append((f"Coastal — {sea_name} is near", (110, 160, 210)))
     text_y = section_y
     for line, color in overview_lines:
         for wrapped in wrap_text_lines(game.small_font, line, inset.width - 4):

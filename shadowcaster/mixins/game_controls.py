@@ -208,6 +208,7 @@ class ControlsMixin(GameMixinBase):
                 "Navigation",
                 [
                     f"World map: {controller_labels['world_map']}",
+                    "On world map — D-pad or Left Stick moves selection; X/Square scrolls detail up; Y/Triangle scrolls detail down; LB/RB switches mode",
                     f"Menu: {controller_labels['menu']}",
                     "Inventory, Journal, and Log: open the pause menu, then choose them there",
                     f"Tuner during a run: {controller_labels['tuner']}",

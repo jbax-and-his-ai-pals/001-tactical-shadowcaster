@@ -74,6 +74,18 @@ class WorldMixin(GameMixinBase):
         finally:
             random.setstate(state)
 
+    _BIOME_AFFINITY: dict[str, dict[str, float]] = {
+        "plains":   {"farmland": 2.0, "plains": 1.6, "forest": 1.4, "desert": 1.2},
+        "farmland": {"plains": 2.0, "farmland": 1.5, "forest": 1.3, "swamp": 1.1},
+        "forest":   {"plains": 1.4, "farmland": 1.3, "forest": 1.8, "swamp": 1.6, "mountain": 1.3},
+        "swamp":    {"forest": 1.6, "swamp": 1.7, "plains": 1.1, "badlands": 1.1},
+        "desert":   {"badlands": 1.8, "desert": 1.7, "plains": 1.2, "volcanic": 1.1},
+        "mountain": {"forest": 1.3, "tundra": 1.6, "mountain": 1.8, "volcanic": 1.2, "badlands": 1.1},
+        "badlands": {"desert": 1.8, "badlands": 1.6, "volcanic": 1.4, "mountain": 1.1},
+        "tundra":   {"mountain": 1.6, "tundra": 1.8, "plains": 1.2, "forest": 1.1},
+        "volcanic": {"badlands": 1.4, "desert": 1.1, "mountain": 1.2, "volcanic": 1.9},
+    }
+
     def overworld_region_weight(self, region_type, coord):
         distance = abs(coord[0]) + abs(coord[1])
         progress = min(1.0, distance / 10.0)
@@ -89,7 +101,28 @@ class WorldMixin(GameMixinBase):
             "volcanic": (0.15, 5.0),
         }
         near_weight, far_weight = near_far_weights.get(region_type, (1.0, 1.0))
-        return near_weight + (far_weight - near_weight) * progress
+        base = near_weight + (far_weight - near_weight) * progress
+
+        # Boost weight when known neighbors share a compatible biome family
+        affinity_multiplier = 1.0
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nb_key = self.region_key((coord[0] + dx, coord[1] + dy))
+            nb_type = self.world_regions.get(nb_key, {}).get("region_type")
+            if nb_type:
+                affinity_multiplier *= self._BIOME_AFFINITY.get(nb_type, {}).get(region_type, 1.0)
+
+        # River bonus: coords on a river path favor wet and fertile biomes
+        _river_bonus = {"swamp": 1.5, "farmland": 1.4, "forest": 1.2, "plains": 1.1}
+        if coord in self.world_river_coord_set:
+            base *= _river_bonus.get(region_type, 1.0)
+
+        # Coastal bonus: near the sea threshold, favor open/shoreline biomes
+        coast_prox = self.coast_proximity(coord)
+        if coast_prox >= 0.75:
+            _coast_bonus = {"plains": 1.4, "desert": 1.3, "tundra": 1.2, "badlands": 1.1}
+            base *= _coast_bonus.get(region_type, 1.0)
+
+        return base * affinity_multiplier
 
     def debug_biome_hotkeys(self):
         return {
@@ -225,6 +258,17 @@ class WorldMixin(GameMixinBase):
 
     def choose_connected_region(self, coord=None):
         coord = coord or self.world_position
+        city = getattr(self, "world_city", {})
+        if city:
+            if coord == city.get("hub"):
+                city_name = city.get("name", "the city")
+                return RegionChoice(region_type="large_town", name=city_name, summary=f"The sprawling city of {city_name}.")
+            district_type = city.get("districts", {}).get(coord)
+            if district_type:
+                city_name = city.get("name", "the city")
+                district_name = f"{city_name} — {district_type.title()} Quarter"
+                return RegionChoice(region_type="town", name=district_name, summary=f"A district of {city_name}.",
+                                    context={"city_name": city_name, "district_type": district_type})
         with self.seed_scope("world_choice", coord):
             region_types = sorted(self.overworld_region_types())
             weights = [self.overworld_region_weight(region_type, coord) for region_type in region_types]

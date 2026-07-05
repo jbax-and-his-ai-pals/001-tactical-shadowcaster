@@ -187,6 +187,16 @@ class OverlayInputMixin(GameMixinBase):
             elif move in {(1, 0), (0, 1)}:
                 self.adjust_choice_index(1)
             return True
+        if overlay == "world_map":
+            if move == (0, -1):
+                self.step_world_map_selection(0, -1)
+            elif move == (0, 1):
+                self.step_world_map_selection(0, 1)
+            elif move == (-1, 0):
+                self.step_world_map_selection(-1, 0)
+            elif move == (1, 0):
+                self.step_world_map_selection(1, 0)
+            return True
         if overlay == "game_over":
             if move == (-1, 0):
                 self.shift_death_stats_tab(-1)

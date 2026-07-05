@@ -34,6 +34,7 @@ from .mixins import (
     TuningMixin,
     UIMixin,
     VisibilityMixin,
+    WorldGeographyMixin,
     WorldMixin,
     WorldTravelMixin,
     WorldMapPreviewMixin,
@@ -46,6 +47,7 @@ from .mixins import (
 class Game(
     GameCoreMixin,
     TuningMixin,
+    WorldGeographyMixin,
     WorldMixin,
     WorldTravelMixin,
     LandmarkServicesMixin,

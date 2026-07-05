@@ -336,6 +336,10 @@ class OverlayEventMixin(GameMixinBase):
                 self.toggle_world_map()
             elif button in (4, 5):
                 self.toggle_world_map_mode()
+            elif button == 2:
+                self.scroll_world_map_details(-72)
+            elif button == 3:
+                self.scroll_world_map_details(72)
             return True
         if overlay == "game_over":
             if button in (4, 6):
