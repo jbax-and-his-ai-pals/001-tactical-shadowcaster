@@ -8,45 +8,38 @@ This guide covers everything needed to play effectively: controls, the world loo
 
 ## Controls
 
-### Keyboard & Mouse
+| Action | Keyboard / Mouse | Numpad | Controller |
+|--------|-----------------|--------|------------|
+| Move (cardinal) | Arrows or WASD | 8 / 2 / 4 / 6 | Left Stick or D-pad |
+| Move (diagonal) | Q E Z C | 7 9 1 3 | Diagonal on stick or D-pad |
+| Hold to walk | Hold any movement key | Hold key | Hold direction |
+| Melee / talk | Space | 5 | A / Cross |
+| Ranged attack | F | `*` | X / Square |
+| Use stairs / portal / exit | Enter or `.` | `.` | A / Cross |
+| Medkit | H | `+` | LB / L1 |
+| Tonic | G | `-` | RB / R1 |
+| Autoexplore | X | 0 | B / Circle (hold) |
+| World map | M | `/` | View / Select / Share |
+| Inventory | I | — | Pause menu → Inventory |
+| Journal | J | — | Pause menu → Journal |
+| Message log | L | — | Pause menu → Log |
+| Balance tuner | T (during a run) | — | Right Stick click |
+| Menu / pause | Esc | — | Menu / Start / Options |
+| Back / cancel | Esc | — | B / Circle |
 
-| Action | Keys |
-|--------|------|
-| Move | Arrows or WASD |
-| Diagonal move | Q E Z C or Numpad 7 9 1 3 |
-| Hold to walk | Hold any movement key |
-| Melee / talk | Space |
-| Ranged attack | F |
-| Use stairs / portal / exit | Enter or `.` |
-| Medkit | H |
-| Tonic | G |
-| Autoexplore | X |
-| World map | M |
-| Inventory | I |
-| Journal | J |
-| Message log | L |
-| Balance tuner | T (during a run) |
-| Menu / pause | Esc |
+**Mouse:** Click visible creatures, items, exits, and landmarks to inspect. Click seen tiles to path there when no hostile is visible.
 
-Numpad quick keys: `5` melee, `0` autoexplore, `.` use, `+` medkit, `-` tonic, `*` ranged, `/` world map.
+### World Map Controls
 
-Click visible creatures, items, exits, and landmarks to inspect them. Click seen tiles to path there when no hostile is visible.
-
-### Controller
-
-| Action | Button |
-|--------|--------|
-| Move | Left Stick or D-pad |
-| Melee / talk | A / Cross |
-| Ranged | X / Square |
-| Autoexplore | B / Circle (hold) |
-| Medkit | LB / L1 |
-| Tonic | RB / R1 |
-| World map | View / Select / Share |
-| Menu | Menu / Start / Options |
-| Back / cancel | B / Circle |
-
-**On the world map:** D-pad or Left Stick moves the selection cursor. X / Square scrolls the detail panel up. Y / Triangle scrolls it down. LB / RB switch between Discovered and Local Debug modes.
+| Action | Keyboard | Controller |
+|--------|----------|------------|
+| Open / close | M or Esc | View / Select / Share |
+| Pan view | WASD or Arrows | — |
+| Move selection cursor | — | D-pad or Left Stick |
+| Scroll detail panel up | Page Up | X / Square |
+| Scroll detail panel down | Page Down | Y / Triangle |
+| Switch map mode | Tab | LB / RB |
+| Recenter on player | R or Home | — |
 
 ### Touch
 
@@ -248,75 +241,32 @@ Tonics cleanse both poison and burn. In swamp and volcanic regions, carry at lea
 
 Tracks are not chosen upfront. They emerge from what you do during a run. Your dominant track (the highest-scoring one that has reached tier 1) appears in the journal stats tab. Reaching tier 1 (8+ points) adds a **fourth reward option** to every exploration and delve reward modal — the track-specific bonus. Reaching tier 2 (20+ points) upgrades that bonus.
 
-### Score Sources by Track
+### Track Matrix
 
-| Track | Scores from |
-|-------|------------|
-| **Scout** | Scout quests ×4, surface landmark visits ×2 |
-| **Delver** | Kills ÷5, Power pickups ×4, Vitality pickups ×3, full clears ×5 |
-| **Warden** | Bounty quests ×4, towns helped ×3, chain quests ×3 |
-| **Pathfinder** | World regions seen ×1, surface landmarks ×3, delivery quests ×2 |
+| | **Scout** | **Delver** | **Warden** | **Pathfinder** |
+|---|---|---|---|---|
+| **Scores from** | Scout quests ×4, surface landmarks ×2 | Kills ÷5, Power pickups ×4, Vitality ×3, full clears ×5 | Bounty quests ×4, towns helped ×3, chain quests ×3 | Regions seen ×1, surface landmarks ×3, delivery quests ×2 |
+| **Tier 1 reward** | Reveal 1 region + 1 tonic | +1 attack + 3 ammo | +20g + full HP restore | +2 medkits + 1 tonic + 1 reveal |
+| **Master reward** | Reveal 2 regions + 1 tonic | +2 attack + 4 ammo | +35g + full HP restore | +3 medkits + 1 tonic + 2 reveals |
+| **Best regions** | Overworld, surface sites | Dungeon, cave, castle | Town networks | Wide overworld traversal |
+| **Preferred weapon** | Spear | Warhammer → Halberd | Spear → Halberd | Shortbow → Longbow |
+| **Preferred armor** | Travel Cloak or none | Chain Mail → Plate Coat | Leather → Chain Mail | Travel Cloak |
+| **Upgrade priority** | Light → Vitality | Power → Vitality → Reach | Vitality → Reach | Light → Haste → Vitality |
+| **Skip** | Heavy armor, Reach | Haste, Light | — | Reach, Power |
+| **Quest focus** | Scout board jobs | — (combat-driven) | Bounty + chain board jobs | Delivery board jobs |
+| **Town role** | Cartographer for map reveals | City hub as gear base | Build attitude in 2-3 towns | Delivery endpoints; attitude bonus |
+| **Special bonus** | Scout reward compounds: reveals → more sites | +15-30% dungeon cache chance | Gold reward funds gear economy | +15-25% overworld cache chance |
+| **Playstyle** | Wide, shallow, fast | Deep, slow, thorough | Town-anchored, quest-driven | Horizontal, many tiles, cheap |
 
-### Track Reward Options
+### Notes per Track
 
-These appear as the fourth choice in reward modals once you've reached tier 1:
+**Scout** — Use the Cartographer to pre-reveal neighbors, then visit them for the landmark bonus before moving on. Every Scout tier 1 reveal gives you new sites to chain into more points. Light upgrades extend your FOV so you spot surface sites without walking every tile.
 
-| Track | Tier 1 reward | Tier 2 (Master) reward |
-|-------|---------------|------------------------|
-| **Scout** | Reveal 1 region + 1 tonic | Reveal 2 regions + 1 tonic |
-| **Delver** | +1 attack + 3 ammo | +2 attack + 4 ammo |
-| **Warden** | +20g + full HP restore | +35g + full HP restore |
-| **Pathfinder** | +2 medkits + 1 tonic + 1 region reveal | +3 medkits + 1 tonic + 2 region reveals |
+**Delver** — Full clears are the biggest score driver (5 points each). Heavy armor is what makes full clears survivable at high danger tiers — the ammo cost of Plate Coat or War Plate pays for itself in completed floors. Power pickups both score points and directly increase your damage output.
 
-### Scout
+**Warden** — Every completed quest in any town scores `towns_helped` (3 points each). Cross-town social quests chain between towns you've already helped, compounding attitude and score simultaneously. The gold reward is unique — no other track gives currency, and gold feeds directly into ammo purchases for gear upgrades.
 
-**Maximized by:** Prioritizing notice board scout jobs and tapping every surface landmark (waystone, barrow, stone circle, oasis, hot spring, watchtower, grove, necropolis, geyser, standing stone, camp) without needing to enter them.
-
-**Gear:** Light upgrades extend your FOV, letting you spot surface sites faster. Spear for flexible combat. Light or no armor — you're moving fast, not tanking.
-
-**Upgrade priority:** Light → one Vitality buffer. Avoid heavy armor.
-
-**Playstyle:** Wide and shallow. Use the Cartographer to pre-reveal neighbors, visit them for landmark bonuses, then move on. The Scout track reward compounds: each reveal gives you more targets to scout.
-
----
-
-### Delver
-
-**Maximized by:** Achieving 100% exploration on dungeon and cave floors (full clears score 5 points each), collecting Power pickups in deep regions, and staying alive long enough for kills to accumulate.
-
-**Gear:** Warhammer (+2 melee) into Halberd (+2/+1) as your primary weapon. Chain Mail early, Plate Coat when affordable. The defense reduction from heavy armor directly enables the full clears that drive your score.
-
-**Upgrade priority:** Power → Vitality → one Reach. Skip Haste and Light.
-
-**Playstyle:** Deep and thorough. Castles and dungeons are your best regions — they score full-clear points and generate better floor drops at high danger tiers. The named city hub is your ideal base: full provisioner slate and the ammo economy to fund heavy gear.
-
-**Cache bonus:** At Delver tier 1+, the cache-find chance in dungeon/cave first floors is significantly higher (+15% at tier 1, +30% at tier 2).
-
----
-
-### Warden
-
-**Maximized by:** Taking bounty jobs from the notice board and building high attitude in multiple towns. Each completed quest in a town ticks `towns_helped`, scoring 3 points. Chain quests that route between towns score both chain and supply depth gain.
-
-**Gear:** Spear (flexible at both melee and ranged range) into Halberd. Leather Armor or Chain Mail — enough defense without maxing ammo costs, since the Warden gold reward supplements your economy.
-
-**Upgrade priority:** Vitality first (bounty targets can ambush), then one or two Reach. Power optional.
-
-**Playstyle:** Town-anchored. Build a network of allied towns with high attitude — better services lower your medkit burn rate, and the Warden gold reward (+20/35g per modal) funds gear purchases. Cross-town social quests chain between towns you've helped, compounding both attitude and score.
-
----
-
-### Pathfinder
-
-**Maximized by:** Moving across many tiles efficiently. Delivery jobs are the core — they send you to a second town (region visit + delivery points + attitude in both towns). The named city's hub and district tiles are 4 region visits clustered together.
-
-**Gear:** Shortbow early, Longbow later. Travel Cloak (+1 defense, only 2 ammo) keeps the ammo economy light. Light upgrades pay off most for this track — bigger FOV means you spot surface sites on overworld tiles without walking every corner.
-
-**Upgrade priority:** Light → Haste (faster autoexplore for ticking region percentage) → one Vitality buffer. Skip Reach and Power.
-
-**Playstyle:** Horizontal. Cross as many tiles as possible cheaply. River corridors are natural highways — biomes along them tend toward hospitable (swamp/farmland/forest) and give you orientation for multi-tile routes.
-
-**Cache bonus:** At Pathfinder tier 1+, overworld cache-find chance in exploration-friendly biomes (forest, swamp, tundra, mountain, cave) is significantly higher.
+**Pathfinder** — Delivery jobs are the core engine: each one is a region visit, delivery points, and attitude in two towns at once. The named city hub plus its 3 district tiles is 4 region visits in a tight cluster. River corridors are natural highways — biomes along them are hospitable and give you orientation for planning multi-tile routes.
 
 ---
 

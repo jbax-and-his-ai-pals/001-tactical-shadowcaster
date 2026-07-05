@@ -209,6 +209,15 @@ def save_game(game, path=None):
         "message": game.message,
         "game_over": game.game_over,
         "death_cause": game.death_cause,
+        "death_gold_lost": getattr(game, "death_gold_lost", 0),
+        "death_respawn_label": getattr(game, "death_respawn_label", ""),
+        "homepoint_coord": pack_position(game.homepoint_coord) if game.homepoint_coord else None,
+        "discovered_shrines": [pack_position(p) for p in getattr(game, "discovered_shrines", [])],
+        "player_xp": getattr(game, "player_xp", 0),
+        "player_level": getattr(game, "player_level", 1),
+        "xp_milestones_claimed": list(getattr(game, "xp_milestones_claimed", set())),
+        "wandering_npcs": getattr(game, "wandering_npcs", {}),
+        "active_ability": getattr(game, "active_ability", ""),
     }
     save_path.write_text(json.dumps(payload), encoding="utf-8")
     return save_path
@@ -259,6 +268,13 @@ def load_game(path):
     data["region_palette"] = palette_for_region(data["region_type"])
     data["world_regions"] = {key: deserialize_region_state(state) for key, state in data.get("world_regions", {}).items()}
     data["local_regions"] = {key: deserialize_region_state(state) for key, state in data.get("local_regions", {}).items()}
+    hp_raw = data.get("homepoint_coord")
+    data["homepoint_coord"] = unpack_position(hp_raw) if hp_raw else None
+    data["discovered_shrines"] = [unpack_position(p) for p in data.get("discovered_shrines", [])]
+    data["player_xp"] = data.get("player_xp", 0)
+    data["player_level"] = data.get("player_level", 1)
+    data["xp_milestones_claimed"] = list(data.get("xp_milestones_claimed", []))
+    data["wandering_npcs"] = data.get("wandering_npcs", {})
     if not data["world_regions"]:
         data["world_regions"] = {
             "0,0": {

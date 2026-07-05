@@ -167,6 +167,9 @@ class InputMixin(GameMixinBase):
         if active_overlay == "log":
             self.handle_log_click(screen_x, screen_y, dismiss_on_miss=True)
             return
+        if active_overlay == "trade":
+            self.handle_trade_click(screen_x, screen_y)
+            return
         if active_overlay == "notice_board":
             self.handle_notice_board_click(screen_x, screen_y)
             return
@@ -175,6 +178,9 @@ class InputMixin(GameMixinBase):
             return
         if active_overlay == "game_over":
             self.handle_game_over_click(screen_x, screen_y, dismiss_on_miss=True)
+            return
+        if active_overlay == "levelup":
+            self.dismiss_levelup()
             return
         self.handle_touch_map_tap(screen_x, screen_y)
 
@@ -316,6 +322,9 @@ class InputMixin(GameMixinBase):
                     continue
                 if event.key == pygame.K_F10:
                     self.toggle_debug_omniscience()
+                    continue
+                if event.key == pygame.K_h and self.region_type == "shrine" and not self.active_overlay():
+                    self.set_homepoint()
                     continue
                 biome_debug = self.debug_biome_hotkeys().get(event.key)
                 if biome_debug:

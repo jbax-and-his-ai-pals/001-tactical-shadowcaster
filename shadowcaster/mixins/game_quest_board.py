@@ -46,6 +46,8 @@ class QuestBoardMixin(GameMixinBase):
         track = self.dominant_track()
         if track and track[0] == "Warden":
             base += 12 if track[1] >= 2 else 5
+        if getattr(self, "player_level", 1) >= 3:
+            base += 15
         return base
 
     def scouted_target_bonus(self, to_pos):

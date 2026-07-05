@@ -9,6 +9,36 @@ from ..persistence import has_save
 
 class OverlayClickMixin(GameMixinBase):
 
+    def handle_trade_click(self, screen_x, screen_y):
+        from ..rendering_trade import _LEFT, _TOP, _BOX_W, _BOX_H, _STOCK_COL_W, _HEADER_H, _FOOTER_H, _ROW_H, _CONTENT_TOP
+        # Close if clicking outside the box
+        if not pygame.Rect(_LEFT, _TOP, _BOX_W, _BOX_H).collidepoint(screen_x, screen_y):
+            self.close_trade()
+            return True
+        # Determine which panel was clicked
+        col = 0 if screen_x < _LEFT + _STOCK_COL_W else 1
+        self.trade_panel = col
+        content_top = _CONTENT_TOP
+        content_bot = _TOP + _BOX_H - _FOOTER_H - 4
+        if content_top <= screen_y < content_bot:
+            row = (screen_y - content_top) // _ROW_H
+            if col == 0:
+                stock = getattr(self, "trader_stock", [])
+                sel = self.trade_stock_index
+                offset = max(0, sel - (content_bot - content_top) // _ROW_H + 1)
+                abs_idx = row + offset
+                if 0 <= abs_idx < len(stock):
+                    self.trade_stock_index = abs_idx
+            else:
+                rows = self._trade_pack_rows()
+                sel = self.trade_pack_index
+                max_rows = (content_bot - content_top) // _ROW_H
+                offset = max(0, sel - max_rows + 1)
+                abs_idx = row + offset
+                if 0 <= abs_idx < len(rows):
+                    self.trade_pack_index = abs_idx
+        return True
+
     def handle_choice_click(self, screen_x, screen_y):
         choice = self.reward_choice_from_screen(screen_x, screen_y)
         if choice is None:
@@ -181,11 +211,13 @@ class OverlayClickMixin(GameMixinBase):
         if tab_index is not None:
             self.death_stats_tab = tab_index
             return True
+        if self.death_respawn_rect().collidepoint(screen_x, screen_y):
+            self.respawn()
+            return True
         if self.death_main_menu_rect().collidepoint(screen_x, screen_y):
             self.open_main_menu()
             return True
         if dismiss_on_miss:
-            self.open_pause_menu()
             return True
         return False
 

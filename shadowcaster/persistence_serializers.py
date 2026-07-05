@@ -48,7 +48,11 @@ def enemy_to_data(enemy):
         "on_hit_effect": enemy.on_hit_effect,
         "attack_range": enemy.attack_range,
         "preferred_range": enemy.preferred_range,
+        "moves_per_turn": enemy.moves_per_turn,
         "status_effects": enemy.status_effects,
+        "behavior": getattr(enemy, "behavior", "pursuer"),
+        "traits": list(getattr(enemy, "traits", [])),
+        "catalog_key": getattr(enemy, "catalog_key", ""),
     }
 
 
@@ -64,7 +68,11 @@ def enemy_from_data(data):
         data["on_hit_effect"],
         data.get("attack_range", 1),
         data.get("preferred_range", 1),
+        data.get("moves_per_turn", 1),
         data.get("status_effects", {}),
+        data.get("behavior", "pursuer"),
+        list(data.get("traits", [])),
+        data.get("catalog_key", ""),
     )
 
 

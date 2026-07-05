@@ -79,6 +79,12 @@ class OverlayEventMixin(GameMixinBase):
             elif event.type == pygame.MOUSEWHEEL:
                 self.scroll_notice_board(-event.y * 36)
             return True
+        if overlay == "trade":
+            if event.type == pygame.KEYDOWN:
+                self.handle_overlay_keydown(event)
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                self.handle_trade_click(*event.pos)
+            return True
         if overlay == "travel":
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_1, pygame.K_KP1):
@@ -119,6 +125,27 @@ class OverlayEventMixin(GameMixinBase):
 
     def handle_overlay_keydown(self, event):
         overlay = self.active_non_menu_overlay()
+        if overlay == "trade":
+            if event.key == pygame.K_ESCAPE:
+                self.close_trade()
+            elif event.key in (pygame.K_TAB, pygame.K_q, pygame.K_e):
+                self.trade_switch_panel()
+            elif event.key in (pygame.K_UP, pygame.K_w):
+                if self.trade_panel == 0:
+                    self.trade_move_stock(-1)
+                else:
+                    self.trade_move_pack(-1)
+            elif event.key in (pygame.K_DOWN, pygame.K_s):
+                if self.trade_panel == 0:
+                    self.trade_move_stock(1)
+                else:
+                    self.trade_move_pack(1)
+            elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+                if self.trade_panel == 0:
+                    self.trade_buy()
+                else:
+                    self.trade_sell()
+            return True
         if overlay == "choice":
             if event.key == pygame.K_ESCAPE and self.town_choice_pending:
                 self.town_choice_pending = None
@@ -255,98 +282,23 @@ class OverlayEventMixin(GameMixinBase):
                 self.shift_death_stats_tab(-1)
             elif event.key in (pygame.K_RIGHT, pygame.K_d, pygame.K_e, pygame.K_TAB):
                 self.shift_death_stats_tab(1)
-            elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE, pygame.K_ESCAPE):
-                self.open_pause_menu()
+            elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+                self.respawn()
+            elif event.key == pygame.K_ESCAPE:
+                self.open_main_menu()
             return True
-        return False
-
-    def handle_controller_overlay_button(self, button):
-        overlay = self.active_non_menu_overlay()
-        if overlay == "choice":
-            if button == 0:
-                self.apply_current_choice()
-            elif button in (4, 6):
-                self.adjust_choice_index(-1)
-            elif button in (5, 7):
-                self.adjust_choice_index(1)
-            elif button == 1 and self.town_choice_pending:
-                self.town_choice_pending = None
-                self.message = "You step away from the provisioner."
-            return True
-        if self.menu_mode:
-            if button == 0:
-                self.activate_menu_option()
-            elif self.menu_mode == "controls" and button == 4:
-                self.shift_controls_tab(-1)
-            elif self.menu_mode == "controls" and button in (5, 7):
-                self.shift_controls_tab(1)
-            elif button == 1:
-                if self.menu_mode == "pause":
-                    self.close_menu()
-                elif self.menu_mode in {"load", "controls"}:
-                    self.return_to_parent_menu()
-            return True
-        if overlay == "tuner":
-            if button in (1, 7):
-                self.toggle_tuner()
-            elif button == 4:
-                self.shift_tuner_tab(-1)
-            elif button == 5:
-                self.shift_tuner_tab(1)
-            elif button == 2:
-                self.adjust_tuner_value(-1)
-            elif button == 3:
-                self.adjust_tuner_value(1)
-            return True
-        if overlay == "inventory":
-            if button in (1, 7):
-                self.toggle_inventory()
-            elif button == 0:
-                self.inventory_activate_selected()
-            return True
-        if overlay == "journal":
-            if button in (1, 7):
-                self.toggle_journal()
-            elif button == 0:
-                quest = self.selected_active_journal_quest()
-                if quest is not None and self.can_show_map_for_selected_journal_quest():
-                    self.open_world_map_for_quest(quest)
-            elif button == 2:
-                quest = self.selected_active_journal_quest()
-                if quest is not None and self.can_abandon_selected_journal_quest():
-                    self.abandon_quest(quest)
-            elif button == 4:
-                self.shift_journal_tab(-1)
-            elif button == 5:
-                self.shift_journal_tab(1)
-            return True
-        if overlay == "log":
-            if button in (1, 7):
-                self.toggle_log()
-            return True
-        if overlay == "notice_board":
-            if button == 0:
-                if self.notice_board_confirm_available():
-                    self.accept_board_quest(self.notice_board_index)
-            elif button in (1, 7):
-                self.close_notice_board()
-            return True
-        if overlay == "world_map":
-            if button in (1, 7):
-                self.toggle_world_map()
-            elif button in (4, 5):
-                self.toggle_world_map_mode()
-            elif button == 2:
-                self.scroll_world_map_details(-72)
-            elif button == 3:
-                self.scroll_world_map_details(72)
-            return True
-        if overlay == "game_over":
-            if button in (4, 6):
-                self.shift_death_stats_tab(-1)
-            elif button in (5, 7):
-                self.shift_death_stats_tab(1)
-            elif button in (0, 1, 9):
-                self.open_pause_menu()
+        if overlay == "levelup":
+            choices = getattr(self, "levelup_ability_choices", [])
+            if choices:
+                if event.key in (pygame.K_LEFT, pygame.K_a):
+                    self.levelup_ability_index = (self.levelup_ability_index - 1) % len(choices)
+                elif event.key in (pygame.K_RIGHT, pygame.K_d):
+                    self.levelup_ability_index = (self.levelup_ability_index + 1) % len(choices)
+                elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+                    if hasattr(self, "confirm_ability_choice"):
+                        self.confirm_ability_choice(self.levelup_ability_index)
+            else:
+                if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE, pygame.K_ESCAPE):
+                    self.dismiss_levelup()
             return True
         return False

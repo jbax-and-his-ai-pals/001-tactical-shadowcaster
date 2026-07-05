@@ -315,6 +315,8 @@ class RewardsUIMixin(GameMixinBase):
         self.stop_auto_movement()
         self.delve_reward_pending = False
         self.bottom_reward_claimed = True
+        if hasattr(self, "xp_check_delve_bottom"):
+            self.xp_check_delve_bottom()
         if self.exploration_choice_index == 3:
             msg = self._apply_track_reward(delve=True)
             self.trigger_completion_modal(msg)

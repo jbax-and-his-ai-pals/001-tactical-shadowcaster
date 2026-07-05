@@ -58,6 +58,11 @@ class OverlayInputMixin(GameMixinBase):
                     self.move_tuner_selection(1 if vertical > 0 else -1)
                 elif overlay == "inventory":
                     self.move_inventory_selection(1 if vertical > 0 else -1)
+                elif overlay == "trade":
+                    if self.trade_panel == 0:
+                        self.trade_move_stock(1 if vertical > 0 else -1)
+                    else:
+                        self.trade_move_pack(1 if vertical > 0 else -1)
                 elif overlay == "notice_board":
                     self.notice_board_index = (self.notice_board_index + (1 if vertical > 0 else -1)) % max(1, len(self.notice_board_quests))
                     self.ensure_notice_board_selection_visible()
@@ -81,10 +86,15 @@ class OverlayInputMixin(GameMixinBase):
                         self.adjust_tuner_value(1 if horizontal > 0 else -1)
                     elif overlay == "choice":
                         self.adjust_choice_index(1 if horizontal > 0 else -1)
+                    elif overlay == "trade":
+                        self.trade_switch_panel()
                     elif overlay == "world_map":
                         self.step_world_map_selection(horizontal, 0)
                     elif overlay == "game_over":
                         self.shift_death_stats_tab(1 if horizontal > 0 else -1)
+                    elif overlay == "levelup" and getattr(self, "levelup_ability_choices", []):
+                        choices = self.levelup_ability_choices
+                        self.levelup_ability_index = (self.levelup_ability_index + (1 if horizontal > 0 else -1)) % len(choices)
                 self.controller_menu_move = direction
                 self.next_menu_repeat_ms = now + (MOVE_REPEAT_DELAY_MS if changed else MOVE_REPEAT_INTERVAL_MS)
             return
@@ -172,6 +182,20 @@ class OverlayInputMixin(GameMixinBase):
                 self.scroll_log(-36)
             elif move == (0, 1):
                 self.scroll_log(36)
+            return True
+        if overlay == "trade":
+            if move == (0, -1):
+                if self.trade_panel == 0:
+                    self.trade_move_stock(-1)
+                else:
+                    self.trade_move_pack(-1)
+            elif move == (0, 1):
+                if self.trade_panel == 0:
+                    self.trade_move_stock(1)
+                else:
+                    self.trade_move_pack(1)
+            elif move in {(-1, 0), (1, 0)}:
+                self.trade_switch_panel()
             return True
         if overlay == "notice_board":
             if move == (0, -1):

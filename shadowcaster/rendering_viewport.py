@@ -186,6 +186,7 @@ def render_side_panel(screen, game, map_pixel_width):
         ("Explore", f"{game.exploration_progress}%"),
         ("Light", str(game.light_radius)),
         ("Gold", str(game.gold)),
+        ("Level", f"{getattr(game, 'player_level', 1)} {getattr(game, 'player_title', lambda: '')()}"),
         ("Floor", str(game.floor)),
         ("Depth", depth_text),
         ("Coords", f"{coord_x},{coord_y}"),

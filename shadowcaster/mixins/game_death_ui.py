@@ -42,11 +42,19 @@ class DeathUIMixin(GameMixinBase):
             rects.append(pygame.Rect(tab_left, top, tab_width, tab_height))
         return rects
 
+    def death_respawn_rect(self):
+        rect = self.death_overlay_rect()
+        width = 220
+        height = 50
+        left = rect.left + 24
+        top = rect.bottom - height - 24
+        return pygame.Rect(left, top, width, height)
+
     def death_main_menu_rect(self):
         rect = self.death_overlay_rect()
         width = 220
         height = 50
-        left = rect.left + (rect.width - width) // 2
+        left = rect.right - width - 24
         top = rect.bottom - height - 24
         return pygame.Rect(left, top, width, height)
 
@@ -60,13 +68,17 @@ class DeathUIMixin(GameMixinBase):
         pickups = self.powerups_collected
         tab = tab or self.death_stats_tabs()[self.death_stats_tab]
         if tab == "Run":
-            return [
+            gold_lost = getattr(self, "death_gold_lost", 0)
+            respawn = getattr(self, "death_respawn_label", "") or "starting town"
+            lines = [
                 f"Killed by: {self.death_cause_label()}",
+                f"Gold lost: {gold_lost}g",
+                f"Respawn: {respawn}",
                 f"Steps taken: {self.total_steps}",
                 f"Monsters killed: {self.total_monsters_killed}",
-                f"Current floor: {self.floor}",
                 f"Region: {self.region_name}",
             ]
+            return lines
         if tab == "Exploration":
             return [
                 f"Exploration this floor: {self.exploration_progress}%",

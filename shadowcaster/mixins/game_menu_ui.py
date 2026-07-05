@@ -227,7 +227,9 @@ class MenuUIMixin(GameMixinBase):
             if item.category == "consumable":
                 if item.quantity <= 0:
                     continue
-                rows.append({"key": item.key, "label": f"{item.name} x{item.quantity}", "detail": item.description or "Use this item", "action": "use", "color": item.color})
+                rarity = getattr(item, "rarity", "common")
+                rarity_tag = f"[{rarity}] " if rarity != "common" else ""
+                rows.append({"key": item.key, "label": f"{item.name} ×{item.quantity}", "detail": f"{rarity_tag}{item.description or 'Use this item'}", "action": "use", "color": item.color})
             elif item.category == "weapon":
                 status = "Equipped" if item.equipped else "Owned"
                 stat = f"+{item.melee_bonus} melee" if item.melee_bonus else f"+{item.ranged_bonus} ranged"
@@ -235,8 +237,16 @@ class MenuUIMixin(GameMixinBase):
             elif item.category == "armor":
                 status = "Equipped" if item.equipped else "Owned"
                 rows.append({"key": item.key, "label": f"{item.name} ({status})", "detail": f"+{item.defense_bonus} defense", "action": "equip", "color": item.color})
+            elif item.category == "trinket":
+                status = "Equipped" if item.equipped else "Owned"
+                rarity = getattr(item, "rarity", "uncommon")
+                rarity_tag = f"[{rarity}] " if rarity != "uncommon" else ""
+                rows.append({"key": item.key, "label": f"{item.name} ({status})", "detail": f"{rarity_tag}{item.description}", "action": "equip", "color": item.color, "locked": False})
             elif item.category == "quest":
                 rows.append({"key": item.key, "label": item.name, "detail": "Quest item — cannot drop", "action": None, "color": item.color})
+        has_trinket = any(item.category == "trinket" for item in self.inventory)
+        if not has_trinket and getattr(self, "player_level", 1) < 2:
+            rows.append({"key": "__trinket_locked__", "label": "Trinket Slot (Locked)", "detail": "Unlocks at Level 2 — Seasoned", "action": None, "color": (100, 90, 70), "locked": True})
         return rows
 
     def inventory_activate_selected(self):

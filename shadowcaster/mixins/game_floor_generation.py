@@ -142,6 +142,11 @@ class FloorGenerationMixin(GameMixinBase):
         self.spawn_residents()
         if self.rules["player_on_enter_heal"]:
             self.health = min(self.max_health, self.health + self.rules["player_on_enter_heal"])
+        if hasattr(self, "xp_check_biome_visit"):
+            self.xp_check_biome_visit()
+            self.xp_check_world_distance()
+        if hasattr(self, "ability_on_region_enter"):
+            self.ability_on_region_enter()
         self.update_visibility()
         self.last_interest_tiles = self.visible_interest_tiles()
         self.update_camera()

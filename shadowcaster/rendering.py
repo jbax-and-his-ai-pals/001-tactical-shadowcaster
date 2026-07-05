@@ -17,11 +17,12 @@ from .rendering_primitives import (
 )
 from .rendering_viewport import render_viewport, render_side_panel
 from .rendering_world_map import render_world_map_overlay
+from .rendering_trade import render_trade_overlay
 from .rendering_overlays import (
     render_completion_modal, render_reward_choice_overlay, render_tuner_overlay,
     render_inventory_overlay, render_game_over_overlay, render_travel_overlay,
     render_menu_overlay, render_notice_board_overlay, render_journal_overlay,
-    render_log_overlay, render_service_modal,
+    render_log_overlay, render_service_modal, render_levelup_overlay,
 )
 
 
@@ -56,7 +57,9 @@ def render_game(game):
     game.shot_flash = []
     render_completion_modal(game)
     active_overlay = game.active_non_menu_overlay()
-    if active_overlay == "travel":
+    if active_overlay == "trade":
+        render_trade_overlay(game)
+    elif active_overlay == "travel":
         render_travel_overlay(game)
     elif active_overlay == "world_map":
         render_world_map_overlay(game)
@@ -76,6 +79,8 @@ def render_game(game):
         render_service_modal(game)
     elif active_overlay == "game_over":
         render_game_over_overlay(game)
+    elif active_overlay == "levelup":
+        render_levelup_overlay(game)
     if game.menu_mode:
         render_menu_overlay(game)
     if game.perf_overlay:

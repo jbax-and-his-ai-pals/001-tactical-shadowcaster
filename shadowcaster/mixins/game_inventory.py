@@ -1,14 +1,15 @@
 from __future__ import annotations
 import random
 from ..constants import COLOR_ACCENT, COLOR_HEAL, COLOR_ITEM_ARMOR, COLOR_ITEM_WEAPON
+from ..item_catalog import ITEM_CATALOG
 from ..models import GroundItem, Item, UpgradePickup
 from ..game_typing import GameMixinBase
 
 
 class InventoryMixin(GameMixinBase):
     def add_starting_items(self):
-        self.add_item("medkit", "Healing Potion", "consumable", COLOR_HEAL, "vitality", quantity=1, description="Restores health.")
-        self.add_item("tonic", "Ward Tonic", "consumable", COLOR_ACCENT, "power", quantity=1, description="Clears statuses and grants ward.")
+        self.add_catalog_item("medkit", quantity=1)
+        self.add_catalog_item("tonic", quantity=1)
 
     def owns_item(self, key):
         return self.inventory_item(key) is not None
@@ -128,66 +129,6 @@ class InventoryMixin(GameMixinBase):
             return f"You gather {item.name}. Sell it at a town."
         return f"You pick up {item.name}. Open your inventory to equip it."
 
-    def equip_item(self, key):
-        item = self.inventory_item(key)
-        if item is None or item.category not in ("weapon", "armor"):
-            return
-        if item.equipped:
-            item.equipped = False
-            self.message = f"You unequip the {item.name}."
-            return
-        for other in self.inventory:
-            if other.category == item.category:
-                other.equipped = False
-        item.equipped = True
-        self.message = f"You equip the {item.name}."
-
-    def use_item(self, key):
-        item = self.inventory_item(key)
-        if item is None or item.quantity <= 0:
-            self.message = "You don't have that."
-            return
-        heal_amount = self.tuning["medkit_heal"] if item.key == "medkit" else item.heal_amount
-        ward_duration = 4 if item.key == "tonic" else item.ward_duration
-        cleanses = True if item.key == "tonic" else item.cleanses
-        if heal_amount and self.health >= self.max_health and not cleanses:
-            self.message = "You are already at full health."
-            return
-        parts = []
-        if heal_amount:
-            before = self.health
-            self.health = min(self.max_health, self.health + heal_amount)
-            if self.health > before:
-                parts.append(f"You recover {self.health - before} HP.")
-        if cleanses:
-            cleared = ", ".join(sorted(self.player_statuses)) if self.player_statuses else "nothing"
-            self.player_statuses.clear()
-            self.player_status_sources.clear()
-            parts.append(f"You clear {cleared}.")
-        if ward_duration:
-            self.add_status(self.player_statuses, "ward", ward_duration)
-            parts.append("Ward takes hold.")
-        item.quantity -= 1
-        if item.key == "medkit":
-            self.medkits_used += 1
-        elif item.key == "tonic":
-            self.tonics_used += 1
-        if item.quantity <= 0:
-            self.inventory.remove(item)
-        self.after_player_turn(player_acted=False, base_message=f"You use the {item.name}. " + " ".join(parts))
-
-    def consume_medkit(self):
-        if self.inventory_quantity("medkit") <= 0:
-            self.message = "You are out of medkits."
-            return
-        self.use_item("medkit")
-
-    def consume_tonic(self):
-        if self.inventory_quantity("tonic") <= 0:
-            self.message = "You are out of tonics."
-            return
-        self.use_item("tonic")
-
     def floor_item_at(self, position):
         return next((ground_item for ground_item in getattr(self, "floor_items", []) if ground_item.position == position), None)
 
@@ -215,13 +156,42 @@ class InventoryMixin(GameMixinBase):
         if position is None:
             return None
         danger = self._world_danger_bonus() if hasattr(self, "_world_danger_bonus") else min(2, self.danger_tier // 2)
-        # Weight toward tonics in dangerous areas, medkits elsewhere
+        biome = self.region_type
+        # Legendary region: chance of a rare/legendary trinket
+        if biome in ("ossuary", "mirrorwood") and random.random() < 0.30:
+            candidates = [
+                key for key, spec in ITEM_CATALOG.items()
+                if spec["family"] == "trinket"
+                and (not spec["biomes"] or biome in spec["biomes"])
+            ]
+            if candidates:
+                key = random.choice(candidates)
+                spec = ITEM_CATALOG[key]
+                item = Item(key, spec["name"], "trinket", spec["color"], spec["marker"],
+                            rarity=spec["rarity"], description=spec["description"])
+                return GroundItem(position=position, item=item)
+        # 20% chance of a biome-matched uncommon item in dangerous areas
+        if danger >= 2 and random.random() < 0.20:
+            candidates = [
+                key for key, spec in ITEM_CATALOG.items()
+                if spec["rarity"] == "uncommon" and spec["family"] != "trinket"
+                and (not spec["biomes"] or biome in spec["biomes"])
+            ]
+            if candidates:
+                key = random.choice(candidates)
+                spec = ITEM_CATALOG[key]
+                item = Item(key, spec["name"], "consumable", spec["color"], spec["marker"],
+                            rarity=spec["rarity"], description=spec["description"])
+                return GroundItem(position=position, item=item)
+        # Default: tonic in dangerous areas, medkit elsewhere
         if danger >= 2 and random.random() < 0.5:
-            item = Item("tonic", "Ward Tonic", "consumable", COLOR_ACCENT, "power",
-                        description="Clears statuses and grants ward.")
+            spec = ITEM_CATALOG["tonic"]
+            item = Item("tonic", spec["name"], "consumable", spec["color"], spec["marker"],
+                        description=spec["description"])
         else:
-            item = Item("medkit", "Healing Potion", "consumable", COLOR_HEAL, "vitality",
-                        description="Restores health.")
+            spec = ITEM_CATALOG["medkit"]
+            item = Item("medkit", spec["name"], "consumable", spec["color"], spec["marker"],
+                        description=spec["description"])
         return GroundItem(position=position, item=item)
 
     def generate_floor_items(self, pickups_enabled):
@@ -260,6 +230,10 @@ class InventoryMixin(GameMixinBase):
             cache = self.create_hidden_cache_item(exclude=exclude | {item.position for item in items})
             if cache is not None:
                 items.append(cache)
+                if hasattr(self, "ability_cache_double_chance") and self.ability_cache_double_chance():
+                    bonus = self.create_hidden_cache_item(exclude=exclude | {item.position for item in items})
+                    if bonus is not None:
+                        items.append(bonus)
 
         if hasattr(self, "generate_harvest_nodes"):
             items.extend(self.generate_harvest_nodes())

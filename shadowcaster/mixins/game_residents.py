@@ -43,6 +43,8 @@ class ResidentsMixin(GameMixinBase):
             self._spawn_flavor_building_residents()
             return
         if self.region_type != "town":
+            if hasattr(self, "maybe_spawn_wandering_npc"):
+                self.maybe_spawn_wandering_npc()
             return
         metadata = getattr(self.dungeon, "metadata", {})
         size = metadata.get("settlement_size", "hamlet")

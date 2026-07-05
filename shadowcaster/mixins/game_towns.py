@@ -217,8 +217,8 @@ class TownsMixin(GameMixinBase):
     def talk_to_resident(self, resident):
         if resident is None:
             return
-        if resident.kind == "merchant" and self.region_type == "supply" and self.service_claimed and not self.has_pending_choice():
-            self.open_provisioner_trade()
+        if resident.kind == "merchant" and self.region_type == "supply" and self.service_claimed and not self.trade_open and not self.has_pending_choice():
+            self.open_trade()
             return
         if self.apply_resident_boon(resident):
             self.message = self.with_town_attitude_dialogue(self.message, resident)

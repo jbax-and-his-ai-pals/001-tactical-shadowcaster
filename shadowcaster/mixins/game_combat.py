@@ -31,15 +31,12 @@ class CombatMixin(GameMixinBase):
     def take_damage(self, amount, cause=None):
         if amount > 0:
             amount = max(1, amount - self.effective_defense - self._armor_damage_reduction())
+            if hasattr(self, "ability_on_hit_received"):
+                amount = self.ability_on_hit_received(amount)
         self.health -= amount
         if self.health <= 0:
             self.health = 0
-            self.game_over = True
-            self.death_cause = cause or "Unknown"
-            self.stop_auto_movement()
-            self.hovered_world_tile = None
-            self.selected_inspect_tile = None
-            self.message = f"You were slain by {self.death_cause_label()}."
+            self.trigger_death(cause or "Unknown")
             return
         self.update_visibility()
 
@@ -56,6 +53,11 @@ class CombatMixin(GameMixinBase):
                     return False  # 25% chance to block
                 if armor.key == "chain_mail":
                     duration = max(1, duration - 1)
+            # Resistance halves duration
+            resist_key = "resist_poison" if effect == "poison" else ("resist_fire" if effect == "burn" else None)
+            if resist_key and resist_key in statuses:
+                duration = max(1, duration // 2)
+                del statuses[resist_key]
         current = statuses.get(effect, 0)
         statuses[effect] = max(current, duration)
         return statuses[effect] != current
@@ -63,7 +65,12 @@ class CombatMixin(GameMixinBase):
     def status_summary(self):
         if not self.player_statuses:
             return "clear"
-        labels = {"poison": "Poison", "burn": "Burn", "ward": "Ward"}
+        labels = {
+            "poison": "Poison", "burn": "Burn", "ward": "Ward",
+            "regen": "Regen", "resist_poison": "ResPoison", "resist_fire": "ResFire",
+            "fortify_attack": "AtkUp", "fortify_defense": "DefUp",
+            "fortify_speed": "SwiftUp", "fortify_light": "SightUp",
+        }
         return ", ".join(f"{labels.get(name, name.title())} {turns}t" for name, turns in sorted(self.player_statuses.items()))
 
     def tick_player_statuses(self):
@@ -79,10 +86,18 @@ class CombatMixin(GameMixinBase):
                 cause = f"burn from {source}" if source else "burn"
                 self.take_damage(1, cause)
                 messages.append("Flames scorch you for 1 HP.")
+            elif effect == "regen":
+                if self.health < self.max_health:
+                    self.health = min(self.max_health, self.health + 1)
+                    messages.append("You regenerate 1 HP.")
+            # fortify/resist statuses just tick down silently
             self.player_statuses[effect] -= 1
             if self.player_statuses[effect] <= 0:
                 self.clear_player_status(effect)
-                messages.append(f"You shake off {effect}.")
+                if effect not in ("poison", "burn"):
+                    messages.append(f"The {effect.replace('_', ' ')} fades.")
+                else:
+                    messages.append(f"You shake off {effect}.")
             if self.game_over:
                 break
         return messages
@@ -283,53 +298,28 @@ class CombatMixin(GameMixinBase):
             if enemy.status_effects.get("stun", 0) > 0:
                 enemy_messages.append(f"The {enemy.kind} is staggered.")
                 continue
-            acted = False
-            for _step in range(max(1, enemy.moves_per_turn)):
-                distance = heuristic(enemy.position, self.player)
-                # Ranged attack if in range and has line of sight
-                if enemy.attack_range > 1 and distance <= enemy.attack_range and self.line_to_target(enemy.position):
-                    self.take_damage(enemy.damage, f"the {enemy.kind}")
-                    effect_applied = self.apply_enemy_hit_effect(enemy, enemy_messages)
-                    if self.run_has_ended():
-                        return
-                    effect_text = f" and inflicts {enemy.on_hit_effect}" if effect_applied else ""
-                    enemy_messages.append(f"The {enemy.kind} strikes from range for {enemy.damage}{effect_text}.")
-                    acted = True
-                    break
-                # Preferred-range retreat: back away when too close
-                if enemy.preferred_range > 1 and distance < enemy.preferred_range:
-                    dx = enemy.position[0] - self.player[0]
-                    dy = enemy.position[1] - self.player[1]
-                    step_x = enemy.position[0] + (1 if dx > 0 else -1 if dx < 0 else 0)
-                    step_y = enemy.position[1] + (1 if dy > 0 else -1 if dy < 0 else 0)
-                    retreat = (step_x, step_y)
-                    if (not self.dungeon.is_blocked(*retreat) and retreat not in occupied_positions):
-                        occupied_positions.discard(enemy.position)
-                        enemy.position = retreat
-                        occupied_positions.add(enemy.position)
-                    acted = True
-                    break
-                # Move toward player
-                path = find_path(self.dungeon, enemy.position, self.player, occupied=occupied_positions - {enemy.position})
-                if path:
-                    next_step = path[0]
-                    if next_step == self.player:
-                        self.take_damage(enemy.damage, f"the {enemy.kind}")
-                        effect_applied = self.apply_enemy_hit_effect(enemy, enemy_messages)
-                        if self.run_has_ended():
-                            return
-                        effect_text = f" and inflicts {enemy.on_hit_effect}" if effect_applied else ""
-                        enemy_messages.append(f"The {enemy.kind} hits you for {enemy.damage}{effect_text}.")
-                        acted = True
-                        break
-                    occupied_positions.discard(enemy.position)
-                    enemy.position = next_step
-                    occupied_positions.add(enemy.position)
-                    if _step == 0:
-                        label = "dashes" if enemy.moves_per_turn > 1 else "closes in"
-                        enemy_messages.append(f"The {enemy.kind} {label}.")
-                else:
-                    break
+            # Trait: regen — heal 1 HP per turn if damaged
+            if "regen" in enemy.traits and enemy.health < enemy.max_health:
+                enemy.health = min(enemy.max_health, enemy.health + 1)
+            # Trait: berserks — double damage at half HP
+            effective_damage = enemy.damage
+            if "berserks" in enemy.traits and enemy.health <= enemy.max_health // 2:
+                effective_damage = enemy.damage * 2
+            # Trait: pack_bonus — +1 damage if another friendly adjacent
+            if "pack_bonus" in enemy.traits:
+                allies_near = sum(
+                    1 for other in self.enemies
+                    if other is not enemy and heuristic(other.position, enemy.position) <= 2
+                )
+                if allies_near >= 1:
+                    effective_damage += 1
+            self._run_enemy_ai(enemy, effective_damage, occupied_positions, enemy_messages)
+            if self.run_has_ended():
+                return
+            # Trait: calls_reinforcements — rare chance to spawn a low-tier ally nearby
+            if "calls_reinforcements" in enemy.traits and not self.run_has_ended():
+                if random.random() < 0.08:
+                    self._try_call_reinforcement(enemy, occupied_positions, enemy_messages)
         self.move_residents()
         self.update_visibility()
         parts = [pending_message]

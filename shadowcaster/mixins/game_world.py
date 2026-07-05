@@ -24,7 +24,11 @@ class WorldMixin(GameMixinBase):
         return f"{coord[0]},{coord[1]}"
 
     def overworld_region_types(self):
-        return {"forest", "desert", "swamp", "plains", "mountain", "farmland", "badlands", "tundra", "volcanic"}
+        return {
+            "forest", "desert", "swamp", "plains", "mountain",
+            "farmland", "badlands", "tundra", "volcanic",
+            "ossuary", "mirrorwood",
+        }
 
     def connected_region_types(self):
         return self.overworld_region_types()
@@ -99,7 +103,13 @@ class WorldMixin(GameMixinBase):
             "tundra": (0.9, 3.3),
             "badlands": (0.45, 4.2),
             "volcanic": (0.15, 5.0),
+            # Legendary — require distance >= 8 and world-edge proximity
+            "ossuary":    (0.0, 0.05),
+            "mirrorwood": (0.0, 0.04),
         }
+        # Legendary types never spawn within distance 8
+        if region_type in ("ossuary", "mirrorwood") and (abs(coord[0]) + abs(coord[1])) < 8:
+            return 0.0
         near_weight, far_weight = near_far_weights.get(region_type, (1.0, 1.0))
         base = near_weight + (far_weight - near_weight) * progress
 
@@ -187,6 +197,8 @@ class WorldMixin(GameMixinBase):
             "dungeon": 2,
             "monster_town": 2,
             "maze": 2,
+            "ossuary": 2,
+            "mirrorwood": 1,
         }.get(region_type, 0)
 
     def assign_region_danger(self, coord=None, region_type=None, parent_tier=None, depth=1):

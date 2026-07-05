@@ -63,6 +63,7 @@ class TownsServicesMixin(GameMixinBase):
                 lines.append("Your reputation here opens the back shelf.")
         elif self.region_type == "shrine":
             title = "Shrine — Blessing"
+            self.record_shrine_visit()
             statuses_cleared = [s for s in ("poison", "burn") if s in self.player_statuses]
             for s in statuses_cleared:
                 self.clear_player_status(s)
@@ -78,6 +79,10 @@ class TownsServicesMixin(GameMixinBase):
                 lines.append("You are already at full health.")
             if not lines:
                 lines.append("A stillness settles over you.")
+            is_homepoint = self.homepoint_coord == self.world_position
+            hp_label = "Current homepoint." if is_homepoint else "Not your homepoint."
+            lines.append(hp_label)
+            lines.append("Press H to set as homepoint." if not is_homepoint else "")
         elif self.region_type == "smith":
             title = "Smithy — Outfitted"
             ammo_gain = 1 + service_bonus

@@ -119,6 +119,12 @@ class GameCoreMixin(GameMixinBase):
         self.log_scroll = 0
         self.inventory = []
         self.gold = 0
+        self.trade_open = False
+        self.trade_panel = 0
+        self.trade_stock_index = 0
+        self.trade_pack_index = 0
+        self.trader_stock: list = []
+        self.trader_gold = 0
         self.active_quests = []
         self.notice_board_open = False
         self.notice_board_quests = []
@@ -135,6 +141,19 @@ class GameCoreMixin(GameMixinBase):
         self.debug_omniscient = False
         self.death_stats_tab = 0
         self.death_cause = ""
+        self.death_gold_lost = 0
+        self.death_respawn_label = ""
+        self.homepoint_coord: tuple | None = None
+        self.discovered_shrines: list = []  # list of world_position tuples
+        self.respawn_pending = False
+        self.player_xp = 0
+        self.player_level = 1
+        self.xp_milestones_claimed: set = set()
+        self.levelup_pending = 0  # level just reached, 0 = none pending
+        self.active_ability: str = ""
+        self.levelup_ability_choices: list = []
+        self.levelup_ability_index: int = 0
+        self.wandering_npcs: dict = {}
         self.newly_discovered_tiles = set()
         self.turn_newly_discovered_tiles = set()
         self.save_entries = []
@@ -148,49 +167,6 @@ class GameCoreMixin(GameMixinBase):
         self.refresh_controllers()
         self.reset()
         self.open_main_menu()
-
-    @property
-    def light_radius(self):
-        base = self.base_light_radius + self.light_bonus
-        weapon = self.equipped_weapon
-        armor = self.equipped_armor
-        if weapon and weapon.key == "longbow":
-            base += 1
-        if armor and armor.key == "travel_cloak":
-            base += 1
-        return base
-
-    @property
-    def autoexplore_interval(self):
-        return max(25, AUTO_MOVE_INTERVAL_MS - self.haste_bonus)
-
-    @property
-    def melee_range(self):
-        bonus = 1 if (self.equipped_weapon and self.equipped_weapon.key == "spear") else 0
-        return 1 + self.reach_bonus + bonus
-
-    @property
-    def equipped_weapon(self):
-        return next((item for item in self.inventory if item.category == "weapon" and item.equipped), None)
-
-    @property
-    def equipped_armor(self):
-        return next((item for item in self.inventory if item.category == "armor" and item.equipped), None)
-
-    @property
-    def effective_melee_damage(self):
-        weapon = self.equipped_weapon
-        return self.melee_damage + (weapon.melee_bonus if weapon else 0)
-
-    @property
-    def effective_ranged_damage(self):
-        weapon = self.equipped_weapon
-        return self.ranged_damage + (weapon.ranged_bonus if weapon else 0)
-
-    @property
-    def effective_defense(self):
-        armor = self.equipped_armor
-        return armor.defense_bonus if armor else 0
 
     @property
     def message(self):
@@ -303,6 +279,7 @@ class GameCoreMixin(GameMixinBase):
         self.world_zones: list[dict] = self.generate_world_zones()
         self.world_coast: dict = self.generate_world_coast()
         self.world_city: dict = self.generate_world_city()
+        self.wandering_npcs: dict = self.generate_wandering_npcs()
         self.preview_world_regions = {}
         self.local_regions = {}
         self.current_local_region: str | None = None
@@ -340,8 +317,12 @@ class GameCoreMixin(GameMixinBase):
     def active_non_menu_overlay(self):
         if self.game_over:
             return "game_over"
+        if getattr(self, "levelup_pending", 0):
+            return "levelup"
         if self.has_pending_choice():
             return "choice"
+        if self.trade_open:
+            return "trade"
         if self.service_modal_open:
             return "service_modal"
         if self.notice_board_open:

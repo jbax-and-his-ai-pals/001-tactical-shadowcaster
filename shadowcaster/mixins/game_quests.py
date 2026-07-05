@@ -19,10 +19,14 @@ class QuestsMixin(QuestGenerationMixin, QuestBoardMixin):
         builders = self.board_builders_for_attitude((wx, wy))
         quest_slots = self.town_quest_slots((wx, wy))
         quests = []
-        if self.town_attitude_score((wx, wy)) >= 6:
+        attitude = self.town_attitude_score((wx, wy))
+        level = getattr(self, "player_level", 1)
+        if attitude >= 6:
             quests.append(self._board_quest_priority(wx, wy, 0))
+            if level >= 3 and attitude >= 10:
+                quests.append(self._board_quest_priority(wx, wy, 99))
             start_slot = 1
-        elif self.town_attitude_score((wx, wy)) >= 1:
+        elif attitude >= 1:
             quests.append(self._board_quest_chain(wx, wy, 0))
             start_slot = 1
         else:
@@ -184,6 +188,9 @@ class QuestsMixin(QuestGenerationMixin, QuestBoardMixin):
         quest.status = "complete"
         self._record_quest_consequences(quest)
         self.gold += quest.reward_gold
+        if hasattr(self, "xp_check_quest"):
+            self.xp_check_quest(quest)
+            self.xp_check_attitude(quest.from_world_pos)
         town_response = self.town_response_line(quest.from_world_pos)
         if quest.kind == "delivery" and self._is_social_quest(quest):
             self.message = f"Errand complete — {quest.item_name} delivered. Received {quest.reward_gold}g. Total: {self.gold}g."

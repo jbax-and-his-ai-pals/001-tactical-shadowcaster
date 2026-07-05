@@ -27,6 +27,9 @@ class Enemy:
     preferred_range: int = 1
     moves_per_turn: int = 1
     status_effects: dict[str, int] = field(default_factory=dict)
+    behavior: str = "pursuer"
+    traits: list[str] = field(default_factory=list)
+    catalog_key: str = ""
 
 
 @dataclass
@@ -73,6 +76,7 @@ class Item:
     marker: str
     description: str = ""
     quantity: int = 1
+    rarity: str = "common"
     melee_bonus: int = 0
     ranged_bonus: int = 0
     defense_bonus: int = 0

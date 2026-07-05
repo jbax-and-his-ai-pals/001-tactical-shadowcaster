@@ -130,7 +130,7 @@ def render_inventory_overlay(game):
 
     title = game.font.render("Inventory", True, (248, 244, 224))
     gold_text = game.small_font.render(f"Gold: {game.gold}", True, (240, 210, 100))
-    subtitle = game.small_font.render("Use a consumable, or equip/unequip a weapon and armor", True, (206, 220, 236))
+    subtitle = game.small_font.render("Use a consumable, or equip/unequip a weapon, armor, or trinket", True, (206, 220, 236))
     game.screen.blit(title, title.get_rect(center=(SCREEN_WIDTH // 2, 82)))
     game.screen.blit(gold_text, gold_text.get_rect(center=(SCREEN_WIDTH // 2, 106)))
     game.screen.blit(subtitle, subtitle.get_rect(center=(SCREEN_WIDTH // 2, 124)))
@@ -149,14 +149,20 @@ def render_inventory_overlay(game):
         empty = game.small_font.render("Your pack is empty.", True, COLOR_TEXT)
         panel.blit(empty, (18, y))
     for index, row in enumerate(rows):
+        locked = row.get("locked", False)
         selected = index == game.inventory_index
         row_rect = pygame.Rect(12, y - 4, panel_width - 24, 30)
-        if selected:
+        if locked:
+            pygame.draw.rect(panel, (28, 32, 40, 180), row_rect, border_radius=8)
+        elif selected:
             pygame.draw.rect(panel, (38, 48, 68, 220), row_rect, border_radius=8)
             pygame.draw.rect(panel, (255, 222, 134), row_rect, 2, border_radius=8)
-        pygame.draw.rect(panel, row["color"], (18, y + 4, 10, 18), border_radius=3)
-        label = game.small_font.render(row["label"], True, (255, 246, 214) if selected else COLOR_TEXT)
-        detail = game.small_font.render(row["detail"], True, COLOR_ACCENT if selected else (200, 220, 240))
+        swatch_color = row["color"] if not locked else (60, 55, 48)
+        pygame.draw.rect(panel, swatch_color, (18, y + 4, 10, 18), border_radius=3)
+        label_color = (120, 110, 90) if locked else ((255, 246, 214) if selected else COLOR_TEXT)
+        detail_color = (100, 95, 80) if locked else (COLOR_ACCENT if selected else (200, 220, 240))
+        label = game.small_font.render(row["label"], True, label_color)
+        detail = game.small_font.render(row["detail"], True, detail_color)
         panel.blit(label, (38, y))
         panel.blit(detail, (panel_width - detail.get_width() - 22, y))
         y += 34
@@ -199,8 +205,21 @@ def render_game_over_overlay(game):
         panel.blit(surface, (48, y))
         y += 28
 
+    mouse_rel = (game.mouse_screen_pos[0] - rect.left, game.mouse_screen_pos[1] - rect.top)
+
+    # Respawn button
+    respawn_rect = game.death_respawn_rect().move(-rect.left, -rect.top)
+    hovered_respawn = respawn_rect.collidepoint(mouse_rel)
+    respawn_fill = (50, 100, 80) if hovered_respawn else (34, 72, 58)
+    respawn_border = (140, 220, 180) if hovered_respawn else (90, 170, 130)
+    pygame.draw.rect(panel, respawn_fill, respawn_rect, border_radius=12)
+    pygame.draw.rect(panel, respawn_border, respawn_rect, 2, border_radius=12)
+    respawn_text = game.small_font.render("Respawn", True, (200, 255, 230))
+    panel.blit(respawn_text, respawn_text.get_rect(center=respawn_rect.center))
+
+    # Main Menu button
     button_rect = game.death_main_menu_rect().move(-rect.left, -rect.top)
-    hovered_button = button_rect.collidepoint((game.mouse_screen_pos[0] - rect.left, game.mouse_screen_pos[1] - rect.top))
+    hovered_button = button_rect.collidepoint(mouse_rel)
     button_fill = (110, 78, 84) if hovered_button else (78, 56, 62)
     button_border = (255, 214, 214) if hovered_button else (210, 164, 164)
     pygame.draw.rect(panel, button_fill, button_rect, border_radius=12)
@@ -210,7 +229,7 @@ def render_game_over_overlay(game):
 
     footer = [
         "Click tabs or use left/right to change stat groups.",
-        "Press Enter, Space, or Esc for the in-game menu.",
+        "Enter/Space to Respawn. Esc for Main Menu.",
     ]
     y = button_rect.top - 70
     for line in footer:
@@ -290,3 +309,6 @@ def render_service_modal(game):
     modal.blit(ok_label, ok_label.get_rect(center=ok_rect.center))
 
     game.screen.blit(modal, (x, y))
+
+
+from .rendering_levelup import render_levelup_overlay  # noqa: F401

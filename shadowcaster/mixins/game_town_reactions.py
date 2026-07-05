@@ -76,6 +76,11 @@ class TownReactionsMixin(GameMixinBase):
             suffix = "At least the locals recognize you now."
         else:
             suffix = "You still feel a little unproven here."
+        # Level 3+: NPCs address the player by title
+        if getattr(self, "player_level", 1) >= 3 and label in ("Known", "Welcome", "Trusted", "Beloved"):
+            title = self.player_title() if hasattr(self, "player_title") else ""
+            if title:
+                text = f"{title}. {text}"
         return f"{text} {suffix}".strip()
 
     def town_response_line(self, coord=None):
