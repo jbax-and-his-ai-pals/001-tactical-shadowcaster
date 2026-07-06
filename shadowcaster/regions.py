@@ -1,11 +1,14 @@
 import random
 from dataclasses import dataclass, field
-from collections import deque
 
 from .constants import INTERIOR_REGION_TYPES
 from .dungeon import Dungeon
 from .game_typing import RegionMapLike
-from .models import RectRoom, RegionPalette
+from .models import RegionPalette
+from .regions_map import (  # noqa: F401
+    RegionMap, carve_path, feature_footprint_tiles,
+    path_tiles, walkable_path_tiles, widen_path_tiles,
+)
 from .regions_metadata import palette_for_region, random_region_name, region_summary  # noqa: F401
 
 
@@ -25,114 +28,7 @@ class RegionChoice:
     context: dict = field(default_factory=dict)
 
 
-class RegionMap:
-    def __init__(self, width, height, fill=1):
-        self.width: int = width
-        self.height: int = height
-        self.tiles: list[list[int]] = [[fill for _ in range(height)] for _ in range(width)]
-        self.rooms: list[RectRoom] = []
-        self.metadata: dict = {}
-        self.transparent_tiles: set[tuple[int, int]] = set()
-
-    def carve_rect(self, x, y, w, h):
-        room = RectRoom(x, y, w, h)
-        self.rooms.append(room)
-        for tx in range(x, x + w):
-            for ty in range(y, y + h):
-                self.tiles[tx][ty] = 0
-        return room
-
-    def is_blocked(self, x, y):
-        return not (0 <= x < self.width and 0 <= y < self.height) or self.tiles[x][y] == 1
-
-
-def path_tiles(start, end, width=1):
-    tiles = set()
-    x1, y1 = start
-    x2, y2 = end
-    for x in range(min(x1, x2), max(x1, x2) + 1):
-        for offset in range(-(width // 2), width - (width // 2)):
-            tiles.add((x, y1 + offset))
-    for y in range(min(y1, y2), max(y1, y2) + 1):
-        for offset in range(-(width // 2), width - (width // 2)):
-            tiles.add((x2 + offset, y))
-    return tiles
-
-
-def walkable_path_tiles(region_map, start, end):
-    if start == end:
-        return [start]
-    frontier = deque([start])
-    came_from = {start: None}
-    while frontier:
-        current = frontier.popleft()
-        if current == end:
-            break
-        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-            neighbor = (current[0] + dx, current[1] + dy)
-            if neighbor in came_from:
-                continue
-            if not (0 < neighbor[0] < region_map.width - 1 and 0 < neighbor[1] < region_map.height - 1):
-                continue
-            if region_map.is_blocked(*neighbor) and neighbor != end:
-                continue
-            came_from[neighbor] = current
-            frontier.append(neighbor)
-    if end not in came_from:
-        return []
-    path = []
-    current = end
-    while current is not None:
-        path.append(current)
-        current = came_from[current]
-    path.reverse()
-    return path
-
-
-def widen_path_tiles(tiles, width=1):
-    widened = set()
-    for x, y in tiles:
-        for offset_x in range(-(width // 2), width - (width // 2)):
-            for offset_y in range(-(width // 2), width - (width // 2)):
-                widened.add((x + offset_x, y + offset_y))
-    return widened
-
-
-def feature_footprint_tiles(region_map, anchor, kind, preferred_tiles=None):
-    if kind != "notice_board":
-        return {anchor}
-    preferred_tiles = set(preferred_tiles or set())
-    candidates = [
-        [(0, 0), (1, 0), (0, -1), (1, -1)],
-        [(-1, 0), (0, 0), (-1, -1), (0, -1)],
-        [(0, 0), (1, 0), (0, 1), (1, 1)],
-        [(-1, 0), (0, 0), (-1, 1), (0, 1)],
-    ]
-    best_tiles = {anchor}
-    best_score = (-1, -1)
-    for offsets in candidates:
-        tiles = []
-        valid = True
-        for dx, dy in offsets:
-            tile = (anchor[0] + dx, anchor[1] + dy)
-            if not (1 <= tile[0] < region_map.width - 1 and 1 <= tile[1] < region_map.height - 1):
-                valid = False
-                break
-            if region_map.tiles[tile[0]][tile[1]] != 0:
-                valid = False
-                break
-            tiles.append(tile)
-        if not valid:
-            continue
-        preferred_count = sum(1 for tile in tiles if tile in preferred_tiles)
-        score = (preferred_count, len(tiles))
-        if score > best_score:
-            best_score = score
-            best_tiles = set(tiles)
-    return best_tiles
-
-
-def choose_region_type(floor):
+def choose_region_type(floor: int) -> str:
     if floor == 1:
         return "dungeon"
     options = ["dungeon", "forest", "ruins"]
@@ -152,7 +48,7 @@ def choose_region_type(floor):
     return random.choices(options, weights=weights, k=1)[0]
 
 
-def settlement_size_label(size):
+def settlement_size_label(size: str) -> str:
     return {
         "hamlet": "Hamlet",
         "village": "Village",
@@ -161,7 +57,7 @@ def settlement_size_label(size):
     }.get(size, size.replace("_", " ").title())
 
 
-def choose_settlement_size(parent_biome, hostile=False):
+def choose_settlement_size(parent_biome: str, hostile: bool = False) -> str:
     weights = {
         "forest": [3, 5, 3, 1],
         "plains": [2, 4, 4, 2],
@@ -180,21 +76,6 @@ def choose_settlement_size(parent_biome, hostile=False):
     return random.choices(options, weights=biome_weights, k=1)[0]
 
 
-def carve_path(region_map, start, end, width=1):
-    x1, y1 = start
-    x2, y2 = end
-    for x in range(min(x1, x2), max(x1, x2) + 1):
-        for offset in range(-(width // 2), width - (width // 2)):
-            py = max(1, min(region_map.height - 2, y1 + offset))
-            region_map.tiles[x][py] = 0
-    for y in range(min(y1, y2), max(y1, y2) + 1):
-        for offset in range(-(width // 2), width - (width // 2)):
-            px = max(1, min(region_map.width - 2, x2 + offset))
-            region_map.tiles[px][y] = 0
-
-
-
-
 # Generators are imported after the core definitions to avoid circular imports.
 from .regions_generators import (  # noqa: E402
     generate_forest, generate_ruins, generate_desert, generate_mountain,
@@ -202,6 +83,8 @@ from .regions_generators import (  # noqa: E402
     generate_badlands, generate_tundra, generate_volcanic, generate_castle,
     generate_cave, generate_maze,
 )
+
+
 def generate_region(floor, width, height, region_type=None, name=None, context=None):
     from .regions_town import generate_interior, generate_monster_town, generate_town
     region_type = region_type or choose_region_type(floor)

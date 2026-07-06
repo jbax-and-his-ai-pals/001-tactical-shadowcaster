@@ -226,34 +226,6 @@ class MenuUIMixin(GameMixinBase):
             "scroll": scroll,
         }
 
-    def tuner_entries(self):
-        entries = []
-        for entry in self.tuner_schema():
-            value = self.tuning[entry["key"]]
-            display = "Yes" if entry["key"] == "heal_pickup_require_missing_hp" and value else "No" if entry["key"] == "heal_pickup_require_missing_hp" else str(value)
-            entries.append({**entry, "value": value, "display": display})
-        return entries
-
-    def tuner_tabs(self):
-        return ["Recovery", "Rewards", "Upgrades"]
-
-    def grouped_tuner_entries(self):
-        groups = {
-            "Recovery": {"heal_pickup_floor_interval", "heal_pickup_restore", "heal_pickup_require_missing_hp", "medkit_heal"},
-            "Rewards": {
-                "full_explore_vitality_bonus",
-                "full_explore_power_bonus",
-                "full_explore_recovery_medkits",
-                "full_explore_recovery_tonics",
-                "bottom_reward_ammo",
-                "bottom_reward_medkits",
-            },
-            "Upgrades": {"vitality_upgrade_amount", "power_upgrade_amount", "light_upgrade_amount"},
-        }
-        group_name = self.tuner_tabs()[self.tuner_tab]
-        allowed = groups[group_name]
-        return [entry for entry in self.tuner_entries() if entry["key"] in allowed]
-
     def toggle_tuner(self):
         active_overlay = self.active_overlay()
         if active_overlay not in {None, "tuner"}:
@@ -270,19 +242,6 @@ class MenuUIMixin(GameMixinBase):
             self.reopen_menu_if_needed(self.tuner_return_mode)
             self.tuner_return_mode = None
             self.message = f"You return to {self.region_name}."
-
-    def adjust_tuner_value(self, delta):
-        entries = self.grouped_tuner_entries()
-        if not entries:
-            return
-        entry = entries[self.tuner_index]
-        current = self.tuning[entry["key"]]
-        new_value = max(entry["min"], min(entry["max"], current + entry["step"] * delta))
-        if new_value == current:
-            return
-        self.tuning[entry["key"]] = new_value
-        new_display = "Yes" if entry["key"] == "heal_pickup_require_missing_hp" and new_value else "No" if entry["key"] == "heal_pickup_require_missing_hp" else str(new_value)
-        self.message = f"{entry['label']}: {new_display}"
 
     def toggle_inventory(self):
         active_overlay = self.active_overlay()
@@ -322,96 +281,3 @@ class MenuUIMixin(GameMixinBase):
         else:
             self.message = f"You return to {self.region_name}."
 
-    def inventory_rows(self):
-        rows = []
-        for item in self.inventory:
-            if item.category == "consumable":
-                if item.quantity <= 0:
-                    continue
-                rarity = getattr(item, "rarity", "common")
-                rarity_tag = f"[{rarity}] " if rarity != "common" else ""
-                rows.append({"key": item.key, "label": f"{item.name} ×{item.quantity}", "detail": f"{rarity_tag}{item.description or 'Use this item'}", "action": "use", "color": item.color})
-            elif item.category == "weapon":
-                status = "Equipped" if item.equipped else "Owned"
-                stat = f"+{item.melee_bonus} melee" if item.melee_bonus else f"+{item.ranged_bonus} ranged"
-                rows.append({"key": item.key, "label": f"{item.name} ({status})", "detail": stat, "action": "equip", "color": item.color})
-            elif item.category == "armor":
-                status = "Equipped" if item.equipped else "Owned"
-                rows.append({"key": item.key, "label": f"{item.name} ({status})", "detail": f"+{item.defense_bonus} defense", "action": "equip", "color": item.color})
-            elif item.category == "trinket":
-                status = "Equipped" if item.equipped else "Owned"
-                rarity = getattr(item, "rarity", "uncommon")
-                rarity_tag = f"[{rarity}] " if rarity != "uncommon" else ""
-                rows.append({"key": item.key, "label": f"{item.name} ({status})", "detail": f"{rarity_tag}{item.description}", "action": "equip", "color": item.color, "locked": False})
-            elif item.category == "quest":
-                rows.append({"key": item.key, "label": item.name, "detail": "Quest item — cannot drop", "action": None, "color": item.color})
-        has_trinket = any(item.category == "trinket" for item in self.inventory)
-        if not has_trinket and getattr(self, "player_level", 1) < 2:
-            rows.append({"key": "__trinket_locked__", "label": "Trinket Slot (Locked)", "detail": "Unlocks at Level 2 — Seasoned", "action": None, "color": (100, 90, 70), "locked": True})
-        return rows
-
-    def inventory_activate_selected(self):
-        rows = self.inventory_rows()
-        if not rows or self.inventory_index >= len(rows):
-            return
-        row = rows[self.inventory_index]
-        if row["action"] is None:
-            self.message = f"{row['label']}: {row['detail']}"
-        elif row["action"] == "use":
-            self.use_item(row["key"])
-        else:
-            self.equip_item(row["key"])
-        self.inventory_index = min(self.inventory_index, max(0, len(self.inventory_rows()) - 1))
-
-    def inventory_choice_from_screen(self, screen_x, screen_y):
-        rows = self.inventory_rows()
-        panel_width = 720
-        left = (SCREEN_WIDTH - panel_width) // 2
-        top = 136
-        y = 20
-        for index in range(len(rows)):
-            row_rect = pygame.Rect(left + 12, top + y - 4, panel_width - 24, 30)
-            if row_rect.collidepoint(screen_x, screen_y):
-                return index
-            y += 34
-        return None
-
-    def shift_tuner_tab(self, delta):
-        tabs = self.tuner_tabs()
-        self.tuner_tab = (self.tuner_tab + delta) % len(tabs)
-        self.tuner_index = 0
-        self.message = f"Tuner tab: {tabs[self.tuner_tab]}."
-
-    def menu_choice_from_screen(self, screen_x, screen_y):
-        if self.menu_mode == "controls":
-            layout = self.controls_layout()
-            if pygame.Rect(layout["back_left"], layout["back_top"], layout["back_width"], layout["back_height"]).collidepoint(screen_x, screen_y):
-                return 0
-            return None
-        if self.menu_mode == "load":
-            layout = self.load_layout()
-            if pygame.Rect(layout["back_left"], layout["back_top"], layout["back_width"], layout["back_height"]).collidepoint(screen_x, screen_y):
-                return len(self.save_entries)  # "Back" index in menu_options
-            content_top_abs = layout["top"] + layout["content_top"]
-            if content_top_abs <= screen_y < content_top_abs + layout["content_visible_h"]:
-                row_i = (screen_y - content_top_abs) // layout["row_h"]
-                save_idx = self.menu_scroll + row_i
-                if 0 <= save_idx < len(self.save_entries):
-                    return save_idx
-            return None
-        layout = self.menu_layout()
-        box_width = layout["box_width"]
-        box_height = layout["box_height"]
-        start_y = layout["start_y"]
-        gap = layout["gap"]
-        left = layout["left"]
-        visible_options = layout["visible_options"]
-        scroll = layout["scroll"]
-        for visible_index in range(len(visible_options)):
-            top = start_y + visible_index * (box_height + gap)
-            option = visible_options[visible_index]
-            if option == "Load Game" and self.menu_mode == "main" and not has_save():
-                continue
-            if pygame.Rect(left, top, box_width, box_height).collidepoint(screen_x, screen_y):
-                return scroll + visible_index
-        return None

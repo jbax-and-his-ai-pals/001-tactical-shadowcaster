@@ -142,6 +142,14 @@ class InventoryUseMixin(GameMixinBase):
                 self.add_status(self.player_statuses, "fortify_light", turns)
                 self.update_visibility()
                 parts.append(f"Sight extended for {turns} turns.")
+            elif etype == "haste":
+                turns = eff.get("turns", 6)
+                self.add_status(self.player_statuses, "haste", turns)
+                parts.append(f"Haste for {turns} turns — move twice as far.")
+            elif etype == "strength":
+                turns = eff.get("turns", 5)
+                self.add_status(self.player_statuses, "strength", turns)
+                parts.append(f"Strength for {turns} turns — +3 melee damage.")
         return parts
 
     def consume_medkit(self):

@@ -242,6 +242,11 @@ class WorldStateMixin(GameMixinBase):
         self.levelup_ability_choices = []
         self.levelup_ability_index = 0
         self.wandering_npcs = data.get("wandering_npcs", {})
+        self.world_steps = data.get("world_steps", 0)
+        self.trader_stock_steps = data.get("trader_stock_steps", {})
+        self.player_skills = data.get("player_skills", {})
+        self.player_skill_points = data.get("player_skill_points", 0)
+        self.journal_skill_index = 0
         self.attack_flash = None
         self.shot_flash = []
         self.auto_move_path = []

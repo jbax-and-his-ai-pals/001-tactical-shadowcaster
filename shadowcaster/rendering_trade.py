@@ -24,7 +24,7 @@ _STOCK_COL_W  = _BOX_W // 2
 _PACK_COL_W   = _BOX_W - _STOCK_COL_W
 _HEADER_H     = 42
 _FOOTER_H     = 32
-_ROW_H        = 26
+_ROW_H        = 32
 _CONTENT_TOP  = _TOP + _HEADER_H + 4
 _CONTENT_BOT  = _TOP + _BOX_H - _FOOTER_H - 4
 _CONTENT_H    = _CONTENT_BOT - _CONTENT_TOP
@@ -111,7 +111,12 @@ def _draw_stock_panel(game, screen):
             qty = entry.get("qty")
             can_afford = game.gold >= price
             name_color = _WHITE if (is_sel or can_afford) else _DIM
-            if entry_type in ("weapon", "armor") and game.owns_item(entry.get("key", "")):
+            if entry_type == "generated_gear":
+                from .item_generation import QUALITY_COLORS
+                item = entry.get("item")
+                quality = getattr(item, "quality", "normal") if item else "normal"
+                name_color = QUALITY_COLORS.get(quality, _WHITE) if (is_sel or can_afford) else _DIM
+            elif entry_type in ("weapon", "armor") and game.owns_item(entry.get("key", "")):
                 name_color = _DIM
                 name = name + " (owned)"
             label_text = font.render(name, True, name_color)
@@ -120,6 +125,24 @@ def _draw_stock_panel(game, screen):
             price_str = f"{price}g" + (f" ×{qty}" if qty is not None else "")
             price_surf = font.render(price_str, True, price_color)
             screen.blit(price_surf, (panel_right - price_surf.get_width() - 6, y + 4))
+            if entry_type == "generated_gear":
+                item = entry.get("item")
+                if item:
+                    parts = []
+                    if item.melee_bonus:
+                        parts.append(f"+{item.melee_bonus}M")
+                    if item.ranged_bonus:
+                        parts.append(f"+{item.ranged_bonus}R")
+                    if item.defense_bonus:
+                        parts.append(f"+{item.defense_bonus}def")
+                    if getattr(item, "max_hp_bonus", 0):
+                        parts.append(f"+{item.max_hp_bonus}HP")
+                    if getattr(item, "ranged_penalty", 0):
+                        parts.append(f"{item.ranged_penalty}rng")
+                    stat_line = "  " + "  ".join(parts) if parts else ""
+                    if stat_line:
+                        stat_surf = font.render(stat_line, True, _DIM)
+                        screen.blit(stat_surf, (panel_left + 10, y + 18))
 
 
 def _draw_pack_panel(game, screen):

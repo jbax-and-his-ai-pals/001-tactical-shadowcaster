@@ -219,6 +219,15 @@ RETURN_DIALOGUE = {
                      "The baker shrugs. 'Loaves are long gone, I'm afraid.'",
                      "'That bread — it kept on the road?' the baker asks.",
                      "The baker nods. 'Road rations work better than they look.'"),
+    "trainer":      ("The trainer nods. 'Back for another session?'",
+                     "'Training sticks better with repetition,' the trainer says.",
+                     "The trainer looks up. 'Skills take time. Keep at it.'",
+                     "'Gold well spent,' the trainer says. 'You can feel the difference out there.'"),
+    "locksmith":    ("The locksmith squints at the mechanism. 'Seen this model before?'",
+                     "'Still got that container?' the locksmith asks. 'I can open it.'",
+                     "The locksmith sets down their picks. 'Come back when you find something.'",
+                     "'The lock I cracked for you — quality piece,' the locksmith says.",
+                     "The locksmith nods. 'Word gets around about locked finds. I'll be here.'"),
     "fletcher":     ("The fletcher checks the rack. 'Stock's down. Come back tomorrow.'",
                      "'Nothing spare today,' the fletcher says.",
                      "The fletcher squints at a shaft. 'Ammo holding up out there?'",
@@ -325,6 +334,8 @@ SERVICE_NPC_DEFS = {
     "town_hall":    ("mayor",        "Mayor",          ("A settlement survives by knowing its neighbors.", "We've kept good records here. Most of them useful.", "The roads connect everything eventually. We track what we can."), "stationary"),
     "bakery":       ("baker",        "Baker",          ("The bread is out early if you need something before the road.", "A good crust keeps longer than you'd think.", "Flour, heat, and time. Everything else is just noise."), "stationary"),
     "fletcher":     ("fletcher",     "Fletcher",       ("Arrows are worth more than gold on a bad road.", "I keep the stock honest — no warped shafts, no cheap points.", "Take what you need. Come back when you run out."), "stationary"),
+    "locksmith":    ("locksmith",    "Locksmith",      ("Every lock has a solution — you just need the right approach.", "Bring me what you find sealed shut. I'll open it for a fair price.", "Most of what comes out of those is worth more than the cost of opening."), "stationary"),
+    "training_hall": ("trainer",    "Guild Trainer",  ("Knowledge and practice — that's all there is to it.", "Gold buys instruction. What you do with it is your affair.", "Tell me what you want to learn. I'll tell you what it costs."), "stationary"),
 }
 
 # ── Ambient (filler) civilian dialogue ────────────────────────────────────────

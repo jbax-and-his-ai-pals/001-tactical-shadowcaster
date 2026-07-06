@@ -232,5 +232,6 @@ class WorldTravelMixin(GameMixinBase):
             self.message = gate_msg
             return
         self.world_position = target_coord
+        self.world_steps = getattr(self, "world_steps", 0) + 1
         self.load_region_state(self.world_regions[target_key], arrival_direction=self.opposite_direction(direction))
         self.message = f"You cross into {self.region_name}."

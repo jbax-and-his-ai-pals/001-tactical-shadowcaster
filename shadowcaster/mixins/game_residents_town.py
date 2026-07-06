@@ -249,7 +249,7 @@ class ResidentsTownMixin(GameMixinBase):
         for kind, anchor in ambient_targets:
             pos = claim_resident_tile(anchor)
             dlg = tuple(AMBIENT_DIALOGUE.get(kind, ("...",)))
-            residents.append(Resident(pos, kind, COLOR_FRIEND, "settler", ambient_labels.get(kind, kind.title()), dlg, "wander", anchor, ""))
+            residents.append(Resident(pos, kind, COLOR_FRIEND, "settler", ambient_labels.get(kind) or kind.title(), dlg, "wander", anchor, ""))
 
         # Wanderer — a passing traveler who knows something about a distant region
         self._spawn_wanderer(size, residents, claim_resident_tile, plaza, occupied_positions)

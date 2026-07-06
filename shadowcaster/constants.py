@@ -160,4 +160,5 @@ INPUT_BINDINGS = {
     pygame.K_i: (ACTION_INVENTORY, None),
     pygame.K_j: (ACTION_JOURNAL, None),
     pygame.K_l: (ACTION_LOG, None),
+    pygame.K_n: ("minimap", None),
 }

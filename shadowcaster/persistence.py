@@ -218,6 +218,10 @@ def save_game(game, path=None):
         "xp_milestones_claimed": list(getattr(game, "xp_milestones_claimed", set())),
         "wandering_npcs": getattr(game, "wandering_npcs", {}),
         "active_ability": getattr(game, "active_ability", ""),
+        "world_steps": getattr(game, "world_steps", 0),
+        "trader_stock_steps": {str(k): v for k, v in getattr(game, "trader_stock_steps", {}).items()},
+        "player_skills": getattr(game, "player_skills", {}),
+        "player_skill_points": getattr(game, "player_skill_points", 0),
     }
     save_path.write_text(json.dumps(payload), encoding="utf-8")
     return save_path
@@ -275,6 +279,11 @@ def load_game(path):
     data["player_level"] = data.get("player_level", 1)
     data["xp_milestones_claimed"] = list(data.get("xp_milestones_claimed", []))
     data["wandering_npcs"] = data.get("wandering_npcs", {})
+    data["world_steps"] = data.get("world_steps", 0)
+    raw_tss = data.get("trader_stock_steps", {})
+    data["trader_stock_steps"] = {
+        (int(k.split(",")[0]), int(k.split(",")[1])): v for k, v in raw_tss.items()
+    } if raw_tss else {}
     if not data["world_regions"]:
         data["world_regions"] = {
             "0,0": {

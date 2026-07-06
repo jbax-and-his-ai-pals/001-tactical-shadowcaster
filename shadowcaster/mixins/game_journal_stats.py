@@ -217,6 +217,7 @@ class JournalStatsMixin(GameMixinBase):
         """Return display rows for the Character tab."""
         from .game_xp import XP_THRESHOLDS, LEVEL_UNLOCKS
         from .game_abilities import ABILITY_POOL
+        from ..skills import SKILL_REGISTRY, SKILL_ORDER, rank_cost
         rows = []
         level = getattr(self, "player_level", 1)
         title = self.player_title() if hasattr(self, "player_title") else "Wanderer"
@@ -242,6 +243,26 @@ class JournalStatsMixin(GameMixinBase):
             rows.append({"header": f"Role: {label}", "detail": f"Lead track: {track[0]}.", "color": (160, 210, 180)})
         else:
             rows.append({"header": "Role: Unnamed", "detail": "Complete quests and explore to earn a role.", "color": (140, 148, 156)})
+        # Skills section
+        skills = getattr(self, "player_skills", {})
+        sp = getattr(self, "player_skill_points", 0)
+        sp_label = f"{sp} skill point{'s' if sp != 1 else ''} available"
+        rows.append({"header": "── Skills ──", "detail": sp_label, "color": (180, 180, 180), "section": True})
+        for key in SKILL_ORDER:
+            spec = SKILL_REGISTRY[key]
+            current = skills.get(key, 0)
+            max_rank = spec["max_rank"]
+            pips = "●" * current + "○" * (max_rank - current)
+            if current >= max_rank:
+                detail = f"{pips}  (mastered)"
+            elif sp >= rank_cost(current + 1):
+                cost = rank_cost(current + 1)
+                detail = f"{pips}  — Press Enter to spend {cost} pt{'s' if cost > 1 else ''}"
+            else:
+                cost = rank_cost(current + 1)
+                detail = f"{pips}  — Next rank costs {cost} pt{'s' if cost > 1 else ''}"
+            rows.append({"header": spec["name"], "detail": detail, "color": spec["color"],
+                          "skill_key": key, "selectable": True})
         return rows
 
     def current_journal_summary_lines(self):

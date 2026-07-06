@@ -84,6 +84,24 @@ class Item:
     cleanses: bool = False
     ward_duration: int = 0
     equipped: bool = False
+    lock_difficulty: int = 0  # 0 = no lock; 1–5 = lockpicking rank required
+    # Generated equipment fields
+    base_key: str = ""
+    quality: str = "normal"
+    prefix_key: str | None = None
+    suffix_key: str | None = None
+    max_hp_bonus: int = 0
+    fov_bonus: int = 0
+    speed_bonus: int = 0
+    range_bonus: int = 0
+    ranged_penalty: int = 0
+    fov_penalty: int = 0
+    on_kill_heal: int = 0
+    low_hp_melee_bonus: int = 0
+    sell_price: int = 0
+    item_level: int = 0
+    on_hit_effect: dict = field(default_factory=dict)
+    passive_effects: dict = field(default_factory=dict)
 
 
 @dataclass

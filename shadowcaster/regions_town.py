@@ -1,6 +1,6 @@
 import random
 
-from .regions import RegionMap, carve_path
+from .regions_map import RegionMap, carve_path
 from .regions_generate_town import generate_town, town_profile, heuristic_city_distance
 
 

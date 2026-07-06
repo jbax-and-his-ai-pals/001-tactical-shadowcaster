@@ -17,6 +17,8 @@ class DeathUIMixin(GameMixinBase):
     def enemy_status_duration(self, enemy):
         if enemy.on_hit_effect == "poison" and enemy.kind == "shaman":
             return self.tuning["shaman_poison_duration"]
+        if enemy.on_hit_effect == "cripple":
+            return 3
         return self.tuning["enemy_status_duration"]
 
     def death_overlay_rect(self):

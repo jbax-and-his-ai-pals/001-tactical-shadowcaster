@@ -159,6 +159,20 @@ def draw_marker(screen, screen_x, screen_y, kind, color):
             2,
         )
         pygame.draw.line(screen, color, (center_x, top + 8), (center_x, top + TILE_SIZE - 8), 1)
+    elif kind == "gem":
+        # Diamond facet shape with a sparkle highlight
+        pts = [(center_x, top + 5), (left + TILE_SIZE - 7, center_y), (center_x, top + TILE_SIZE - 5), (left + 7, center_y)]
+        pygame.draw.polygon(screen, color, pts, 0)
+        pygame.draw.polygon(screen, COLOR_BG, pts, 1)
+        pygame.draw.circle(screen, (255, 255, 255), (center_x - 2, center_y - 3), 1)
+    elif kind == "curio":
+        # Simple goblet/cup silhouette
+        pygame.draw.line(screen, color, (left + 8, top + 5), (left + TILE_SIZE - 8, top + 5), 2)
+        pygame.draw.line(screen, color, (left + 9, top + 5), (left + 7, top + TILE_SIZE - 7), 2)
+        pygame.draw.line(screen, color, (left + TILE_SIZE - 9, top + 5), (left + TILE_SIZE - 7, top + TILE_SIZE - 7), 2)
+        pygame.draw.line(screen, color, (left + 6, top + TILE_SIZE - 7), (left + TILE_SIZE - 6, top + TILE_SIZE - 7), 2)
+        pygame.draw.line(screen, color, (center_x, top + TILE_SIZE - 7), (center_x, top + TILE_SIZE - 4), 2)
+        pygame.draw.line(screen, color, (left + 8, top + TILE_SIZE - 4), (left + TILE_SIZE - 8, top + TILE_SIZE - 4), 2)
 
 
 def draw_health_bar(screen, screen_x, screen_y, current, maximum, fill_color):

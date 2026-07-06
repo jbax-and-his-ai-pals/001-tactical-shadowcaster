@@ -202,3 +202,12 @@ class PopulationMixin(GameMixinBase):
                 self.award_xp("found_named_elite")
             if hasattr(self, "ability_on_kill"):
                 self.ability_on_kill()
+            scavenge_gold = self.skill_scavenge_gold() if hasattr(self, "skill_scavenge_gold") else 0
+            if scavenge_gold > 0:
+                self.gold += scavenge_gold
+            if hasattr(self, "_maybe_drop_locked_container"):
+                self._maybe_drop_locked_container(enemy)
+            if hasattr(self, "_maybe_drop_gem"):
+                self._maybe_drop_gem(enemy)
+            if hasattr(self, "_maybe_drop_curio"):
+                self._maybe_drop_curio(enemy)

@@ -22,16 +22,17 @@
 | 5 | Larger Social & World Structures | ✅ Complete | 95% |
 | 6 | Economy, Items, and Combat Depth | 🔄 Mostly Complete | ~90% |
 | 7 | Leveling, Persistence, and Universal Rarity | ✅ Complete | ~95% |
+| 8 | Living World — Towns, Threats, and Growth | 🔲 Planned | 0% |
 
 Overall: roughly **92% of total planned work shipped** (Phases 0-7 complete or near-complete).  
 Most complete: world exploration, settlement generation, combat, world-map UX, settlement attachment, world loop, archetype tracks, gather/harvest, social quests, world geography, trade system, composable item effects, enemy catalog (81 types), leveling (L1–L5 with ability system), legendary site gating, city stronghold, persistent world and death system, universal rarity model.  
-Remaining frontier: controller/touch audit on new overlays, ability shown in journal overlay, long-term enemy catalog toward 100+ types.
+Remaining frontier: controller/touch audit on new overlays, ability shown in journal overlay, long-term enemy catalog toward 100+ types, Phase 8 (living world).
 
 ---
 
 ## Current Focus
+- Phase 8: Living World — Towns, Threats, and Growth (planned, not yet started)
 - Long-term: enemy catalog toward 100+ types
-- Phase 8 planning: more landmark types, biome first-visit flavor, additional quest situations
 
 ## Player Fantasy
 - The game is a **persistent world expedition**, not a roguelite — the world, map discoveries, quests, towns, and character all persist between sessions
@@ -510,6 +511,181 @@ The provisioner/trader only ever sells Common items. Finding Uncommon through ex
 - The leveling system is deliberately narrow (max 5). Each level must add a genuinely new dimension — not a stat increment. If a new level doesn't change what the player can access or how they play, it's not worth a level.
 - XP sources should be first-time achievements, not grinding. Kill counts and revisit counts should not be XP sources.
 - Regions and enemies do not scale with player level. A high-level player in a distant volcanic region is still in danger. The player grows; the world does not shrink.
+
+---
+
+### Phase 8 — Living World: Towns, Threats, and Growth `XL`
+
+**Goal:** Make the world feel alive between player visits. Towns grow in directions shaped by their geography and by what the player has done. Threats have origins and apply real pressure. The player's sustained attention to a place changes what it becomes.
+
+**Design principles:**
+- Towns grow; they do not stage. There is no stage 1 → stage 2 progression. Instead, towns have tracked dimensions (security, prosperity, knowledge, connections) that rise and fall based on quests, threats, and player activity. Physical changes reflect dimension scores, not a fixed checklist.
+- Archetype is derived, then self-reinforcing. A town with a dominant dimension develops archetype momentum: new residents, notice board priorities, and organic quest generation all compound that direction. Archetype is never explicitly named to the player — they read it from what's there.
+- Expansion is directional. Towns expand only toward viable biomes. Hostile biome borders (badlands, swamp, volcanic, etc.) are hard stops in that direction. The town's shape is determined by its geography.
+- Hemmed-in towns improve inward. A town that cannot expand still develops — through interior upgrades, wall hardening, and reputation rather than new districts or satellites.
+- Threats have origins and leak. A monster town or hostile camp two regions away is a source, not just a destination. It generates patrol pressure on roads, notice board entries, and eventually raid events if left unaddressed.
+
+---
+
+#### 8A — Town Dimension Tracking `S`
+
+**Current state:** Towns have an attitude score and a supply depth. There is no tracking of what a town has been doing or what kind of place it is becoming.
+
+**Target:** Each town tracks four dimensions as integer scores: `security`, `prosperity`, `knowledge`, `connections`. These rise when the player completes relevant quests and fall when threats go unaddressed or supply routes break. The dominant dimension at any time determines the town's **derived archetype** (used internally to drive NPC behavior, notice board priorities, and building generation).
+
+**Dimension sources:**
+
+| Dimension | Rises from | Falls from |
+|-----------|-----------|-----------|
+| Security | Bounty/threat-clearance quests, escort completions | Nearby hostile camp unresolved, raid event |
+| Prosperity | Trade/delivery quests, supply route established | Supply route broken, long absence |
+| Knowledge | Investigation/survey quests, Chronicler work | — (knowledge does not decay) |
+| Connections | Cross-town social quests, letter chains | — (connections do not decay) |
+
+**Derived archetypes:**
+
+| Dominant dimension | Archetype label (internal) | What it drives |
+|-------------------|--------------------------|----------------|
+| Security | `frontier_post` | Watch captain prominence, heavy-wall aesthetics, threat-response notice board weighting |
+| Prosperity | `trade_hub` | Merchant NPC, caravan activity, market district growth, best shop stock |
+| Knowledge | `learning_seat` | Archive building, trainer hall, expanded NPC knowledge, lorekeeper attraction |
+| Connections | `social_anchor` | Cross-town NPC visitors, diplomat resident, richer attitude bonuses to neighboring towns |
+| Balanced / low | `survivor` | Default; no dominant identity; notice board is pure survival quests |
+
+**Milestones:**
+- [ ] `town_dimensions` dict per town in world state (`security`, `prosperity`, `knowledge`, `connections`)
+- [ ] Quest completion hooks increment the appropriate dimension
+- [ ] `town_archetype(town_coord)` derived from dominant dimension; returns archetype key
+- [ ] Archetype threshold: archetype is `survivor` until any dimension reaches threshold value (e.g., 3); above threshold, self-reinforcement begins (see 8B)
+
+---
+
+#### 8B — Archetype Self-Reinforcement `S-M`
+
+**Current state:** Town contents are fixed at generation time. Revisiting a town changes nothing except attitude tier and stock depth.
+
+**Target:** Past the archetype threshold, a town starts generating its own momentum. A `trade_hub` town attracts a permanent merchant NPC, generates trade quests organically, and eventually spawns a market district building if space allows. A `frontier_post` generates patrol quests on its own and eventually hardens its wall appearance. The player doesn't trigger these changes — they happen between visits and are discoverable on return.
+
+**Self-reinforcement by archetype:**
+
+| Archetype | What compounds automatically |
+|-----------|----------------------------|
+| `frontier_post` | Watch captain becomes most prominent NPC; notice board weights threat-response quests; wall aesthetics harden (timber → stone appearance); patrol buffer zone appears at hostile border |
+| `trade_hub` | Wandering merchant sets up permanently; caravan NPC appears on roads; market stall count increases; shop stock depth increases beyond attitude tier alone |
+| `learning_seat` | Archive building appears; trainer hall appears (if not already); lorekeeper NPC attracted; NPC dialogue depth increases |
+| `social_anchor` | Cross-town visitors appear as temporary residents; diplomat NPC appears; attitude bonuses extend to neighboring towns the player has connected |
+
+**Milestones:**
+- [ ] `town_reinforcement_tick(town_coord)` called on each town visit (not on every game tick — only when player enters the region)
+- [ ] Reinforcement checks archetype and dimension score; applies the next appropriate change if threshold met and change not yet applied
+- [ ] Change log per town: tracks which reinforcements have fired so they don't repeat
+- [ ] Permanent merchant NPC seeded into `trade_hub` towns above threshold
+- [ ] Archive building added to `learning_seat` towns above threshold (if footprint allows)
+- [ ] Notice board quest weighting reads archetype key to bias quest type selection
+
+---
+
+#### 8C — Endemic Threat System `M`
+
+**Current state:** Threats exist in specific regions and stay there. Clearing a region ends its threat permanently. Roads between towns have no safety state.
+
+**Target:** Hostile camps and monster towns are **sources** that apply continuous pressure to nearby areas. Road safety between towns is a tracked variable. Raid events can damage towns that go unattended. Wildlife acts as weather — environmental pressure without faction intent.
+
+**Road safety:**
+- Each road connection between towns has a `road_safety` state: `safe`, `watched`, or `contested`
+- `safe`: caravans move freely; NPC trader stock replenishes faster; attitude between connected towns is warmer
+- `watched`: player-cleared recently; patrols present; caravans move cautiously
+- `contested`: nearby hostile source unresolved; caravans stop; town isolation sets in (stock depth drops, attitude between towns cools)
+- Road safety visible on world map as subtle color coding on road lines; NPC dialogue references it
+
+**Threat origins:**
+- Monster towns and hostile camps are tagged as `threat_source` at world generation
+- Each source has a `pressure_radius` (in world-grid steps) and a `patrol_interval`
+- On each world-time tick (triggered by player region transitions), sources emit patrol pressure onto roads within radius
+- Pressure degrades road safety for roads in radius; clearing the source ends the pressure permanently
+
+**Raid events:**
+- A town that has had `contested` road safety for too long (tracked by world-time ticks) may receive a raid event
+- Raid events are discovered on the next visit: a quest appears ("three days ago they hit the outer district"), one NPC may be absent, one building may be closed temporarily, attitude takes a small hit
+- Completing the follow-up quest (bounty or relief) restores the affected building and NPC; repeated raids without response can make an NPC permanently leave
+
+**Wildlife pressure:**
+- Certain biome adjacencies generate wildlife pressure: boar migrations through farmland, wolf packs in forest borders, ember sprites drifting from volcanic
+- Wildlife pressure is seasonal (tied to world-time counter) rather than source-based
+- Towns with sufficient security dimension already have counter-measures in place; low-security towns generate wildlife quests organically
+
+**Milestones:**
+- [ ] `road_safety` state tracked per town-pair connection in world state
+- [ ] Threat source tags at world generation for monster towns and hostile camps
+- [ ] Pressure propagation on world-time tick; roads in radius degrade toward `contested` if source unresolved
+- [ ] Clearing a source permanently removes its pressure; road safety recovers over subsequent ticks
+- [ ] World map road color indicates safety state (subtle; readable without being loud)
+- [ ] Raid event generation for long-contested towns; discoverable on next visit with quest hook
+- [ ] Wildlife pressure by biome adjacency; seasonal cycle tied to world-time counter
+- [ ] NPC dialogue references road safety and threat situation naturally
+
+---
+
+#### 8D — Directional Town Expansion `M`
+
+**Current state:** Towns occupy a single world-grid tile. Their footprint never changes.
+
+**Target:** Towns with sufficient dimension scores and available adjacent viable tiles can expand: first to an outer district (features outside the main settlement cluster in the same tile), then to satellite hamlets (a new world-grid tile), then to road infrastructure between connected towns. Expansion direction is determined by adjacent biome viability.
+
+**Expansion tiers:**
+
+| Tier | What appears | Requires |
+|------|-------------|---------|
+| Outer district | Specific tiles outside the building cluster: tannery, stable, open-air market stall, guard post | Any dimension score ≥ 4; at least one viable adjacent direction |
+| Satellite hamlet | New world-grid tile appears 1 step from parent town; 2-3 NPCs, no full services, fragile | Dominant dimension ≥ 6; viable adjacent tile |
+| Road infrastructure | Waystation or bridge appears on a long road between two connected towns | Both towns have `connections` ≥ 3; road is `safe` or `watched` |
+| District town | Multiple distinct clusters within the same tile footprint; specialized quarters | Dominant dimension ≥ 10; multiple dimensions ≥ 4 |
+
+**Biome viability for expansion:**
+- Viable: plains, farmland, forest, mountain (slow), tundra (slow)
+- Blocked: badlands, swamp, volcanic, desert (without specific quest unlock), cave, dungeon
+- Hostile border tiles become buffer zones rather than expansion targets: a cleared perimeter the town patrols, not settled
+
+**Buffer zones:**
+- A town adjacent to a hostile biome maintains a buffer zone at that border
+- The buffer zone is a cleared strip: no hostile cover, patrolled by town watch
+- Buffer zone can shrink if the town's security dimension falls; player quests can restore it
+- The buffer zone is the first place a raid event manifests — visible as disturbed terrain on the next visit
+
+**Hemmed-in towns (no viable expansion directions):**
+- Cannot expand outward; can still improve inward
+- Interior improvements: wall upgrade (timber → stone appearance), second building in footprint, well deepening, skilled watch NPC
+- Hemmed-in towns develop `survivor` or `frontier_post` archetypes almost exclusively
+- Reputation track: a fully improved hemmed-in town becomes known as a tough waypoint; passing NPCs mention it; the town's notice board has its own distinct character
+
+**Satellite hamlet:**
+- Fragile: can be abandoned if threat pressure exceeds the hamlet's small security score
+- If abandoned, the world-grid tile reverts to its biome type; the parent town takes a prosperity hit
+- Protecting the hamlet is a distinct quest structure — smaller scale, more personal — compared to town-level quests
+
+**Milestones:**
+- [ ] `viable_expansion_directions(town_coord)` computed from adjacent biome types at world generation
+- [ ] Outer district generation: when dimension threshold met, scatter 2-3 specific feature tiles outside the building cluster
+- [ ] Satellite hamlet: new world-grid entry seeded as `hamlet` type, connected to parent; own NPC set; own quest hooks
+- [ ] Hamlet fragility: security score tracked; abandoned if pressure sustained without player response
+- [ ] Buffer zone: flagged on hostile-border tiles; shrinks/grows with security dimension; raid events manifest here first
+- [ ] Road infrastructure: waystation or bridge tile seeded on long roads between sufficiently connected towns
+- [ ] District town: multiple spatial clusters in one tile when dimension thresholds reached; district labels on world map
+
+---
+
+#### 8E — World Improvement Visibility `S`
+
+**Goal:** The player should be able to read the world's history from what's there — not from a stats screen. Changes made by the town growth system should be discoverable through observation, NPC dialogue, and world map details.
+
+**Milestones:**
+- [ ] World map road coloring reflects safety state without requiring the detail panel
+- [ ] Town world-map tile reflects development stage: a trade hub looks busier, a frontier post looks fortified (via icon or tile overlay)
+- [ ] NPC dialogue references town history: "used to be rougher here before the patrols started" / "caravan stopped coming through last season"
+- [ ] Notice board quest text reflects archetype: frontier post boards use military register, trade hub boards use merchant language, learning seat boards have scholarly tone
+- [ ] Journal tab: "World Notes" section that records significant changes the player has witnessed or caused (raid repelled, satellite founded, road secured)
+
+---
 
 ## Much Later
 - Experiment with a giant seamless overworld driven by a stable world seed and coordinate-based procedural generation

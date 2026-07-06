@@ -8,6 +8,7 @@ from .game_death_ui import DeathUIMixin
 from .game_autoexplore import AutoexploreMixin
 from .game_floor_generation import FloorGenerationMixin
 from .game_harvest import HarvestMixin
+from .game_skills import SkillsMixin
 from .game_social_quests import SocialQuestsMixin
 from .game_input import InputMixin
 from .game_inspect import InspectMixin
@@ -17,6 +18,7 @@ from .game_journal_ui import JournalUIMixin
 from .game_journal_stats import JournalStatsMixin
 from .game_log_ui import LogUIMixin
 from .game_menu_ui import MenuUIMixin
+from .game_menu_ui_helpers import MenuUIHelpersMixin
 from .game_overlay_clicks import OverlayClickMixin
 from .game_overlay_controller import OverlayControllerMixin
 from .game_rare_npcs import RareNPCsMixin
@@ -27,6 +29,8 @@ from .game_movement import MovementMixin
 from .game_quest_text import QuestTextMixin
 from .game_quests import QuestsMixin
 from .game_resident_boons import ResidentBoonsMixin
+from .game_locksmith import LocksmithMixin
+from .game_loot import LootMixin
 from .game_resident_boons_service import ServiceBoonsMixin
 from .game_residents import ResidentsMixin
 from .game_respawn import RespawnMixin
@@ -71,6 +75,7 @@ __all__ = [
     "JournalStatsMixin",
     "LogUIMixin",
     "MenuUIMixin",
+    "MenuUIHelpersMixin",
     "MovementMixin",
     "OverlayClickMixin",
     "OverlayControllerMixin",
@@ -80,11 +85,14 @@ __all__ = [
     "PopulationMixin",
     "QuestTextMixin",
     "QuestsMixin",
+    "LocksmithMixin",
+    "LootMixin",
     "ResidentBoonsMixin",
     "ServiceBoonsMixin",
     "ResidentsMixin",
     "RespawnMixin",
     "ResidentsTownMixin",
+    "SkillsMixin",
     "TuningMixin",
     "RewardsUIMixin",
     "TerrainMixin",

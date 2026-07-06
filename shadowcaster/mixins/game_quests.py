@@ -187,7 +187,8 @@ class QuestsMixin(QuestGenerationMixin, QuestBoardMixin):
     def _complete_quest(self, quest):
         quest.status = "complete"
         self._record_quest_consequences(quest)
-        self.gold += quest.reward_gold
+        diplomacy_bonus = self.skill_quest_gold_bonus(quest.reward_gold) if hasattr(self, "skill_quest_gold_bonus") else 0
+        self.gold += quest.reward_gold + diplomacy_bonus
         if hasattr(self, "xp_check_quest"):
             self.xp_check_quest(quest)
             self.xp_check_attitude(quest.from_world_pos)

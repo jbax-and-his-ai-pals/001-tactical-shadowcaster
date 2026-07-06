@@ -1,7 +1,7 @@
 import random
 
 from .regions_generate_town_helpers import heuristic_city_distance
-from .regions import feature_footprint_tiles
+from .regions_map import feature_footprint_tiles
 
 
 def _add_decor(region, profile, plaza, north, south, west, east, width, height, plaza_w, plaza_h):
@@ -131,6 +131,8 @@ def _assign_buildings(region, profile, plaza, houses):
         ("town_hall", "Town Hall"),
         ("bakery", "Town Bakery"),
         ("fletcher", "Fletcher's Workshop"),
+        ("locksmith", "Locksmith's Workshop"),
+        ("training_hall", "Guild Training Hall"),
     ]
     flavor_buildings = {
         "forest": [
@@ -233,7 +235,7 @@ def _assign_buildings(region, profile, plaza, houses):
                 return "Market Quarter"
             if kind in {"clinic", "shrine", "chapel", "library", "town_hall", "bathhouse"}:
                 return "Civic Quarter"
-            if kind in {"smith", "stable", "armory", "guardhouse", "fletcher"}:
+            if kind in {"smith", "stable", "armory", "guardhouse", "fletcher", "locksmith", "training_hall"}:
                 return f"{side} Works"
             return "Town Center"
         if role == "civic":
@@ -336,6 +338,8 @@ def _assign_buildings(region, profile, plaza, houses):
         "town_hall": ["pew", "pew", "sign"],
         "bakery": ["crate", "barrel"],
         "fletcher": ["crate", "sign"],
+        "locksmith": ["crate", "sign"],
+        "training_hall": ["pew", "brazier"],
         "home": ["flowers"],
         "work": ["crate"],
         "civic": ["pew"],

@@ -1,10 +1,7 @@
 import random
 
 from .models import RectRoom
-from .regions import (
-    RegionMap,
-    carve_path,
-)
+from .regions_map import RegionMap, carve_path
 from .regions_farmland import generate_farmland
 
 

@@ -18,6 +18,9 @@ from .rendering_primitives import (
 from .rendering_viewport import render_viewport, render_side_panel
 from .rendering_world_map import render_world_map_overlay
 from .rendering_trade import render_trade_overlay
+from .rendering_locksmith import render_locksmith_overlay
+from .rendering_trainer import render_trainer_overlay
+from .rendering_minimap import render_minimap_overlay
 from .rendering_overlays import (
     render_completion_modal, render_reward_choice_overlay, render_tuner_overlay,
     render_inventory_overlay, render_game_over_overlay, render_travel_overlay,
@@ -59,6 +62,12 @@ def render_game(game):
     active_overlay = game.active_non_menu_overlay()
     if active_overlay == "trade":
         render_trade_overlay(game)
+    elif active_overlay == "locksmith":
+        render_locksmith_overlay(game)
+    elif active_overlay == "trainer":
+        render_trainer_overlay(game)
+    elif active_overlay == "minimap":
+        render_minimap_overlay(game)
     elif active_overlay == "travel":
         render_travel_overlay(game)
     elif active_overlay == "world_map":

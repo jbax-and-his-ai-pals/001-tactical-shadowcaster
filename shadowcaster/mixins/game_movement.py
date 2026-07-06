@@ -67,11 +67,48 @@ class MovementMixin(GameMixinBase):
                 self.clear_player_status("poison")
                 self.clear_player_status("burn")
                 return "The cool water washes your afflictions away."
+        if feature and feature.startswith("trap_"):
+            return self._trigger_trap(feature)
         return None
+
+    def _trigger_trap(self, trap_kind: str) -> str:
+        # Fieldcraft rank 2+ detects traps before stepping — auto-dodge
+        fieldcraft = self.get_skill_rank("fieldcraft") if hasattr(self, "get_skill_rank") else 0
+        if fieldcraft >= 2:
+            self.terrain_features.pop(self.player, None)
+            return f"You spot and avoid a {trap_kind.replace('_', ' ')}."
+        # Remove the trap (one-use)
+        self.terrain_features.pop(self.player, None)
+        if trap_kind == "trap_spike":
+            dmg = 3
+            self.take_damage(dmg, "a spike trap")
+            return f"A spike trap springs! You take {dmg} damage."
+        if trap_kind == "trap_poison":
+            self.add_status(self.player_statuses, "poison", 4)
+            self.set_player_status_source("poison", "a poison trap")
+            return "A poison trap releases a cloud of toxin. You are poisoned."
+        if trap_kind == "trap_alarm":
+            # Wake the two nearest enemies
+            enemies = sorted(
+                getattr(self, "enemies", []),
+                key=lambda e: abs(e.position[0] - self.player[0]) + abs(e.position[1] - self.player[1])
+            )
+            count = 0
+            for enemy in enemies[:2]:
+                if hasattr(enemy, "status_effects"):
+                    enemy.status_effects.pop("stun", None)
+                count += 1
+            return f"An alarm trap blares! {count} nearby {'enemy rushes' if count == 1 else 'enemies rush'} toward you."
+        return f"A trap activates."
 
     def try_move_player(self, dx, dy, automated=False):
         if self.run_has_ended():
             return False
+        # Cripple: 50% chance the move step is wasted
+        if "cripple" in getattr(self, "player_statuses", {}) and not automated:
+            if random.random() < 0.5:
+                self.after_player_turn(base_message="You stumble — the cripple slows you.")
+                return True
         previous_adjacent_residents = {resident.position for resident in self.adjacent_residents()}
         nx, ny = self.player[0] + dx, self.player[1] + dy
         if not can_step(self.dungeon, self.player, (nx, ny)):
@@ -142,6 +179,14 @@ class MovementMixin(GameMixinBase):
             self.maybe_interact_with_adjacent_resident(previous_adjacent_residents)
         elif not automated:
             self.last_interest_tiles = self.visible_interest_tiles()
+        # Haste: free bonus step (no extra enemy turn)
+        if not automated and "haste" in getattr(self, "player_statuses", {}) and not self.run_has_ended():
+            bnx, bny = self.player[0] + dx, self.player[1] + dy
+            if can_step(self.dungeon, self.player, (bnx, bny)) and not self.get_enemy_at((bnx, bny)):
+                self.player = (bnx, bny)
+                self.total_steps += 1
+                self.update_visibility()
+                self.update_camera()
         return True
 
     def edge_direction_at(self, position):

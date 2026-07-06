@@ -86,7 +86,7 @@ class InventoryMixin(GameMixinBase):
     def add_item(self, key, name, category, color, marker, quantity=1, **stats):
         existing = self.inventory_item(key)
         if existing is not None:
-            if existing.category == "consumable":
+            if existing.category in ("consumable", "locked_container", "gem", "curio"):
                 existing.quantity += quantity
             return existing
         item = Item(key=key, name=name, category=category, color=color, marker=marker, quantity=quantity, **stats)
@@ -96,27 +96,25 @@ class InventoryMixin(GameMixinBase):
     def add_ground_item_to_inventory(self, ground_item):
         item = ground_item.item
         existing = self.inventory_item(item.key)
+        if item.category == "gem":
+            self.add_item(item.key, item.name, item.category, item.color, item.marker,
+                          quantity=1, description=item.description)
+            return f"You find a {item.name}. Sell it at a town market."
+        if item.category == "curio":
+            self.add_item(item.key, item.name, item.category, item.color, item.marker,
+                          quantity=1, description=item.description)
+            return f"You pocket a {item.name}. Worth something at market."
+        if item.category == "locked_container":
+            self.add_item(item.key, item.name, item.category, item.color, item.marker,
+                          quantity=1, description=item.description)
+            return f"You find a {item.name}. A locksmith in town can open it for a fee."
         if item.category == "harvest":
             if hasattr(self, "can_carry_harvest") and not self.can_carry_harvest(item.key):
                 return f"You're already carrying as much {item.name} as you can manage."
         if existing is not None and existing.category not in ("consumable", "harvest"):
             self.ammo += 1
             return f"You already know this gear. You salvage the spare for 1 ammo."
-        self.add_item(
-            item.key,
-            item.name,
-            item.category,
-            item.color,
-            item.marker,
-            quantity=item.quantity,
-            description=item.description,
-            melee_bonus=item.melee_bonus,
-            ranged_bonus=item.ranged_bonus,
-            defense_bonus=item.defense_bonus,
-            heal_amount=item.heal_amount,
-            cleanses=item.cleanses,
-            ward_duration=item.ward_duration,
-        )
+        self.inventory.append(item)
         if item.category == "consumable":
             cache_finds = {
                 "medkit": "You find a stashed healing potion — left here by someone who didn't come back for it.",
@@ -133,21 +131,32 @@ class InventoryMixin(GameMixinBase):
         return next((ground_item for ground_item in getattr(self, "floor_items", []) if ground_item.position == position), None)
 
     def create_floor_item(self, exclude=None):
-        weapon_preferences, armor_preferences = self.region_gear_preferences()
-        category_order = ["weapon", "armor"] if self.region_type in {"desert", "plains", "farmland"} else ["armor", "weapon"]
-        if random.random() < 0.5:
-            category_order.reverse()
-        for category in category_order:
-            preferred = weapon_preferences if category == "weapon" else armor_preferences
-            available = [key for key in preferred if key in (self.WEAPON_CATALOG if category == "weapon" else self.ARMOR_CATALOG) and not self.owns_item(key)]
-            if not available:
-                available = self.unowned_catalog_keys(category)
-            if not available:
-                continue
-            key = random.choice(available)
-            position = self.place_feature(exclude=exclude or set())
-            return GroundItem(position=position, item=self.item_from_catalog(category, key))
-        return None
+        from ..item_generation import compute_item_level, generate_armor, generate_weapon
+        position = self.place_feature(exclude=exclude or set())
+        if position is None:
+            return None
+        danger = getattr(self, "danger_tier", 1)
+        depth = getattr(self, "region_depth", 1)
+        ilvl = compute_item_level(danger, depth)
+        rng = random.Random()
+        category = random.choice(["weapon", "armor"])
+        gen_fn = generate_weapon if category == "weapon" else generate_armor
+        data = gen_fn(rng, ilvl)
+        item = Item(
+            key=data["key"], name=data["name"], category=data["category"],
+            color=data["color"], marker=data["marker"], description=data["description"],
+            melee_bonus=data.get("melee_bonus", 0), ranged_bonus=data.get("ranged_bonus", 0),
+            defense_bonus=data.get("defense_bonus", 0),
+            max_hp_bonus=data.get("max_hp_bonus", 0), fov_bonus=data.get("fov_bonus", 0),
+            speed_bonus=data.get("speed_bonus", 0), range_bonus=data.get("range_bonus", 0),
+            ranged_penalty=data.get("ranged_penalty", 0), fov_penalty=data.get("fov_penalty", 0),
+            on_kill_heal=data.get("on_kill_heal", 0), low_hp_melee_bonus=data.get("low_hp_melee_bonus", 0),
+            sell_price=data.get("sell_price", 1), quality=data.get("quality", "normal"),
+            prefix_key=data.get("prefix_key"), suffix_key=data.get("suffix_key"),
+            base_key=data.get("base_key", ""), item_level=data.get("item_level", 0),
+            on_hit_effect=data.get("on_hit_effect", {}), passive_effects=data.get("passive_effects", {}),
+        )
+        return GroundItem(position=position, item=item)
 
     def create_hidden_cache_item(self, exclude=None):
         """A consumable stash hidden in exploration terrain."""
@@ -183,6 +192,13 @@ class InventoryMixin(GameMixinBase):
                 item = Item(key, spec["name"], "consumable", spec["color"], spec["marker"],
                             rarity=spec["rarity"], description=spec["description"])
                 return GroundItem(position=position, item=item)
+        # Chance to find a gem or curio instead of a potion
+        if hasattr(self, "random_gem_item") and random.random() < 0.18:
+            item = self.random_gem_item()
+            return GroundItem(position=position, item=item)
+        if hasattr(self, "random_curio_item") and random.random() < 0.22:
+            item = self.random_curio_item()
+            return GroundItem(position=position, item=item)
         # Default: tonic in dangerous areas, medkit elsewhere
         if danger >= 2 and random.random() < 0.5:
             spec = ITEM_CATALOG["tonic"]

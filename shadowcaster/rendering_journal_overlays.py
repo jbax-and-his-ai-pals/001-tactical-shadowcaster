@@ -174,18 +174,33 @@ def render_journal_overlay(game):
         char_rows = game.character_journal_rows()
         y = 12
         row_w = viewport_rect.width - 16
+        skill_rows = [r for r in char_rows if r.get("selectable")]
+        sel_skill_idx = getattr(game, "journal_skill_index", 0)
+        skill_counter = 0
         for row in char_rows:
+            is_section = row.get("section", False)
+            is_selectable = row.get("selectable", False)
+            is_selected = is_selectable and skill_counter == sel_skill_idx
+            if is_selectable:
+                skill_counter += 1
             header_surf = game.small_font.render(row["header"], True, row["color"])
             detail_surfaces = wrap_text(game.small_font, row["detail"], COLOR_TEXT, row_w - 28)
-            row_height = 20 + len(detail_surfaces) * 18 + 14
+            row_height = (14 + 14) if is_section else (20 + len(detail_surfaces) * 18 + 14)
             row_rect = pygame.Rect(8, y, row_w, row_height)
-            pygame.draw.rect(content, (26, 34, 50, 200), row_rect, border_radius=10)
-            pygame.draw.rect(content, (*row["color"][:3], 160), row_rect, 1, border_radius=10)
-            content.blit(header_surf, (row_rect.left + 12, row_rect.top + 8))
-            line_y = row_rect.top + 28
-            for surf in detail_surfaces:
-                content.blit(surf, (row_rect.left + 12, line_y))
-                line_y += 18
+            if is_section:
+                content.blit(header_surf, (row_rect.left + 12, row_rect.top + 4))
+                sp_surf = game.small_font.render(row["detail"], True, (160, 200, 160))
+                content.blit(sp_surf, (row_rect.right - sp_surf.get_width() - 12, row_rect.top + 4))
+            else:
+                bg = (40, 50, 28) if is_selected else (26, 34, 50, 200)
+                border_color = (*row["color"][:3], 220) if is_selected else (*row["color"][:3], 160)
+                pygame.draw.rect(content, bg, row_rect, border_radius=10)
+                pygame.draw.rect(content, border_color, row_rect, 1 if not is_selected else 2, border_radius=10)
+                content.blit(header_surf, (row_rect.left + 12, row_rect.top + 8))
+                line_y = row_rect.top + 28
+                for surf in detail_surfaces:
+                    content.blit(surf, (row_rect.left + 12, line_y))
+                    line_y += 18
             y += row_height + 8
     elif not entries and game.journal_tab == 3:
         town_rows = game.town_reputation_rows()

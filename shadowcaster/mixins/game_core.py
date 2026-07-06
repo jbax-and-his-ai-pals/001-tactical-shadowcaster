@@ -121,6 +121,8 @@ class GameCoreMixin(GameMixinBase):
         self.gold = 0
         self.trade_open = False
         self.trade_panel = 0
+        self.locksmith_open = False
+        self.locksmith_index = 0
         self.trade_stock_index = 0
         self.trade_pack_index = 0
         self.trader_stock: list = []
@@ -148,8 +150,11 @@ class GameCoreMixin(GameMixinBase):
         self.respawn_pending = False
         self.player_xp = 0
         self.player_level = 1
+        self.player_skill_points = 0
+        self.player_skills: dict = {}
         self.xp_milestones_claimed: set = set()
         self.levelup_pending = 0  # level just reached, 0 = none pending
+        self.levelup_gains: list = []
         self.active_ability: str = ""
         self.levelup_ability_choices: list = []
         self.levelup_ability_index: int = 0
@@ -159,6 +164,12 @@ class GameCoreMixin(GameMixinBase):
         self.save_entries = []
         self.menu_message = ""
         self.touch_ui_active = False
+        self.world_steps = 0
+        self.trader_stock_steps: dict = {}
+        self.trainer_open = False
+        self.trainer_skill_key = None
+        self.trainer_skill_index = 0
+        self.journal_skill_index = 0  # coord → world_step at last stock refresh
         self.controllers = {}
         self.active_controller_id = None
         self.running = True
@@ -231,6 +242,7 @@ class GameCoreMixin(GameMixinBase):
         self.travel_mode = False
         self.travel_choices = []
         self.world_map_open = False
+        self.minimap_open = False
         self.world_map_mode = "discovered"
         self.selected_world_region = None
         self.world_map_view_center = None
@@ -323,6 +335,12 @@ class GameCoreMixin(GameMixinBase):
             return "choice"
         if self.trade_open:
             return "trade"
+        if getattr(self, "locksmith_open", False):
+            return "locksmith"
+        if getattr(self, "trainer_open", False):
+            return "trainer"
+        if getattr(self, "minimap_open", False):
+            return "minimap"
         if self.service_modal_open:
             return "service_modal"
         if self.notice_board_open:

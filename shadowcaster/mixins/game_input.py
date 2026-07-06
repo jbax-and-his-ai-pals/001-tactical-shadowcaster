@@ -277,6 +277,8 @@ class InputMixin(GameMixinBase):
             self.toggle_journal()
         elif action == ACTION_LOG:
             self.toggle_log()
+        elif action == "minimap":
+            self.minimap_open = not getattr(self, "minimap_open", False)
         elif action == ACTION_MOVE and payload:
             self.stop_pathing()
             self.try_move_player(*payload)

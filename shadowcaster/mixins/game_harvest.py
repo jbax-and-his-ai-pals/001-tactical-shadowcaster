@@ -63,7 +63,8 @@ class HarvestMixin(GameMixinBase):
             getattr(self, "return_portal", None),
         }
         exclude.discard(None)
-        count = 2 if self.region_type in {"farmland", "plains"} else 1
+        fieldcraft_extra = self.skill_fieldcraft_node_bonus() if hasattr(self, "skill_fieldcraft_node_bonus") else 0
+        count = (2 if self.region_type in {"farmland", "plains"} else 1) + fieldcraft_extra
         nodes = []
         for _ in range(count):
             position = self.place_feature(exclude=exclude | {n.position for n in nodes})
@@ -95,12 +96,14 @@ class HarvestMixin(GameMixinBase):
             return None
         parts = []
         total_gold = 0
+        herb_bonus = self.skill_herbalism_sell_bonus() if hasattr(self, "skill_herbalism_sell_bonus") else 0
         for item in harvest_items:
             spec = _HARVEST_SPECS.get(item.key)
             if not spec:
                 continue
             _, _, value = spec
-            earned = item.quantity * value
+            bonus = herb_bonus if item.key == "herbs" else 0
+            earned = item.quantity * (value + bonus)
             total_gold += earned
             label = _HARVEST_SELL_MESSAGES.get(item.key, f"You sell {item.name}")
             qty_str = f"{item.quantity}" if item.quantity > 1 else ""

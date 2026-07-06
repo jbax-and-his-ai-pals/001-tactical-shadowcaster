@@ -187,7 +187,30 @@ class JournalUIMixin(JournalStatsMixin, GameMixinBase):
     def can_abandon_selected_journal_quest(self):
         return self.selected_active_journal_quest() is not None
 
+    def _character_skill_rows(self):
+        """Return only the selectable skill rows from character_journal_rows."""
+        rows = self.character_journal_rows() if hasattr(self, "character_journal_rows") else []
+        return [r for r in rows if r.get("selectable")]
+
+    def journal_character_skill_activate(self):
+        skill_rows = self._character_skill_rows()
+        if not skill_rows:
+            return
+        idx = max(0, min(getattr(self, "journal_skill_index", 0), len(skill_rows) - 1))
+        row = skill_rows[idx]
+        key = row.get("skill_key")
+        if key and hasattr(self, "spend_skill_point"):
+            self.message = self.spend_skill_point(key)
+
     def move_journal_selection(self, delta):
+        if self.journal_tab == 2:
+            skill_rows = self._character_skill_rows()
+            if skill_rows:
+                current = getattr(self, "journal_skill_index", 0)
+                self.journal_skill_index = (current + delta) % len(skill_rows)
+                name = skill_rows[self.journal_skill_index].get("name", "")
+                self.message = f"Selected: {name}"
+            return
         entries = self.current_journal_entries()
         if not entries:
             self.journal_index = -1

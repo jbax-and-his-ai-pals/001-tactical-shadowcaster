@@ -142,4 +142,15 @@ class TerrainMixin(GameMixinBase):
         if feature_type:
             for tile in candidates[:feature_count]:
                 features[tile] = feature_type
+
+        # Traps in dangerous indoor regions
+        if self.region_type in {"dungeon", "cave", "ruins", "castle", "maze"}:
+            danger = getattr(self, "danger_tier", 1)
+            trap_count = min(4, 1 + danger // 2)
+            trap_pool = ["trap_spike", "trap_spike", "trap_poison", "trap_alarm"]
+            remaining = [t for t in candidates if t not in features]
+            random.shuffle(remaining)
+            for tile in remaining[:trap_count]:
+                features[tile] = random.choice(trap_pool)
+
         return features

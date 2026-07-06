@@ -1,13 +1,7 @@
 import random
 
 from .models import RectRoom
-from .regions import (
-    RegionMap,
-    carve_path,
-    path_tiles,
-    walkable_path_tiles,
-    widen_path_tiles,
-)
+from .regions_map import RegionMap, carve_path, path_tiles, walkable_path_tiles, widen_path_tiles
 
 
 def heuristic_city_distance(left, right):

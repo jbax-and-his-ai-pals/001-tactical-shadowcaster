@@ -171,6 +171,16 @@ class ServiceBoonsMixin(GameMixinBase):
             self.store_current_region()
             self.message = f"The fletcher counts out two bolts from the rack. Ammo {self.ammo}."
             return True
+        if resident.kind == "locksmith":
+            if hasattr(self, "open_locksmith"):
+                self.open_locksmith()
+                self.message = "The locksmith spreads their tools on the bench. 'Let's see what you've got.'"
+            return True
+        if resident.kind == "trainer":
+            if hasattr(self, "open_trainer"):
+                self.open_trainer()
+                self.message = "The trainer looks you over. 'Pick a discipline and we'll get to work.'"
+            return True
         if resident.kind in {"laborer", "patron", "townsfolk", "herald"}:
             if resident.dialogue:
                 self.message = random.choice(resident.dialogue)

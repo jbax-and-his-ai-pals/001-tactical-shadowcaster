@@ -58,40 +58,61 @@ def render_levelup_overlay(game):
         return
 
     # Standard level-up modal
-    panel_w, panel_h = 560, 320
-    x = (SCREEN_WIDTH - panel_w) // 2
-    y = (SCREEN_HEIGHT - panel_h) // 2
+    gains = getattr(game, "levelup_gains", [])
+    xp_now = getattr(game, "player_xp", 0)
+
+    panel_w, panel_h = 580, 360
+    px = (SCREEN_WIDTH - panel_w) // 2
+    py = (SCREEN_HEIGHT - panel_h) // 2
 
     dim = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
-    dim.fill((6, 8, 14, 200))
+    dim.fill((6, 8, 14, 210))
     game.screen.blit(dim, (0, 0))
 
     panel = pygame.Surface((panel_w, panel_h), pygame.SRCALPHA)
-    panel.fill((20, 28, 20, 248))
+    panel.fill((20, 28, 20, 252))
     pygame.draw.rect(panel, (100, 200, 120, 255), panel.get_rect(), 3, border_radius=16)
 
-    head = game.font.render(f"Level Up — {title}", True, (180, 255, 200))
-    panel.blit(head, head.get_rect(center=(panel_w // 2, 36)))
+    # Title
+    head = game.font.render(f"Level {level}  —  {title}", True, (180, 255, 200))
+    panel.blit(head, head.get_rect(center=(panel_w // 2, 34)))
 
-    lvl_surf = game.small_font.render(f"You are now level {level}.", True, (160, 230, 180))
-    panel.blit(lvl_surf, lvl_surf.get_rect(center=(panel_w // 2, 70)))
+    # Thin divider
+    pygame.draw.line(panel, (60, 120, 70), (40, 56), (panel_w - 40, 56))
 
-    y_text = 104
-    for line in wrap_text_lines(game.small_font, unlock, panel_w - 64):
-        surf = game.small_font.render(line, True, COLOR_TEXT)
-        panel.blit(surf, surf.get_rect(center=(panel_w // 2, y_text)))
-        y_text += 26
+    # Gains list
+    gy = 72
+    bullet_color = (140, 220, 160)
+    for line in gains:
+        wrapped = wrap_text_lines(game.small_font, line, panel_w - 80)
+        for i, wl in enumerate(wrapped):
+            prefix = "▸ " if i == 0 else "  "
+            s = game.small_font.render(prefix + wl, True, bullet_color if i == 0 else COLOR_TEXT)
+            panel.blit(s, (48, gy))
+            gy += 24
+        gy += 4
 
+    # XP bar toward next level
+    bar_y = panel_h - 88
+    pygame.draw.line(panel, (60, 120, 70), (40, bar_y - 8), (panel_w - 40, bar_y - 8))
     if next_xp is not None:
-        xp_now = getattr(game, "player_xp", 0)
-        needed = next_xp - xp_now
-        progress = game.small_font.render(
-            f"XP: {xp_now} / {next_xp}  ({needed} to level {next_level})",
-            True, COLOR_ACCENT,
+        prev_xp = XP_THRESHOLDS.get(level, 0)
+        span = next_xp - prev_xp
+        fill = max(0.0, min(1.0, (xp_now - prev_xp) / span)) if span > 0 else 0.0
+        bar_w = panel_w - 80
+        pygame.draw.rect(panel, (30, 60, 35), (40, bar_y, bar_w, 14), border_radius=4)
+        if fill > 0:
+            pygame.draw.rect(panel, (80, 200, 100), (40, bar_y, int(bar_w * fill), 14), border_radius=4)
+        pygame.draw.rect(panel, (60, 120, 70), (40, bar_y, bar_w, 14), 1, border_radius=4)
+        xp_label = game.small_font.render(
+            f"XP {xp_now}/{next_xp}  —  {next_xp - xp_now} to level {next_level}", True, (130, 190, 150)
         )
-        panel.blit(progress, progress.get_rect(center=(panel_w // 2, panel_h - 80)))
+        panel.blit(xp_label, xp_label.get_rect(center=(panel_w // 2, bar_y + 28)))
+    else:
+        maxed = game.small_font.render("Maximum level reached.", True, (180, 220, 140))
+        panel.blit(maxed, maxed.get_rect(center=(panel_w // 2, bar_y + 14)))
 
-    footer = game.small_font.render("Press Space or Enter to continue.", True, (130, 190, 150))
-    panel.blit(footer, footer.get_rect(center=(panel_w // 2, panel_h - 50)))
+    footer = game.small_font.render("Press Space or Enter to continue.", True, (100, 160, 120))
+    panel.blit(footer, footer.get_rect(center=(panel_w // 2, panel_h - 26)))
 
-    game.screen.blit(panel, (x, y))
+    game.screen.blit(panel, (px, py))

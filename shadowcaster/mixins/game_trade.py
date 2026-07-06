@@ -4,7 +4,14 @@ import random
 
 from ..constants import COLOR_ACCENT, COLOR_HEAL, COLOR_ITEM_ARMOR, COLOR_ITEM_WEAPON
 from ..item_catalog import ITEM_CATALOG, TRADER_COMMON, TRADER_UNCOMMON
+from ..item_generation import compute_item_level, generate_armor, generate_weapon
+from ..item_generation_data import QUALITY_TIERS
+from ..loot_catalog import GEMS, CURIOS
+from ..models import Item
 from ..game_typing import GameMixinBase
+
+# How many world-map steps before a town's stock refreshes
+_STOCK_REFRESH_STEPS = 20
 
 _HARVEST_SELL_PRICES: dict[str, int] = {
     "grain": 3,
@@ -40,7 +47,14 @@ class TradeMixin(GameMixinBase):
         self.trade_panel = 0  # 0 = trader stock, 1 = player pack
         self.trade_stock_index = 0
         self.trade_pack_index = 0
-        self._build_trader_stock()
+        coord = self.world_position
+        steps = getattr(self, "world_steps", 0)
+        stock_steps = getattr(self, "trader_stock_steps", {})
+        last_refresh = stock_steps.get(coord, -_STOCK_REFRESH_STEPS)
+        if not self.trader_stock or steps - last_refresh >= _STOCK_REFRESH_STEPS:
+            self._build_trader_stock()
+            stock_steps[coord] = steps
+            self.trader_stock_steps = stock_steps
         self.message = "The provisioner spreads the goods. Tab to switch panel, Enter to buy or sell."
 
     def close_trade(self):
@@ -49,12 +63,21 @@ class TradeMixin(GameMixinBase):
         self.trader_gold = 0
 
     def _attitude_tier(self):
-        attitude = getattr(self, "town_attitude", {}).get(self.world_position, 0)
+        attitude = self.town_attitude_score() if hasattr(self, "town_attitude_score") else 0
         if attitude >= 8:
             return 2
         if attitude >= 3:
             return 1
         return 0
+
+    def _shop_ilvl_cap(self) -> int:
+        """Maximum item level this shop will generate based on player level + attitude + bartering."""
+        level = getattr(self, "player_level", 1)
+        attitude = self.town_attitude_score() if hasattr(self, "town_attitude_score") else 0
+        level_cap = level * 2
+        attitude_bonus = min(4, attitude // 2)
+        barter_bonus = self.skill_shop_ilvl_bonus() if hasattr(self, "skill_shop_ilvl_bonus") else 0
+        return min(15, level_cap + attitude_bonus + barter_bonus)
 
     def _trader_gold_pool(self):
         tier = self._attitude_tier()
@@ -64,8 +87,8 @@ class TradeMixin(GameMixinBase):
 
     def _build_trader_stock(self):
         supply_depth = getattr(self, "_supply_depth", 0)
-        attitude_tier = self._attitude_tier()
         discount = self._trade_discount()
+        ilvl_cap = self._shop_ilvl_cap()
 
         stock: list[dict] = []
 
@@ -80,21 +103,18 @@ class TradeMixin(GameMixinBase):
         stock.append({"type": "ammo_bundle", "key": "ammo_bundle", "name": "Ammo (×5)",
                        "price": max(1, 12 - discount), "qty": 3})
 
-        # Gear: seeded offer per town
-        weapon_key, armor_key = self._trader_gear_offer()
-        if weapon_key:
-            w_price = max(1, _WEAPON_GOLD_COSTS.get(weapon_key, 20) - discount * 2)
-            weapon_name = self.WEAPON_CATALOG[weapon_key]["name"]
-            stock.append({"type": "weapon", "key": weapon_key, "name": weapon_name, "price": w_price})
-        if armor_key:
-            a_price = max(1, _ARMOR_GOLD_COSTS.get(armor_key, 20) - discount * 2)
-            armor_name = self.ARMOR_CATALOG[armor_key]["name"]
-            stock.append({"type": "armor", "key": armor_key, "name": armor_name, "price": a_price})
+        # Gear: seeded generated equipment with shop iLvl cap
+        gear_items = self._trader_gear_offer(ilvl_cap)
+        for item in gear_items:
+            markup = 1.4 if item.quality in ("quality", "masterwork") else 1.2 if item.quality == "superior" else 1.0
+            price = max(1, int(item.sell_price * markup) - discount * 2)
+            stock.append({"type": "generated_gear", "key": item.key, "name": item.name,
+                           "price": price, "item": item})
 
         # At supply depth 1+: uncommon consumables (biome-matched)
         if supply_depth >= 1:
             biome = self.region_type
-            with self.seed_scope("trader_uncommon", self.world_position):
+            with self.seed_scope("trader_uncommon", self.world_position, ilvl_cap):
                 uncommon_candidates = [
                     key for key in TRADER_UNCOMMON
                     if not ITEM_CATALOG[key]["biomes"] or biome in ITEM_CATALOG[key]["biomes"]
@@ -106,18 +126,6 @@ class TradeMixin(GameMixinBase):
                     stock.append({"type": "consumable", "key": key, "name": spec["name"],
                                    "price": max(1, (spec.get("buy_price", 18) or 18) - discount), "qty": 2,
                                    "rarity": "uncommon"})
-
-        # At supply depth 1+, offer a second weapon and armor
-        if supply_depth >= 1:
-            weapon_key2, armor_key2 = self._trader_gear_offer(offset=1)
-            if weapon_key2 and weapon_key2 != weapon_key:
-                w_price2 = max(1, _WEAPON_GOLD_COSTS.get(weapon_key2, 20) - discount * 2)
-                stock.append({"type": "weapon", "key": weapon_key2,
-                               "name": self.WEAPON_CATALOG[weapon_key2]["name"], "price": w_price2})
-            if armor_key2 and armor_key2 != armor_key:
-                a_price2 = max(1, _ARMOR_GOLD_COSTS.get(armor_key2, 20) - discount * 2)
-                stock.append({"type": "armor", "key": armor_key2,
-                               "name": self.ARMOR_CATALOG[armor_key2]["name"], "price": a_price2})
 
         # Crafting recipes appear when player has ingredients
         if self.inventory_quantity("grain") >= 2:
@@ -142,15 +150,36 @@ class TradeMixin(GameMixinBase):
             discount = 3
         elif supply_depth >= 1 or attitude_tier >= 1:
             discount = 1
+        discount += self.skill_buy_discount() if hasattr(self, "skill_buy_discount") else 0
         return discount
 
-    def _trader_gear_offer(self, offset=0):
-        weapon_keys = sorted(self.WEAPON_CATALOG.keys())
-        armor_keys = sorted(self.ARMOR_CATALOG.keys())
-        with self.seed_scope("trader_offer", self.world_position, offset):
-            weapon_key = random.choice(weapon_keys)
-            armor_key = random.choice(armor_keys)
-        return weapon_key, armor_key
+    def _trader_gear_offer(self, ilvl_cap: int) -> list:
+        """Generate 2–4 pieces of equipment for the shop, seeded by town + ilvl_cap."""
+        supply_depth = getattr(self, "_supply_depth", 0)
+        slot_count = 2 + supply_depth  # 2 base, up to 4 at depth 2
+        items = []
+        with self.seed_scope("trader_offer", self.world_position, ilvl_cap):
+            rng = random.Random(random.getrandbits(32))
+            for i in range(slot_count):
+                ilvl = min(ilvl_cap, max(1, rng.randint(1, ilvl_cap)))
+                gen_fn = generate_weapon if i % 2 == 0 else generate_armor
+                data = gen_fn(rng, ilvl)
+                item = Item(
+                    key=data["key"], name=data["name"], category=data["category"],
+                    color=data["color"], marker=data["marker"], description=data["description"],
+                    melee_bonus=data.get("melee_bonus", 0), ranged_bonus=data.get("ranged_bonus", 0),
+                    defense_bonus=data.get("defense_bonus", 0),
+                    max_hp_bonus=data.get("max_hp_bonus", 0), fov_bonus=data.get("fov_bonus", 0),
+                    speed_bonus=data.get("speed_bonus", 0), range_bonus=data.get("range_bonus", 0),
+                    ranged_penalty=data.get("ranged_penalty", 0), fov_penalty=data.get("fov_penalty", 0),
+                    on_kill_heal=data.get("on_kill_heal", 0), low_hp_melee_bonus=data.get("low_hp_melee_bonus", 0),
+                    sell_price=data.get("sell_price", 1), quality=data.get("quality", "normal"),
+                    prefix_key=data.get("prefix_key"), suffix_key=data.get("suffix_key"),
+                    base_key=data.get("base_key", ""), item_level=data.get("item_level", 0),
+                    on_hit_effect=data.get("on_hit_effect", {}), passive_effects=data.get("passive_effects", {}),
+                )
+                items.append(item)
+        return items
 
     def trade_switch_panel(self):
         self.trade_panel = 1 - self.trade_panel
@@ -168,7 +197,7 @@ class TradeMixin(GameMixinBase):
     def _trade_pack_rows(self):
         rows = []
         for item in self.inventory:
-            if item.category in ("weapon", "armor", "consumable", "harvest"):
+            if item.category in ("weapon", "armor", "consumable", "harvest", "gem", "curio"):
                 rows.append(item)
         return rows
 
@@ -181,9 +210,17 @@ class TradeMixin(GameMixinBase):
         if item.category == "harvest":
             return _HARVEST_SELL_PRICES.get(item.key, 2)
         if item.category == "weapon":
-            return _WEAPON_GOLD_COSTS.get(item.key, 20) // 2
+            if item.sell_price > 0:
+                return item.sell_price
+            return _WEAPON_GOLD_COSTS.get(item.base_key or item.key, 20) // 2
         if item.category == "armor":
-            return _ARMOR_GOLD_COSTS.get(item.key, 20) // 2
+            if item.sell_price > 0:
+                return item.sell_price
+            return _ARMOR_GOLD_COSTS.get(item.base_key or item.key, 20) // 2
+        if item.category == "gem":
+            return GEMS.get(item.key, {}).get("sell", 3) + (self.skill_sell_bonus() if hasattr(self, "skill_sell_bonus") else 0)
+        if item.category == "curio":
+            return CURIOS.get(item.key, {}).get("sell", 2) + (self.skill_sell_bonus() if hasattr(self, "skill_sell_bonus") else 0)
         return 1
 
     def trade_buy(self):
@@ -226,30 +263,13 @@ class TradeMixin(GameMixinBase):
             self.ammo += 5
             self.message = f"Bought 5 ammo for {price}g. Ammo: {self.ammo}. Gold: {self.gold}g."
 
-        elif entry["type"] == "weapon":
-            catalog = self.WEAPON_CATALOG.get(key)
-            if not catalog:
-                return
-            if self.owns_item(key):
-                self.message = f"You already own {catalog['name']}."
+        elif entry["type"] == "generated_gear":
+            item = entry.get("item")
+            if item is None:
                 return
             self.gold -= price
-            self.add_item(key, catalog["name"], "weapon", catalog["color"], "weapon",
-                          melee_bonus=catalog["melee_bonus"], ranged_bonus=catalog["ranged_bonus"],
-                          description=catalog.get("description", ""))
-            self.message = f"Bought {catalog['name']} for {price}g. Open inventory to equip. Gold: {self.gold}g."
-
-        elif entry["type"] == "armor":
-            catalog = self.ARMOR_CATALOG.get(key)
-            if not catalog:
-                return
-            if self.owns_item(key):
-                self.message = f"You already own {catalog['name']}."
-                return
-            self.gold -= price
-            self.add_item(key, catalog["name"], "armor", catalog["color"], "armor",
-                          defense_bonus=catalog["defense_bonus"], description=catalog.get("description", ""))
-            self.message = f"Bought {catalog['name']} for {price}g. Open inventory to equip. Gold: {self.gold}g."
+            self.inventory.append(item)
+            self.message = f"Bought {item.name} for {price}g. Open inventory to equip. Gold: {self.gold}g."
 
     def _apply_craft(self, craft_key):
         if craft_key == "craft_rations":
@@ -308,7 +328,7 @@ class TradeMixin(GameMixinBase):
 
         qty = item.quantity if hasattr(item, "quantity") and item.quantity > 1 else 1
 
-        if item.category in ("consumable", "harvest") and qty > 1:
+        if item.category in ("consumable", "harvest", "gem", "curio") and qty > 1:
             # Sell one at a time
             item.quantity -= 1
             if item.quantity <= 0:

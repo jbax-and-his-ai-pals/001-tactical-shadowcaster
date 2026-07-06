@@ -128,8 +128,11 @@ class FloorGenerationMixin(GameMixinBase):
         self.terrain_features = self.generate_terrain_features()
         self.sync_vision_transparency()
         pickups_enabled = self.region_type not in INTERIOR_REGION_TYPES
+        if hasattr(self, "reset_stealth_ambush"):
+            self.reset_stealth_ambush()
         self.upgrade_pickup = None
-        if pickups_enabled and not self.is_bottom_floor():
+        import random as _random
+        if pickups_enabled and not self.is_bottom_floor() and _random.random() < 0.05:
             self.upgrade_pickup = self.create_upgrade_pickup(exclude={self.player, self.stairs, self.up_stairs, self.delve_goal})
         self.heal_pickup = None
         if not pickups_enabled or self.is_bottom_floor():

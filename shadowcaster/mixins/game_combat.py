@@ -22,15 +22,44 @@ class CombatMixin(GameMixinBase):
         armor = self.equipped_armor
         if not armor:
             return 0
-        if armor.key == "war_plate":
+        bk = getattr(armor, "base_key", None) or armor.key
+        if bk == "war_plate":
             return 2
-        if armor.key == "leather_armor":
+        if bk == "leather_armor":
             return 1
         return 0
 
+    def _weapon_on_hit(self, enemy) -> str | None:
+        """Apply equipped weapon on_hit_effect to the given enemy. Returns a flavour message or None."""
+        weapon = self.equipped_weapon
+        if weapon is None:
+            return None
+        effects = getattr(weapon, "on_hit_effect", {})
+        if not effects:
+            return None
+        msgs = []
+        if effects.get("on_hit_poison"):
+            if self.add_status(enemy.status_effects, "poison", 3):
+                msgs.append(f"The {enemy.kind} is poisoned.")
+        if effects.get("on_hit_fire"):
+            if self.add_status(enemy.status_effects, "burn", 2):
+                msgs.append(f"The {enemy.kind} catches fire.")
+        if effects.get("on_hit_slow"):
+            if self.add_status(enemy.status_effects, "stun", 1):
+                msgs.append(f"The {enemy.kind} is slowed.")
+        if effects.get("on_hit_bleed"):
+            if self.add_status(enemy.status_effects, "bleed", 3):
+                msgs.append(f"The {enemy.kind} bleeds.")
+        return " ".join(msgs) if msgs else None
+
     def take_damage(self, amount, cause=None):
         if amount > 0:
-            amount = max(1, amount - self.effective_defense - self._armor_damage_reduction())
+            parry = self.skill_parry_chance() if hasattr(self, "skill_parry_chance") else 0.0
+            if parry > 0 and random.random() < parry:
+                self.message = "You parry the blow."
+                return
+            dr = self.skill_damage_reduction() if hasattr(self, "skill_damage_reduction") else 0
+            amount = max(1, amount - self.effective_defense - self._armor_damage_reduction() - dr)
             if hasattr(self, "ability_on_hit_received"):
                 amount = self.ability_on_hit_received(amount)
         self.health -= amount
@@ -47,11 +76,12 @@ class CombatMixin(GameMixinBase):
         if statuses is self.player_statuses and effect in ("poison", "burn"):
             armor = self.equipped_armor
             if armor:
-                if armor.key == "war_plate":
+                bk = getattr(armor, "base_key", None) or armor.key
+                if bk == "war_plate":
                     return False  # immune to burn/poison
-                if armor.key == "plate_coat" and random.random() < 0.25:
+                if bk == "plate_coat" and random.random() < 0.25:
                     return False  # 25% chance to block
-                if armor.key == "chain_mail":
+                if bk == "chain_mail":
                     duration = max(1, duration - 1)
             # Resistance halves duration
             resist_key = "resist_poison" if effect == "poison" else ("resist_fire" if effect == "burn" else None)
@@ -66,10 +96,11 @@ class CombatMixin(GameMixinBase):
         if not self.player_statuses:
             return "clear"
         labels = {
-            "poison": "Poison", "burn": "Burn", "ward": "Ward",
+            "poison": "Poison", "burn": "Burn", "bleed": "Bleed", "ward": "Ward",
             "regen": "Regen", "resist_poison": "ResPoison", "resist_fire": "ResFire",
             "fortify_attack": "AtkUp", "fortify_defense": "DefUp",
             "fortify_speed": "SwiftUp", "fortify_light": "SightUp",
+            "haste": "Haste", "strength": "Strength", "cripple": "Crippled",
         }
         return ", ".join(f"{labels.get(name, name.title())} {turns}t" for name, turns in sorted(self.player_statuses.items()))
 
@@ -112,6 +143,9 @@ class CombatMixin(GameMixinBase):
                 elif effect == "burn":
                     enemy.health -= 1
                     messages.append(f"The {enemy.kind} burns.")
+                elif effect == "bleed":
+                    enemy.health -= 1
+                    messages.append(f"The {enemy.kind} bleeds.")
                 elif effect == "stun":
                     pass  # stun dealt with in enemy turn loop
                 enemy.status_effects[effect] -= 1
@@ -127,15 +161,24 @@ class CombatMixin(GameMixinBase):
         weapon = self.equipped_weapon
         if not weapon:
             return None
-        if weapon.key == "dagger":
+        bk = getattr(weapon, "base_key", None) or weapon.key
+        msg = None
+        if bk == "dagger":
             gained = min(1, self.max_health - self.health)
             if gained > 0:
                 self.health += gained
-                return f"The kill restores {gained} HP."
-        if weapon.key == "halberd":
+                msg = f"The kill restores {gained} HP."
+        if bk == "halberd":
             self.add_status(self.player_statuses, "ward", 1)
-            return "The decisive blow grants ward."
-        return None
+            msg = "The decisive blow grants ward."
+        on_kill_heal = getattr(weapon, "on_kill_heal", 0)
+        if on_kill_heal > 0:
+            gained = min(on_kill_heal, self.max_health - self.health)
+            if gained > 0:
+                self.health += gained
+                heal_msg = f"Your weapon's hunger restores {gained} HP."
+                msg = f"{msg} {heal_msg}" if msg else heal_msg
+        return msg
 
     def damage_enemy(self, enemy, amount, effect=None, duration=0):
         enemy.health -= amount
@@ -212,13 +255,21 @@ class CombatMixin(GameMixinBase):
         if enemy:
             self.attack_flash = enemy.position
             self.facing = direction_toward(self.player, enemy.position)
-            message = self.damage_enemy(enemy, self.effective_melee_damage)
+            stealth_bonus = self.skill_stealth_bonus() if hasattr(self, "skill_stealth_bonus") else 0
+            if stealth_bonus > 0:
+                self.consume_stealth_ambush()
+            message = self.damage_enemy(enemy, self.effective_melee_damage + stealth_bonus)
             weapon = self.equipped_weapon
-            stun_msg = ""
-            if weapon and weapon.key == "warhammer" and enemy in self.enemies and random.random() < 0.25:
+            extra = ""
+            bk = (getattr(weapon, "base_key", None) or weapon.key) if weapon else None
+            if bk == "warhammer" and enemy in self.enemies and random.random() < 0.25:
                 self.add_status(enemy.status_effects, "stun", 1)
-                stun_msg = " The blow staggers it."
-            self.after_player_turn(player_acted=False, base_message=f"You strike the {enemy.kind}. {message}{stun_msg}")
+                extra += " The blow staggers it."
+            if enemy in self.enemies:
+                on_hit_msg = self._weapon_on_hit(enemy)
+                if on_hit_msg:
+                    extra += f" {on_hit_msg}"
+            self.after_player_turn(player_acted=False, base_message=f"You strike the {enemy.kind}. {message}{extra}")
             return
         resident = self.choose_adjacent_resident()
         if resident is not None:
@@ -238,12 +289,16 @@ class CombatMixin(GameMixinBase):
             self.message = "Your ranged weapon clicks empty."
             return
         weapon = self.equipped_weapon
-        if weapon and weapon.key == "shortbow":
+        bk = (getattr(weapon, "base_key", None) or weapon.key) if weapon else None
+        free_archery = self.skill_archery_free_shot() if hasattr(self, "skill_archery_free_shot") else False
+        if bk == "shortbow":
             self._shortbow_shot_count = getattr(self, "_shortbow_shot_count", 0) + 1
-            if self._shortbow_shot_count % 3 == 0:
+            if self._shortbow_shot_count % 3 == 0 or free_archery:
                 pass  # free shot — don't consume ammo
             else:
                 self.ammo -= 1
+        elif free_archery:
+            pass  # archery skill free shot
         else:
             self._shortbow_shot_count = 0
             self.ammo -= 1
@@ -252,9 +307,14 @@ class CombatMixin(GameMixinBase):
         if enemy:
             self.facing = direction_toward(self.player, enemy.position)
             damage = self.effective_ranged_damage + self.rules["ranged_bonus"]
-            effect = "burn" if self.region_type == "desert" else None
-            message = self.damage_enemy(enemy, damage, effect=effect, duration=2 if effect else 0)
-            self.after_player_turn(player_acted=False, base_message=f"Your shot hits the {enemy.kind}. {message}")
+            biome_effect = "burn" if self.region_type == "desert" else None
+            message = self.damage_enemy(enemy, damage, effect=biome_effect, duration=2 if biome_effect else 0)
+            extra = ""
+            if enemy in self.enemies:
+                on_hit_msg = self._weapon_on_hit(enemy)
+                if on_hit_msg:
+                    extra = f" {on_hit_msg}"
+            self.after_player_turn(player_acted=False, base_message=f"Your shot hits the {enemy.kind}. {message}{extra}")
             return
         if shot_line and self.dungeon.is_blocked(*shot_line[-1]):
             self.after_player_turn(player_acted=False, base_message="Your shot splashes against stone.")

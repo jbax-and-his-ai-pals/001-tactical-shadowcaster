@@ -7,6 +7,12 @@ class OverlayControllerMixin(GameMixinBase):
 
     def handle_controller_overlay_button(self, button):
         overlay = self.active_non_menu_overlay()
+        if overlay == "locksmith":
+            if button in (1, 7):
+                self.close_locksmith()
+            elif button == 0:
+                self.locksmith_confirm_unlock()
+            return True
         if overlay == "trade":
             if button in (1, 7):
                 self.close_trade()

@@ -87,6 +87,18 @@ class OverlayEventMixin(GameMixinBase):
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 self.handle_trade_click(*event.pos)
             return True
+        if overlay == "locksmith":
+            if event.type == pygame.KEYDOWN:
+                self.handle_overlay_keydown(event)
+            return True
+        if overlay == "trainer":
+            if event.type == pygame.KEYDOWN:
+                self.handle_overlay_keydown(event)
+            return True
+        if overlay == "minimap":
+            if event.type == pygame.KEYDOWN:
+                self.handle_overlay_keydown(event)
+            return True
         if overlay == "travel":
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_1, pygame.K_KP1):
@@ -133,6 +145,26 @@ class OverlayEventMixin(GameMixinBase):
 
     def handle_overlay_keydown(self, event):
         overlay = self.active_non_menu_overlay()
+        if overlay == "locksmith":
+            if event.key == pygame.K_ESCAPE:
+                self.close_locksmith()
+            elif event.key in (pygame.K_UP, pygame.K_w):
+                self.locksmith_move_selection(-1)
+            elif event.key in (pygame.K_DOWN, pygame.K_s):
+                self.locksmith_move_selection(1)
+            elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+                self.locksmith_confirm_unlock()
+            return True
+        if overlay == "trainer":
+            if event.key == pygame.K_ESCAPE:
+                self.close_trainer()
+            elif event.key in (pygame.K_UP, pygame.K_w):
+                self._trainer_move(-1)
+            elif event.key in (pygame.K_DOWN, pygame.K_s):
+                self._trainer_move(1)
+            elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+                self._trainer_confirm()
+            return True
         if overlay == "trade":
             if event.key == pygame.K_ESCAPE:
                 self.close_trade()
@@ -251,9 +283,12 @@ class OverlayEventMixin(GameMixinBase):
             elif event.key == pygame.K_PAGEDOWN:
                 self.scroll_journal(144)
             elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE, pygame.K_m):
-                quest = self.selected_active_journal_quest()
-                if quest is not None and self.can_show_map_for_selected_journal_quest():
-                    self.open_world_map_for_quest(quest)
+                if self.journal_tab == 2 and hasattr(self, "journal_character_skill_activate"):
+                    self.journal_character_skill_activate()
+                else:
+                    quest = self.selected_active_journal_quest()
+                    if quest is not None and self.can_show_map_for_selected_journal_quest():
+                        self.open_world_map_for_quest(quest)
             elif event.key in (pygame.K_DELETE, pygame.K_BACKSPACE):
                 quest = self.selected_active_journal_quest()
                 if quest is not None and self.can_abandon_selected_journal_quest():
@@ -290,6 +325,10 @@ class OverlayEventMixin(GameMixinBase):
                 self.scroll_world_map_details(72)
             elif event.key in (pygame.K_HOME, pygame.K_r):
                 self.reset_world_map_view()
+            return True
+        if overlay == "minimap":
+            if event.key in (pygame.K_ESCAPE, pygame.K_n, pygame.K_m):
+                self.minimap_open = False
             return True
         if overlay == "game_over":
             if event.key in (pygame.K_LEFT, pygame.K_a, pygame.K_q):

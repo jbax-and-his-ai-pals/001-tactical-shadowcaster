@@ -1,11 +1,7 @@
 import random
 
 from .models import RectRoom
-from .regions import (
-    RegionMap,
-    carve_path,
-    path_tiles,
-)
+from .regions_map import RegionMap, carve_path, path_tiles
 
 
 def _place_building(region, bx, by, bw, bh, door_side="south"):

@@ -94,6 +94,15 @@ class XPMixin(GameMixinBase):
             self._apply_level_unlock(next_level)
 
     def _apply_level_unlock(self, level: int):
+        self.player_skill_points = getattr(self, "player_skill_points", 0) + 5
+        gains = ["+5 Skill Points"]
+        hp_bonus = self.skill_max_hp_bonus() if hasattr(self, "skill_max_hp_bonus") else 0
+        if hp_bonus > 0:
+            gains.append(f"Max HP: {self.max_health} (toughness bonus active)")
+        unlock_text = LEVEL_UNLOCKS.get(level, "")
+        if unlock_text:
+            gains.append(unlock_text)
+        self.levelup_gains = gains
         if level == 4 and hasattr(self, "pick_ability_choices"):
             self.pick_ability_choices()
 
