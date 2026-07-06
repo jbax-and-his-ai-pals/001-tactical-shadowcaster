@@ -21,7 +21,7 @@ def town_profile(context, hostile=False):
         "hamlet": {"plaza_w": 11, "plaza_h": 7, "house_divisor": 380, "min_houses": 8, "service_cap": 3, "ponds": 0},
         "village": {"plaza_w": 13, "plaza_h": 9, "house_divisor": 300, "min_houses": 10, "service_cap": 4, "ponds": 1},
         "town": {"plaza_w": 15, "plaza_h": 9, "house_divisor": 250, "min_houses": 13, "service_cap": 5, "ponds": 1},
-        "large_town": {"plaza_w": 17, "plaza_h": 11, "house_divisor": 200, "min_houses": 16, "service_cap": 6, "ponds": 2},
+        "large_town": {"plaza_w": 17, "plaza_h": 11, "house_divisor": 180, "min_houses": 20, "service_cap": 9, "ponds": 2},
     }
     biome_decor = {
         "forest": {"flowers": 0.18, "water": "pond", "water_bonus": 1, "path_flowers": True},

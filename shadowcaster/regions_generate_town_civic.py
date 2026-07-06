@@ -126,6 +126,11 @@ def _assign_buildings(region, profile, plaza, houses):
         ("bathhouse", "Public Bathhouse"),
         ("armory", "Town Armory"),
         ("apothecary", "Apothecary"),
+        ("library", "Town Library"),
+        ("guardhouse", "Guardhouse"),
+        ("town_hall", "Town Hall"),
+        ("bakery", "Town Bakery"),
+        ("fletcher", "Fletcher's Workshop"),
     ]
     flavor_buildings = {
         "forest": [
@@ -188,11 +193,11 @@ def _assign_buildings(region, profile, plaza, houses):
     def district_label(role, house, kind=None):
         side = house_side_label(house).title()
         if role == "service":
-            if kind in {"supply", "cartographer", "inn", "tavern"}:
-                return "Market Square"
-            if kind in {"clinic", "shrine", "chapel", "bathhouse", "apothecary"}:
-                return "Civic Square"
-            if kind in {"smith", "stable", "armory"}:
+            if kind in {"supply", "cartographer", "inn", "tavern", "bakery", "apothecary"}:
+                return "Market Quarter"
+            if kind in {"clinic", "shrine", "chapel", "library", "town_hall", "bathhouse"}:
+                return "Civic Quarter"
+            if kind in {"smith", "stable", "armory", "guardhouse", "fletcher"}:
                 return f"{side} Works"
             return "Town Center"
         if role == "civic":
@@ -290,6 +295,11 @@ def _assign_buildings(region, profile, plaza, houses):
         "tavern": ["barrel", "barrel", "sign", "pew"],
         "chapel": ["flowers", "pew", "flowers"],
         "stable": ["hitch_post", "hitch_post", "crate", "barrel"],
+        "library": ["pew", "sign"],
+        "guardhouse": ["brazier", "brazier"],
+        "town_hall": ["pew", "pew", "sign"],
+        "bakery": ["crate", "barrel"],
+        "fletcher": ["crate", "sign"],
         "home": ["flowers"],
         "work": ["crate"],
         "civic": ["pew"],

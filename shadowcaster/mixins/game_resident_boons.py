@@ -208,7 +208,7 @@ class ResidentBoonsMixin(GameMixinBase):
             else:
                 self.message = "The child looks at you for a moment, then goes back to whatever they were doing."
             return True
-        return False
+        return self._apply_service_boon(resident, claim_key)
 
     def adjacent_residents(self):
         return [

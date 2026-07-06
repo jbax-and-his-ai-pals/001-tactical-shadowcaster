@@ -26,6 +26,23 @@ class TownsMixin(GameMixinBase):
             "kilnkeeper":  "Can bank the heat into a ward",
             "wanderer":    "Can tip you off about a distant region",
             "child":       "Has nothing much to say, but means it",
+            "innkeeper":   "May restore your health with a proper rest",
+            "healer":      "Can clear road ailments and afflictions",
+            "blacksmith":  "May fortify you before the road",
+            "barkeep":     "Can brace you with something steadying",
+            "priest":      "May bless you with a ward for the journey",
+            "surveyor":    "Can chart nearby routes on your map",
+            "armorer":     "May set a ward to weather what's ahead",
+            "apothecary":  "Can treat wounds and spare a remedy",
+            "librarian":   "Can mark hidden sites from the records",
+            "watch_captain":"Briefs on every known danger nearby",
+            "mayor":       "May reveal all routes surrounding the town",
+            "baker":       "May spare a loaf to ease the road",
+            "fletcher":    "May press spare arrows into your hands",
+            "laborer":     "Just getting on with the work",
+            "patron":      "Enjoying a moment off the road",
+            "townsfolk":   "Keeping to their own business",
+            "herald":      "Keeps track of what moves on the roads",
         }
         return summaries.get(resident.kind)
 
@@ -54,6 +71,11 @@ class TownsMixin(GameMixinBase):
             "bathhouse": ("bathhouse", (164, 208, 228)),
             "armory": ("armory", (200, 172, 140)),
             "apothecary": ("apothecary", (168, 220, 188)),
+            "library": ("library", (172, 196, 228)),
+            "guardhouse": ("guardhouse", (188, 176, 148)),
+            "town_hall": ("town_hall", (208, 196, 168)),
+            "bakery": ("bakery", (216, 184, 136)),
+            "fletcher": ("fletcher", (180, 168, 140)),
             "house": ("home", (210, 196, 168)),
             "hall": ("civic", (200, 192, 236)),
             "granary": ("work", (196, 176, 128)),
@@ -73,8 +95,11 @@ class TownsMixin(GameMixinBase):
     def town_building_data(self):
         return getattr(self.dungeon, "metadata", {}).get("town_buildings", [])
 
+    def town_service_buildings(self):
+        return [b for b in self.town_building_data() if b.get("role") == "service"]
+
     def town_non_service_buildings(self):
-        return [building for building in self.town_building_data() if not building.get("enterable")]
+        return [b for b in self.town_building_data() if b.get("role") != "service"]
 
     def feature_footprints(self):
         return getattr(self.dungeon, "metadata", {}).get("feature_footprints", {})

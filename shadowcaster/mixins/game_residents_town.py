@@ -6,8 +6,8 @@ from ..constants import COLOR_FRIEND, COLOR_FRIEND_ANIMAL
 from ..game_typing import GameMixinBase
 from ..models import Resident
 from ..resident_data import (
-    BIOME_LOCALS, BIOME_NAME_POOL, CHILD_OBSERVATIONS,
-    RESIDENT_KIND_CONCERNS,
+    AMBIENT_DIALOGUE, BIOME_LOCALS, BIOME_NAME_POOL, CHILD_OBSERVATIONS,
+    RESIDENT_KIND_CONCERNS, SERVICE_NPC_DEFS,
     WANDERER_DIRECTION_FLAVOR, WANDERER_NAMES, WANDERER_REGION_FLAVOR,
 )
 from ..systems import can_step, heuristic
@@ -218,6 +218,38 @@ class ResidentsTownMixin(GameMixinBase):
             b = take_building(terms)
             if b is not None:
                 residents.append(resident_from_building(b, kind, COLOR_FRIEND_ANIMAL, "animal", title, dialogue, "homebound"))
+
+        # Service professionals — one per service building with a matching definition
+        for building in self.town_service_buildings():
+            defn = SERVICE_NPC_DEFS.get(building["kind"])
+            if defn is None:
+                continue
+            kind, title, dialogue, behavior = defn
+            anchor = building.get("door") or building.get("center")
+            pos = claim_resident_tile(anchor)
+            residents.append(Resident(
+                pos, kind, COLOR_FRIEND, "settler", title, dialogue,
+                behavior, anchor, building["name"],
+                self._resident_name(parent_biome),
+            ))
+
+        # Ambient civilians — laborers, patrons, townsfolk, herald
+        ambient_targets = []
+        work_buildings = [b for b in self.town_non_service_buildings() if b.get("role") == "work"]
+        for b in work_buildings[:3]:
+            ambient_targets.append(("laborer", b.get("door") or b.get("center")))
+        tavern_inn = [b for b in self.town_service_buildings() if b["kind"] in {"tavern", "inn"}]
+        for b in tavern_inn[:2]:
+            ambient_targets.append(("patron", b.get("door") or b.get("center")))
+        if size in {"town", "large_town"}:
+            ambient_targets += [("townsfolk", plaza), ("townsfolk", plaza)]
+        if size == "large_town":
+            ambient_targets += [("herald", plaza), ("townsfolk", plaza)]
+        ambient_labels = {"laborer": "Laborer", "patron": "Patron", "townsfolk": "Townsfolk", "herald": "Town Crier"}
+        for kind, anchor in ambient_targets:
+            pos = claim_resident_tile(anchor)
+            dlg = tuple(AMBIENT_DIALOGUE.get(kind, ("...",)))
+            residents.append(Resident(pos, kind, COLOR_FRIEND, "settler", ambient_labels.get(kind, kind.title()), dlg, "wander", anchor, ""))
 
         # Wanderer — a passing traveler who knows something about a distant region
         self._spawn_wanderer(size, residents, claim_resident_tile, plaza, occupied_positions)

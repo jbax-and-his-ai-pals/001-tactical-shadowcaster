@@ -14,7 +14,10 @@ class WorldMapUIMixin(GameMixinBase):
         parent_biome = self.region_type if self.is_overworld_region() else self.settlement_parent_biome() or self.region_type
         context = {"parent_biome": parent_biome}
         if landmark.kind in {"town", "monster_town"}:
-            context["settlement_size"] = self.choose_settlement_size(parent_biome, hostile=landmark.kind == "monster_town")
+            if landmark.key == "poi_start_town":
+                context["settlement_size"] = "large_town"
+            else:
+                context["settlement_size"] = self.choose_settlement_size(parent_biome, hostile=landmark.kind == "monster_town")
         return context
 
     def world_map_layout(self, regions=None):

@@ -27,6 +27,7 @@ from .game_movement import MovementMixin
 from .game_quest_text import QuestTextMixin
 from .game_quests import QuestsMixin
 from .game_resident_boons import ResidentBoonsMixin
+from .game_resident_boons_service import ServiceBoonsMixin
 from .game_residents import ResidentsMixin
 from .game_respawn import RespawnMixin
 from .game_residents_town import ResidentsTownMixin
@@ -80,6 +81,7 @@ __all__ = [
     "QuestTextMixin",
     "QuestsMixin",
     "ResidentBoonsMixin",
+    "ServiceBoonsMixin",
     "ResidentsMixin",
     "RespawnMixin",
     "ResidentsTownMixin",
