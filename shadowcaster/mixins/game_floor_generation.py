@@ -58,6 +58,10 @@ class FloorGenerationMixin(GameMixinBase):
     ):
         floor_width = FLOOR_BASE_WIDTH + ((self.floor - 1) // 2) * 6
         floor_height = FLOOR_BASE_HEIGHT + ((self.floor - 1) // 2) * 4
+        region_type = chosen_region.region_type if chosen_region else None
+        if region_type in {"town", "monster_town"}:
+            floor_width = floor_width * 2
+            floor_height = floor_height * 2
         region = generate_region(
             self.floor,
             floor_width,
