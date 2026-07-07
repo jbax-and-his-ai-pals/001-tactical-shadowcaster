@@ -85,6 +85,9 @@ class WorldMapSettlementMixin(GameMixinBase):
         return label or (settlement_size_label(size) if size else None)
 
     def settlement_size_rank(self, state=None):
+        region_type = (state or {}).get("region_type", self.region_type)
+        if region_type in ("hamlet", "waystation"):
+            return 1
         size = self.settlement_metadata(state).get("settlement_size") or ""
         return {"hamlet": 1, "village": 2, "town": 3, "large_town": 4}.get(size, 0)
 

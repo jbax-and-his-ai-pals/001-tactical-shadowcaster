@@ -28,7 +28,55 @@ _GROWTH_RESIDENT_TIER2 = (
 )
 
 
+_ARCHETYPE_THRESHOLD = 3
+
+_ARCHETYPE_LABELS = {
+    "frontier_post": "Frontier Post",
+    "trade_hub": "Trade Hub",
+    "learning_seat": "Learning Seat",
+    "social_anchor": "Social Anchor",
+    "survivor": "Survivor Settlement",
+}
+
+
 class TownReactionsMixin(GameMixinBase):
+
+    # ── Town dimensions ────────────────────────────────────────────────────
+
+    def _town_dim_key(self, coord):
+        c = coord or self.world_position
+        return f"{c[0]},{c[1]}"
+
+    def town_dimensions(self, coord=None):
+        key = self._town_dim_key(coord)
+        dims = getattr(self, "_town_dimensions", {})
+        return dims.get(key, {"security": 0, "prosperity": 0, "knowledge": 0, "connections": 0})
+
+    def increment_town_dimension(self, dim, coord=None, amount=1):
+        key = self._town_dim_key(coord)
+        if not hasattr(self, "_town_dimensions"):
+            self._town_dimensions = {}
+        entry = self._town_dimensions.setdefault(key, {"security": 0, "prosperity": 0, "knowledge": 0, "connections": 0})
+        entry[dim] = entry.get(dim, 0) + amount
+
+    def town_archetype(self, coord=None):
+        dims = self.town_dimensions(coord)
+        dominant_dim = max(dims, key=lambda k: dims[k])
+        dominant_val = dims[dominant_dim]
+        if dominant_val < _ARCHETYPE_THRESHOLD:
+            return "survivor"
+        return {
+            "security": "frontier_post",
+            "prosperity": "trade_hub",
+            "knowledge": "learning_seat",
+            "connections": "social_anchor",
+        }[dominant_dim]
+
+    def town_archetype_label(self, coord=None):
+        return _ARCHETYPE_LABELS.get(self.town_archetype(coord), "Settlement")
+
+    # ── Existing attitude system ───────────────────────────────────────────
+
     def town_attitude_score(self, coord=None):
         coord = coord or self.world_position
         return self.town_prosperity_score(coord)
@@ -115,6 +163,32 @@ class TownReactionsMixin(GameMixinBase):
     def resident_town_response_line(self, resident):
         if self.region_type != "town":
             return ""
+        # Road pressure takes priority when roads are contested
+        if hasattr(self, "road_pressure_npc_line"):
+            pressure = self.road_pressure_npc_line()
+            if pressure:
+                return pressure
+        # Wildlife pressure: surface when roads are safe but biome conditions are active
+        if resident.kind in ("elder", "guide", "scout", "watch", "farmer"):
+            if hasattr(self, "wildlife_pressure_npc_line"):
+                wildlife = self.wildlife_pressure_npc_line()
+                if wildlife:
+                    return wildlife
+        # Buffer zone: watch and scout residents surface patrol perimeter status
+        if resident.kind in ("watch", "scout"):
+            if hasattr(self, "buffer_zone_npc_line"):
+                bz = self.buffer_zone_npc_line()
+                if bz:
+                    return bz
+        # Established towns: surface archetype history or expansion state via elder/guide dialogue
+        if resident.kind in ("elder", "guide"):
+            expansion_line = self.town_expansion_npc_line()
+            if expansion_line:
+                return expansion_line
+        if resident.kind in ("elder", "guide", "scout"):
+            history = self.town_history_npc_line()
+            if history:
+                return history
         response = self.town_response_line()
         if not response:
             return ""
@@ -175,10 +249,87 @@ class TownReactionsMixin(GameMixinBase):
             lines.append("Complete local contracts to unlock better services.")
         return lines
 
+    # ── Archetype self-reinforcement ───────────────────────────────────────
+
+    _REINFORCEMENT_NPCS = {
+        "frontier_post": ("scout", "Patrol Scout", (
+            "The perimeter runs east and west — I check both before nightfall.",
+            "We've had fewer incidents since the patrols started.",
+            "If you're heading toward the border, I can tell you what we've seen.",
+        ), "wander", 5),
+        "trade_hub": ("vendor", "Traveling Merchant", (
+            "I set up here permanently once the caravans started coming through.",
+            "Best crossroads I've found in the region. Good for business.",
+            "I carry things you won't find in the standard supply. Ask.",
+        ), "stationary", 5),
+        "learning_seat": ("librarian", "Town Archivist", (
+            "We've been collecting records from every traveler who passes through.",
+            "The archive isn't large yet, but it grows with every report that comes back.",
+            "If you've seen something unusual out there, I'd like to hear it.",
+        ), "stationary", 5),
+        "social_anchor": ("herald", "Town Diplomat", (
+            "We maintain correspondence with six settlements now. Three of them responded.",
+            "A town that knows its neighbors makes better decisions for itself.",
+            "You've been to more towns than most. That knowledge has value here.",
+        ), "wander", 5),
+    }
+
+    def _reinforcement_log(self) -> dict:
+        if not hasattr(self, "_town_reinforcements"):
+            self._town_reinforcements: dict = {}
+        return self._town_reinforcements
+
+    def _reinforcement_fired(self, coord_key: str, key: str) -> bool:
+        return key in self._reinforcement_log().get(coord_key, set())
+
+    def _fire_reinforcement(self, coord_key: str, key: str) -> None:
+        log = self._reinforcement_log()
+        log.setdefault(coord_key, set()).add(key)
+
+    def town_reinforcement_tick(self) -> None:
+        archetype = self.town_archetype()
+        if archetype == "survivor":
+            return
+        dims = self.town_dimensions()
+        coord_key = self._town_dim_key(None)
+        spec = self._REINFORCEMENT_NPCS.get(archetype)
+        if spec is None:
+            return
+        kind, title, dialogue, behavior, min_score = spec
+        dominant_dim = {"frontier_post": "security", "trade_hub": "prosperity",
+                        "learning_seat": "knowledge", "social_anchor": "connections"}[archetype]
+        if dims.get(dominant_dim, 0) < min_score:
+            return
+        rkey = f"npc_{archetype}"
+        if self._reinforcement_fired(coord_key, rkey):
+            return
+        if any(r.kind == kind and getattr(r, "is_growth_resident", False) and r.title == title
+               for r in self.residents):
+            self._fire_reinforcement(coord_key, rkey)
+            return
+        pos = self._growth_resident_tile()
+        r = Resident(pos, kind, COLOR_FRIEND, "settler", title, tuple(dialogue),
+                     behavior, is_growth_resident=True)
+        self.residents.append(r)
+        self._fire_reinforcement(coord_key, rkey)
+        archetype_label = self.town_archetype_label()
+        self.message = (self.message + f" {title} has established a presence here — {self.region_name} is becoming a {archetype_label}.").strip()
+        if hasattr(self, "add_world_note"):
+            self.add_world_note(f"{self.region_name} is developing into a {archetype_label}.", coord=self.world_position, kind="archetype")
+
     def load_region_state(self, state, arrival_direction=None):
         super().load_region_state(state, arrival_direction=arrival_direction)  # type: ignore[misc]
         if state.get("region_type") == "town" and arrival_direction is not None:
             self._check_town_growth()
+            self.town_reinforcement_tick()
+            if hasattr(self, "seed_hamlet_if_eligible"):
+                self.seed_hamlet_if_eligible()
+            if hasattr(self, "hamlet_fragility_tick"):
+                self.hamlet_fragility_tick()
+            if hasattr(self, "road_pressure_tick"):
+                self.road_pressure_tick()
+            if hasattr(self, "seed_waystations"):
+                self.seed_waystations()
             if hasattr(self, "sell_harvest_goods"):
                 sell_msg = self.sell_harvest_goods()
                 if sell_msg:

@@ -152,6 +152,10 @@ class GameCoreMixin(GameMixinBase):
         self.player_level = 1
         self.player_skill_points = 0
         self.player_skills: dict = {}
+        self._town_dimensions: dict = {}
+        self._town_reinforcements: dict = {}
+        self._town_hamlets: dict = {}
+        self._hamlet_security: dict = {}
         self.xp_milestones_claimed: set = set()
         self.levelup_pending = 0  # level just reached, 0 = none pending
         self.levelup_gains: list = []

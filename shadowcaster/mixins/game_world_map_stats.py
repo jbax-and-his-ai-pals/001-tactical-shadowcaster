@@ -133,6 +133,10 @@ class WorldMapStatsMixin(GameMixinBase):
                 return None
         if state is None:
             return None
+        if state.get("hamlet_placeholder"):
+            return self.hamlet_placeholder_stats(coord, state)
+        if state.get("waystation_placeholder"):
+            return self.waystation_placeholder_stats(coord, state)
         if state.get("expandable_preview"):
             return {
                 "coord": coord,
@@ -277,6 +281,14 @@ class WorldMapStatsMixin(GameMixinBase):
         prosperity_score = self.town_prosperity_score(coord)
         attitude_score = self.town_attitude_score(coord)
         active_quest_summary = self.active_quest_region_summary(coord)
+        is_town = state.get("region_type") == "town"
+        road_safety = self.road_safety_for_town(coord) if (is_town and hasattr(self, "road_safety_for_town")) else None
+        road_safety_label = self.road_safety_label(coord) if (is_town and hasattr(self, "road_safety_label")) else None
+        road_safety_color = self.road_safety_color(coord) if (is_town and hasattr(self, "road_safety_color")) else None
+        expansion = self.expansion_status(coord) if (is_town and hasattr(self, "expansion_status")) else None
+        buffer_zone = self.buffer_zone_status(coord) if (is_town and hasattr(self, "buffer_zone_status")) else None
+        town_archetype = self.town_archetype(coord) if (is_town and hasattr(self, "town_archetype")) else None
+        town_archetype_label = self.town_archetype_label(coord) if (is_town and hasattr(self, "town_archetype_label")) else None
         return {
             "coord": coord,
             "distance": abs(coord[0]) + abs(coord[1]),
@@ -363,7 +375,14 @@ class WorldMapStatsMixin(GameMixinBase):
             "parent_biome": self.settlement_parent_biome(state),
             "scouted": state.get("scouted", False),
             "supply_depth": state.get("supply_depth", 0),
-            "service_preview_lines": self.town_service_preview_lines(coord) if state.get("region_type") == "town" else [],
+            "service_preview_lines": self.town_service_preview_lines(coord) if is_town else [],
+            "road_safety": road_safety,
+            "road_safety_label": road_safety_label,
+            "road_safety_color": road_safety_color,
+            "town_archetype": town_archetype,
+            "town_archetype_label": town_archetype_label,
+            "expansion": expansion,
+            "buffer_zone": buffer_zone,
             "coast_proximity": self.coast_proximity(coord),
             "zone_name": next((z["name"] for z in self.world_zones if abs(z["center"][0] - coord[0]) + abs(z["center"][1] - coord[1]) <= 3), None),
             "is_city_hub": coord == getattr(self, "world_city", {}).get("hub"),
@@ -372,20 +391,4 @@ class WorldMapStatsMixin(GameMixinBase):
             "city_district_type": getattr(self, "world_city", {}).get("districts", {}).get(coord),
         }
 
-    def region_walkable_count(self, state):
-        if "walkable_count" not in state:
-            dungeon = state["dungeon"]
-            state["walkable_count"] = sum(1 for x in range(dungeon.width) for y in range(dungeon.height) if dungeon.tiles[x][y] == 0)
-        return state["walkable_count"]
-
-    def region_exploration_percent(self, state):
-        walkable = self.region_walkable_count(state)
-        explored = len(state["seen_tiles"])
-        return int((explored / max(1, walkable)) * 100)
-
-    def site_type_counts(self, landmarks):
-        counts = {}
-        for landmark in landmarks:
-            label = landmark.kind.replace("_", " ").title()
-            counts[label] = counts.get(label, 0) + 1
-        return [f"{label} x{counts[label]}" for label in sorted(counts)]
+    # region_walkable_count, region_exploration_percent, site_type_counts → WorldMapStatsHelpersMixin

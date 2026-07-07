@@ -43,6 +43,9 @@ from .game_towns import TownsMixin
 from .game_trade import TradeMixin
 from .game_towns_services import TownsServicesMixin
 from .game_town_reactions import TownReactionsMixin
+from .game_threat import ThreatMixin
+from .game_hamlet import HamletMixin
+from .game_expansion import ExpansionMixin
 from .game_towns_reveal import TownsRevealMixin
 from .game_ui import UIMixin
 from .game_visibility import VisibilityMixin
@@ -53,6 +56,7 @@ from .game_world_travel import WorldTravelMixin
 from .game_world_map_preview import WorldMapPreviewMixin
 from .game_world_map_settlements import WorldMapSettlementMixin
 from .game_world_map_stats import WorldMapStatsMixin
+from .game_world_map_stats_helpers import WorldMapStatsHelpersMixin
 from .game_world_map_ui import WorldMapUIMixin
 from .game_world_state import WorldStateMixin
 
@@ -102,6 +106,9 @@ __all__ = [
     "TradeMixin",
     "TownsServicesMixin",
     "TownReactionsMixin",
+    "ThreatMixin",
+    "HamletMixin",
+    "ExpansionMixin",
     "TownsRevealMixin",
     "UIMixin",
     "VisibilityMixin",
@@ -112,6 +119,7 @@ __all__ = [
     "WorldMapPreviewMixin",
     "WorldMapSettlementMixin",
     "WorldMapStatsMixin",
+    "WorldMapStatsHelpersMixin",
     "WorldMapUIMixin",
     "WorldStateMixin",
 ]

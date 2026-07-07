@@ -187,11 +187,25 @@ class QuestsMixin(QuestGenerationMixin, QuestBoardMixin):
     def _complete_quest(self, quest):
         quest.status = "complete"
         self._record_quest_consequences(quest)
+        self._increment_quest_dimension(quest)
         diplomacy_bonus = self.skill_quest_gold_bonus(quest.reward_gold) if hasattr(self, "skill_quest_gold_bonus") else 0
         self.gold += quest.reward_gold + diplomacy_bonus
         if hasattr(self, "xp_check_quest"):
             self.xp_check_quest(quest)
             self.xp_check_attitude(quest.from_world_pos)
+
+    def _increment_quest_dimension(self, quest):
+        if not hasattr(self, "increment_town_dimension"):
+            return
+        coord = quest.from_world_pos
+        if quest.kind == "bounty":
+            self.increment_town_dimension("security", coord)
+        elif quest.kind == "scout":
+            self.increment_town_dimension("knowledge", coord)
+        elif quest.kind == "chain" or (quest.kind == "delivery" and self._is_social_quest(quest)):
+            self.increment_town_dimension("connections", coord)
+        elif quest.kind == "delivery":
+            self.increment_town_dimension("prosperity", coord)
         town_response = self.town_response_line(quest.from_world_pos)
         if quest.kind == "delivery" and self._is_social_quest(quest):
             self.message = f"Errand complete — {quest.item_name} delivered. Received {quest.reward_gold}g. Total: {self.gold}g."

@@ -117,6 +117,8 @@ def generate_region(floor, width, height, region_type=None, name=None, context=N
         return Region(generate_cave(width, height), region_type, name, palette)
     if region_type == "maze":
         return Region(generate_maze(width, height), region_type, name, palette)
+    if region_type in ("hamlet", "waystation"):
+        return Region(generate_town(width, height, context=context), region_type, name, palette)
     if region_type == "town":
         return Region(generate_town(width, height, context=context), region_type, name, palette)
     if region_type == "monster_town":

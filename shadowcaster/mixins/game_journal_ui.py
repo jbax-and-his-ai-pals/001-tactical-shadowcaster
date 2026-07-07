@@ -48,7 +48,7 @@ class JournalUIMixin(JournalStatsMixin, GameMixinBase):
         self.message = f"You abandon the {quest.kind} quest."
 
     def quest_tabs(self):
-        return ["Active", "Completed", "Character", "Towns"]
+        return ["Active", "Completed", "Character", "Towns", "World"]
 
     def current_journal_entries(self):
         if self.journal_tab == 0:

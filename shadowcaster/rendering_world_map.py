@@ -9,7 +9,6 @@ from .constants import (
 )
 from .rendering_primitives import draw_tabs
 from .rendering_world_map_helpers import (
-    _render_world_map_detail,
     draw_world_map_chip,
     draw_world_map_connection,
     draw_world_map_route,
@@ -18,6 +17,7 @@ from .rendering_world_map_helpers import (
     world_map_landmark_icon_specs,
     draw_world_map_settlement_icon,
 )
+from .rendering_world_map_detail import _render_world_map_detail
 
 
 
@@ -178,8 +178,9 @@ def render_world_map_overlay(game):
         border = (255, 232, 126) if coord == game.world_position else (180, 148, 80) if is_hint else palette.banner_border
         pygame.draw.rect(game.screen, border, rect, 3, border_radius=8)
         if state.get("edge_exits") and not is_hint:
+            road_color = (stats_for_cell.get("road_safety_color") or border) if (stats_for_cell and state["region_type"] == "town") else border
             for direction in state["edge_exits"]:
-                draw_world_map_connection(game.screen, rect, direction, border)
+                draw_world_map_connection(game.screen, rect, direction, road_color)
         if coord == game.world_position:
             marker = pygame.Rect(0, 0, max(10, cell_size // 3), max(10, cell_size // 3))
             marker.center = rect.center
@@ -193,7 +194,8 @@ def render_world_map_overlay(game):
             q_label = game.small_font.render("?", True, COLOR_BG)
             game.screen.blit(q_label, q_label.get_rect(center=badge_rect.center))
         else:
-            draw_world_map_settlement_icon(game.screen, rect, state["region_type"], game.settlement_size_rank(state), COLOR_BG)
+            archetype = stats_for_cell.get("town_archetype") if stats_for_cell else None
+            draw_world_map_settlement_icon(game.screen, rect, state["region_type"], game.settlement_size_rank(state), COLOR_BG, archetype)
             danger = max(1, min(5, state.get("danger_tier", 1)))
             for index in range(danger):
                 pip_x = rect.left + 8 + index * 7

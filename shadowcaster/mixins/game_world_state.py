@@ -246,6 +246,14 @@ class WorldStateMixin(GameMixinBase):
         self.trader_stock_steps = data.get("trader_stock_steps", {})
         self.player_skills = data.get("player_skills", {})
         self.player_skill_points = data.get("player_skill_points", 0)
+        self._town_dimensions = data.get("town_dimensions", {})
+        self._town_reinforcements = {k: set(v) for k, v in data.get("town_reinforcements", {}).items()}
+        self._town_hamlets = {k: tuple(v) for k, v in data.get("town_hamlets", {}).items()}
+        self._hamlet_security = dict(data.get("hamlet_security", {}))
+        self._world_notes = list(data.get("world_notes", []))
+        self._road_pressure_ticks = dict(data.get("road_pressure_ticks", {}))
+        self._raided_towns = set(data.get("raided_towns", []))
+        self._town_waystations = {k: tuple(v) for k, v in data.get("town_waystations", {}).items()}
         self.journal_skill_index = 0
         self.attack_flash = None
         self.shot_flash = []

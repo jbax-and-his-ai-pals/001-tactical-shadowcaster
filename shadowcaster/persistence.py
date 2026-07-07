@@ -222,6 +222,14 @@ def save_game(game, path=None):
         "trader_stock_steps": {str(k): v for k, v in getattr(game, "trader_stock_steps", {}).items()},
         "player_skills": getattr(game, "player_skills", {}),
         "player_skill_points": getattr(game, "player_skill_points", 0),
+        "town_dimensions": getattr(game, "_town_dimensions", {}),
+        "town_reinforcements": {k: list(v) for k, v in getattr(game, "_town_reinforcements", {}).items()},
+        "town_hamlets": {k: list(v) for k, v in getattr(game, "_town_hamlets", {}).items()},
+        "hamlet_security": dict(getattr(game, "_hamlet_security", {})),
+        "world_notes": list(getattr(game, "_world_notes", [])),
+        "road_pressure_ticks": dict(getattr(game, "_road_pressure_ticks", {})),
+        "raided_towns": list(getattr(game, "_raided_towns", set())),
+        "town_waystations": {k: list(v) for k, v in getattr(game, "_town_waystations", {}).items()},
     }
     save_path.write_text(json.dumps(payload), encoding="utf-8")
     return save_path

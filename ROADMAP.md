@@ -22,7 +22,8 @@
 | 5 | Larger Social & World Structures | ✅ Complete | 95% |
 | 6 | Economy, Items, and Combat Depth | 🔄 Mostly Complete | ~90% |
 | 7 | Leveling, Persistence, and Universal Rarity | ✅ Complete | ~95% |
-| 8 | Living World — Towns, Threats, and Growth | 🔲 Planned | 0% |
+| 8 | Living World — Towns, Threats, and Growth | 🔄 In Progress | ~55% |
+| 9 | The Frontier — Expansion, Strangeness, and Endgame | 🔲 Planned | 0% |
 
 Overall: roughly **92% of total planned work shipped** (Phases 0-7 complete or near-complete).  
 Most complete: world exploration, settlement generation, combat, world-map UX, settlement attachment, world loop, archetype tracks, gather/harvest, social quests, world geography, trade system, composable item effects, enemy catalog (81 types), leveling (L1–L5 with ability system), legendary site gating, city stronghold, persistent world and death system, universal rarity model.  
@@ -40,6 +41,8 @@ Remaining frontier: controller/touch audit on new overlays, ability shown in jou
 - The strongest long-term hook is not raw combat escalation; it is exploration, route choice, light character identity, and visible settlement/world impact
 - A dedicated player might spend several hours per level — each level should feel genuinely earned and widen the space of what they can do and face
 - Rarity is a first-class design principle: the player should encounter things they have never seen before across dozens of hours of play
+- The arc is **stranger → shaper**: the player begins knowing nothing and occupying no role; over time the world becomes different — more legible, more developed, more shaped — because they were in it
+- The endgame is not a boss fight; it is arriving at the far edge of the world and finding something that recontextualizes everything behind you
 
 ## Player Fun Pillars
 - Exploration should reward curiosity with rumors, landmarks, shortcuts, hidden caches, and distinct regional stories instead of only exits and enemies
@@ -47,6 +50,8 @@ Remaining frontier: controller/touch audit on new overlays, ability shown in jou
 - Character growth should create identity rather than stat clutter; small specialization paths should change how the player approaches regions
 - Settlements should become places the player cares about through recurring residents, better services, town growth, and consequences from completed work
 - Non-combat discoveries should be exciting in their own right so the world does not feel like filler between fights
+- The player's mark on the world should be legible: towns they developed, roads they secured, and frontier they pushed into should be readable from the world map without a stats screen
+- Dangerous regions should be navigable by non-combat means for players who invested in the right skills — diplomacy, fieldcraft, and chronicler knowledge should matter in hostile territory, not just towns
 
 ## Content Strategy
 - Scale the game through authored content atoms plus procedural composition, not through endless generic random variation
@@ -511,6 +516,11 @@ The provisioner/trader only ever sells Common items. Finding Uncommon through ex
 - The leveling system is deliberately narrow (max 5). Each level must add a genuinely new dimension — not a stat increment. If a new level doesn't change what the player can access or how they play, it's not worth a level.
 - XP sources should be first-time achievements, not grinding. Kill counts and revisit counts should not be XP sources.
 - Regions and enemies do not scale with player level. A high-level player in a distant volcanic region is still in danger. The player grows; the world does not shrink.
+- The world has a gradient: comfortable interior → familiar danger → unfamiliar frontier → genuinely strange outer regions → the far edge. The player moves along this gradient voluntarily, at their own pace, pulled by curiosity.
+- The known world is legible; the frontier is not. Interior threats make sense within established rules. Outer region threats operate differently and don't fit the taxonomy the player learned in the interior.
+- Expansion is collaborative: the player is the tip of the spear; towns follow where the player leads. A developed frontier-adjacent town becomes a staging point for the next push outward.
+- The world's history is ambient, not narrated. Pieces of what came before are scattered across regions, embedded in NPC dialogue, visible in the landscape. A player who pays attention assembles a picture; one who doesn't still has a good time.
+- Non-combat skills must matter in dangerous areas, not just in towns. Diplomacy, fieldcraft, arcana, and chronicler knowledge should open options in hostile territory that pure combat cannot.
 
 ---
 
@@ -553,10 +563,10 @@ The provisioner/trader only ever sells Common items. Finding Uncommon through ex
 | Balanced / low | `survivor` | Default; no dominant identity; notice board is pure survival quests |
 
 **Milestones:**
-- [ ] `town_dimensions` dict per town in world state (`security`, `prosperity`, `knowledge`, `connections`)
-- [ ] Quest completion hooks increment the appropriate dimension
-- [ ] `town_archetype(town_coord)` derived from dominant dimension; returns archetype key
-- [ ] Archetype threshold: archetype is `survivor` until any dimension reaches threshold value (e.g., 3); above threshold, self-reinforcement begins (see 8B)
+- [x] `town_dimensions` dict per town in world state (`security`, `prosperity`, `knowledge`, `connections`)
+- [x] Quest completion hooks increment the appropriate dimension
+- [x] `town_archetype(town_coord)` derived from dominant dimension; returns archetype key
+- [x] Archetype threshold: archetype is `survivor` until any dimension reaches threshold value (e.g., 3); above threshold, self-reinforcement begins (see 8B)
 
 ---
 
@@ -576,12 +586,12 @@ The provisioner/trader only ever sells Common items. Finding Uncommon through ex
 | `social_anchor` | Cross-town visitors appear as temporary residents; diplomat NPC appears; attitude bonuses extend to neighboring towns the player has connected |
 
 **Milestones:**
-- [ ] `town_reinforcement_tick(town_coord)` called on each town visit (not on every game tick — only when player enters the region)
-- [ ] Reinforcement checks archetype and dimension score; applies the next appropriate change if threshold met and change not yet applied
-- [ ] Change log per town: tracks which reinforcements have fired so they don't repeat
-- [ ] Permanent merchant NPC seeded into `trade_hub` towns above threshold
+- [x] `town_reinforcement_tick(town_coord)` called on each town visit (not on every game tick — only when player enters the region)
+- [x] Reinforcement checks archetype and dimension score; applies the next appropriate change if threshold met and change not yet applied
+- [x] Change log per town: tracks which reinforcements have fired so they don't repeat
+- [x] Permanent merchant NPC seeded into `trade_hub` towns above threshold
 - [ ] Archive building added to `learning_seat` towns above threshold (if footprint allows)
-- [ ] Notice board quest weighting reads archetype key to bias quest type selection
+- [x] Notice board quest weighting reads archetype key to bias quest type selection
 
 ---
 
@@ -615,14 +625,14 @@ The provisioner/trader only ever sells Common items. Finding Uncommon through ex
 - Towns with sufficient security dimension already have counter-measures in place; low-security towns generate wildlife quests organically
 
 **Milestones:**
-- [ ] `road_safety` state tracked per town-pair connection in world state
-- [ ] Threat source tags at world generation for monster towns and hostile camps
-- [ ] Pressure propagation on world-time tick; roads in radius degrade toward `contested` if source unresolved
-- [ ] Clearing a source permanently removes its pressure; road safety recovers over subsequent ticks
-- [ ] World map road color indicates safety state (subtle; readable without being loud)
-- [ ] Raid event generation for long-contested towns; discoverable on next visit with quest hook
-- [ ] Wildlife pressure by biome adjacency; seasonal cycle tied to world-time counter
-- [ ] NPC dialogue references road safety and threat situation naturally
+- [x] `road_safety` state computed from proximity of uncleared monster towns (radius-based; `contested`/`watched`/`safe`)
+- [x] Threat sources identified from `world_regions` (monster towns with undefeated enemies)
+- [x] Pressure propagation on world-time tick; towns accumulate pressure ticks while contested; road_pressure_tick() fires on each town arrival
+- [x] Clearing a source (defeating all enemies) ends its pressure; road safety reflects cleared state
+- [x] World map road color indicates safety state (connection lines colored by safety: red/yellow/green)
+- [x] Raid event generation for long-contested towns; discoverable on next visit with message + World Note + prosperity hit; raided NPC dialogue distinct from pre-raid
+- [x] Wildlife pressure by biome adjacency; seasonal cycle tied to world-time counter (active every other `_WILDLIFE_SEASON_LENGTH` world steps; suppressed by security ≥ 3)
+- [x] NPC dialogue references road safety and threat situation naturally
 
 ---
 
@@ -664,12 +674,12 @@ The provisioner/trader only ever sells Common items. Finding Uncommon through ex
 - Protecting the hamlet is a distinct quest structure — smaller scale, more personal — compared to town-level quests
 
 **Milestones:**
-- [ ] `viable_expansion_directions(town_coord)` computed from adjacent biome types at world generation
+- [x] `viable_expansion_directions(town_coord)` computed from adjacent biome types
 - [ ] Outer district generation: when dimension threshold met, scatter 2-3 specific feature tiles outside the building cluster
-- [ ] Satellite hamlet: new world-grid entry seeded as `hamlet` type, connected to parent; own NPC set; own quest hooks
-- [ ] Hamlet fragility: security score tracked; abandoned if pressure sustained without player response
-- [ ] Buffer zone: flagged on hostile-border tiles; shrinks/grows with security dimension; raid events manifest here first
-- [ ] Road infrastructure: waystation or bridge tile seeded on long roads between sufficiently connected towns
+- [x] Satellite hamlet: new world-grid entry seeded as `hamlet` type, connected to parent; own NPC set; own quest hooks
+- [x] Hamlet fragility: security score tracked; abandoned if pressure sustained without player response
+- [x] Buffer zone: strength 1-3 from security dimension; NPC dialogue by strength/direction; world map detail shows strength label and border directions
+- [x] Road infrastructure: waystation tile seeded between town pairs where both have `connections ≥ 3` and road is `safe`/`watched`; generates as small town; appears on world map with travel prompt
 - [ ] District town: multiple spatial clusters in one tile when dimension thresholds reached; district labels on world map
 
 ---
@@ -679,11 +689,157 @@ The provisioner/trader only ever sells Common items. Finding Uncommon through ex
 **Goal:** The player should be able to read the world's history from what's there — not from a stats screen. Changes made by the town growth system should be discoverable through observation, NPC dialogue, and world map details.
 
 **Milestones:**
-- [ ] World map road coloring reflects safety state without requiring the detail panel
-- [ ] Town world-map tile reflects development stage: a trade hub looks busier, a frontier post looks fortified (via icon or tile overlay)
-- [ ] NPC dialogue references town history: "used to be rougher here before the patrols started" / "caravan stopped coming through last season"
-- [ ] Notice board quest text reflects archetype: frontier post boards use military register, trade hub boards use merchant language, learning seat boards have scholarly tone
-- [ ] Journal tab: "World Notes" section that records significant changes the player has witnessed or caused (raid repelled, satellite founded, road secured)
+- [x] World map road coloring reflects safety state without requiring the detail panel (connection lines colored contested/watched/safe)
+- [x] Town world-map tile reflects development stage: archetype tints the building icon (frontier_post=amber, trade_hub=yellow-green, learning_seat=blue, social_anchor=purple)
+- [x] NPC dialogue references town history: "used to be rougher here before the patrols started" / "caravan stopped coming through last season"
+- [x] Notice board quest text reflects archetype: frontier post boards use military register, trade hub boards use merchant language, learning seat boards have scholarly tone
+- [x] Journal tab: "World Notes" section that records significant changes the player has witnessed or caused (hamlet founded, hamlet abandoned, town archetype shift)
+
+---
+
+---
+
+### Phase 9 — The Frontier: Expansion, Strangeness, and Endgame `XL`
+
+**Goal:** Give the world a direction and a destination. The known world has edges; beyond those edges is genuine unknown that becomes increasingly strange the further out you go. The player expands that frontier through their own capability and by enabling town expansion. The far edge contains something that recontextualizes the world behind it.
+
+**Design principles:**
+- The frontier is not just harder content — it operates on different rules. The further from the origin, the less the interior's logic applies.
+- Expansion requires both player capability (high level, cleared pressure, frontier-ready gear) and town development (a staging point near the frontier). Neither alone is sufficient.
+- The world's pre-existing history becomes legible at the frontier. Evidence scattered through the interior — anomalous ruins, lorekeeper hints, unexplained geography — points toward the outer regions. The Chronicler play style finds its payoff here.
+- The endgame is a place, not a boss. Reaching the far edge should feel like understanding something, not defeating something.
+- Every focal play style arrives at the same destination by a different route and experiences it differently based on what they've done.
+
+---
+
+#### 9A — World Legibility Pass `S`
+
+**Goal:** Before the frontier can mean anything, the player must be able to read the shape of what they've already done. The world map should show the player's mark on the world without a stats screen.
+
+**Milestones:**
+- [ ] Developed towns have visible world-map signatures: trade hubs look busier, frontier posts look fortified, learning seats have a distinct icon
+- [ ] Player homepoint has a distinct world-map marker
+- [ ] Cleared threat sources visibly differ from active ones on the world map
+- [ ] Satellite hamlets (Phase 8D) appear as distinct smaller markers connected to their parent town
+- [ ] Road safety state (Phase 8C) visible as subtle color coding on road lines
+- [ ] Journal "World Notes" section records significant player-caused changes: towns developed, threats cleared, frontier pushed
+
+---
+
+#### 9B — Frontier Zone Generation `M`
+
+**Goal:** Define the frontier as a distinct world region with its own generation rules, separate from the procedurally generated interior. The frontier begins where the world's standard biome logic starts to break down.
+
+**What makes frontier regions different:**
+- Generated with higher base danger and lower legibility — fewer roads, no established towns, landmarks that don't match the interior taxonomy
+- Physical evidence of what came before: infrastructure that predates the current world (roads that predate current civilizations, structures that don't match known architecture), visible in the landscape rather than explained in text
+- Threats that don't fit the established enemy taxonomy: behaviors and appearances that break the rules the player learned in the interior
+- Biome combinations that don't occur in the interior: volcanic adjacent to tundra, swamp inside a mountain pass, impossible geography
+
+**World generation changes:**
+- Frontier distance threshold computed from world origin; regions beyond threshold generate under frontier rules
+- Frontier regions flagged in world state; detail panel notes "uncharted" or "beyond the known roads" rather than standard region summary
+- Standard town generation suppressed in frontier zones; only ruins and remnant structures appear
+- Enemy spawn tables in frontier zones draw from a separate `frontier_catalog` that can reference interior types but also introduces new unexplained variants
+
+**Milestones:**
+- [ ] `frontier_distance_threshold` computed per world (seeded, varies so frontier starts at different distances per world)
+- [ ] Regions beyond threshold flagged as `frontier: true` in world state
+- [ ] Frontier region generation: modified biome rules, no towns, higher danger, remnant structure landmarks
+- [ ] Frontier detail panel: distinct language and display for uncharted regions
+- [ ] Pre-existing infrastructure landmarks: authored "old road," "collapsed bridge," "sealed vault" landmark types that appear only in frontier zones
+- [ ] Frontier enemy variants: 6-10 new enemy types with behaviors that don't fit the interior taxonomy (spawning, movement, or attack rules that violate established patterns)
+
+---
+
+#### 9C — Frontier Expansion Mechanics `M`
+
+**Goal:** Make frontier expansion a collaborative process between the player and developed towns. The player scouts and clears; towns extend reach where the player has made it viable.
+
+**Expansion requirements:**
+- Player must reach a frontier region and survive it (first-visit flag) before a town can consider expanding toward it
+- A town within range must have a relevant dimension score high enough and a viable expansion direction pointing that way
+- The player may need to complete a specific frontier-adjacent quest to trigger the expansion decision
+
+**What expansion produces:**
+- A frontier waystation: a single-tile outpost with one NPC (a scout or warden), a minimal notice board, and a supply cache. Not a full town — a foothold.
+- The waystation enables further scouting: it extends the effective range of town-sponsored quests into the frontier
+- A waystation can be lost if frontier pressure overwhelms it without the player's support
+
+**Play style expression:**
+- Champion: clears enough frontier pressure to make a waystation viable and defends it against frontier threats
+- Builder: develops the parent town's dimensions to the point where it can sponsor the expansion decision
+- Chronicler: brings back records of frontier geography that change what the town knows and is willing to attempt
+- Wanderer: simply goes further, leaving a path others can follow
+
+**Milestones:**
+- [ ] `frontier_scouted` flag per region, set on first player visit to a frontier region
+- [ ] Town expansion logic (Phase 8D) extended to consider frontier-adjacent tiles when player has scouted them
+- [ ] Frontier waystation type: minimal generation, scout/warden NPC, supply cache, limited notice board
+- [ ] Waystation fragility: can be abandoned under sustained frontier pressure; parent town takes a dimension hit
+- [ ] Expansion trigger quest: specific quest that a town posts when the player has scouted an adjacent frontier region and dimensions are sufficient
+
+---
+
+#### 9D — The World's History `M`
+
+**Goal:** The world has a pre-existing history that the player assembles through exploration. This is not a quest chain — it is an ambient layer of environmental storytelling that rewards attention across the full arc of play.
+
+**What the history is:**
+- Something existed here before the current world — a civilization, a condition, an event — that ended and left traces
+- The current world's towns, monsters, and geography are downstream consequences of that history
+- The frontier contains the most concentrated evidence; the interior contains scattered pieces that only make sense in retrospect
+
+**How the player encounters it:**
+- Environmental: ruins with architectural styles that don't match known cultures; roads leading nowhere; sealed structures
+- NPC dialogue: lorekeepers, elders, and wanderers reference things they don't fully understand; the same fragment surfaces in multiple towns from different angles
+- Landmarks: specific frontier landmarks contain readable records, carvings, or scenes that are explicit pieces of the picture
+- Item descriptions: rare and legendary items have flavor text that implies more than it states
+
+**The picture assembly mechanic:**
+- `world_history_fragments`: a set tracked in world state; each fragment is a key (e.g. `"vault_seal_seen"`, `"lorekeeper_third_age"`, `"old_road_terminus"`)
+- Fragments are earned by visiting specific landmarks, completing specific NPC dialogue branches, or finding specific rare items
+- No UI tracks this explicitly — the player notices they keep encountering references to the same things
+- At sufficient fragment count, certain frontier landmarks unlock additional content (a sealed door opens, a previously silent NPC has something to say)
+- The Chronicler journal tab gains a "Records" section that accumulates readable entries as fragments are collected — the closest thing to explicit tracking, but framed as the player's own notes
+
+**Milestones:**
+- [ ] `world_history_fragments` set in world state; fragment keys defined
+- [ ] Fragment sources: 3-4 frontier landmark types that grant fragments on visit; 2-3 NPC dialogue branches (lorekeeper, elder, wanderer) that grant fragments; 1-2 rare item descriptions that imply fragments without granting them
+- [ ] Fragment-gated content: 2-3 frontier locations that reveal additional layers when player has relevant fragments
+- [ ] Chronicler journal "Records" section: accumulates readable entries per fragment; visible only when player has at least one
+- [ ] Interior history echoes: scattered references to the same history in standard NPC dialogue and landmark flavor text; feels like ambient texture until the player starts connecting it
+
+---
+
+#### 9E — The Far Edge `L`
+
+**Goal:** The world has a literal edge. Reaching it is the culmination of the player's arc. What they find there recontextualizes the world behind them — not through exposition, but through what the place itself is.
+
+**What the edge is:**
+- A defined world boundary beyond the frontier zone — a distance threshold beyond which the world's generation ends
+- The edge itself is a place: a specific generated region that exists once per world, seeded at world creation, never procedurally reset
+- What the edge contains is determined by the world's history fragments and the player's play style — different players reach the same place and find it means different things based on what they've done
+
+**Design options for what the edge contains (one or more of these):**
+- The source: whatever generated the endemic threat of the world — not a villain, but a condition still operating. Encountering it is less "defeat the boss" and more "understand what you've been living downstream of."
+- The remnant: something still functioning on the old rules — infrastructure, a presence, a place — that was there before the current world and has been running quietly ever since. It doesn't react to the player the way enemies do. It just is.
+- The limit: a place where the world's generation visibly ends. The tiles change character. The rules the player learned stop applying. What's on the other side of the limit is not generated — it is simply absent, and that absence is interesting.
+
+**Play style culminations:**
+- Champion: the edge is where the endemic threat originates; understanding it (and surviving it) is the completion of the Champion's arc
+- Chronicler: has assembled enough fragments to recognize what the edge is when they arrive; their journal entry for the edge is the most complete account anyone has written
+- Builder: the town network they developed made reaching the edge possible; a waystation exists near the edge because of their work
+- Wanderer: got here before anyone else; what they found there becomes legend in the towns behind them
+
+**Milestones:**
+- [ ] `world_edge_coord` seeded at world creation: a specific coordinate beyond the frontier threshold
+- [ ] Edge region generation: authored rather than procedural; uses frontier rules but with specific authored landmarks that don't appear elsewhere
+- [ ] Edge content variant: determined by dominant play style and fragment count at time of first visit; different players see different aspects of the same place
+- [ ] Edge first-visit: grants a significant XP milestone (if not already L5) and a unique journal entry; world map marks the edge distinctly after first visit
+- [ ] Champion edge content: the source of endemic threat is present and legible; surviving the encounter without necessarily "defeating" it is the completion condition
+- [ ] Chronicler edge content: fragments assembled into a coherent final record; the lore text of the edge explains what the scattered interior pieces were pointing toward
+- [ ] Wanderer edge content: a view beyond the limit — not generated content, but a visual/textual acknowledgment that the player has reached the boundary of the known world
 
 ---
 
