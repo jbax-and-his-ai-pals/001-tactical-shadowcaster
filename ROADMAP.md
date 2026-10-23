@@ -32,7 +32,7 @@ Remaining frontier: controller/touch audit on new overlays, ability shown in jou
 ---
 
 ## Current Focus
-- Phase 8: Living World — Towns, Threats, and Growth (planned, not yet started)
+- Phase 8: Living World — Towns, Threats, and Growth (in progress, ~55%)
 - Long-term: enemy catalog toward 100+ types
 
 ## Player Fantasy

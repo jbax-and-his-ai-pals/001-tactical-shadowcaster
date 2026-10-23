@@ -1,6 +1,6 @@
 # Architecture
 
-This project is a compact pygame roguelite that now uses a thin `Game` composition class plus a set of focused mixins under `shadowcaster/mixins/`.
+This project is a pygame persistent-world exploration roguelite that now uses a thin `Game` composition class plus a set of focused mixins under `shadowcaster/mixins/`.
 
 For test entry points and current regression coverage, read `docs/TESTING.md`.
 
